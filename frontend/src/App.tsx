@@ -4,6 +4,7 @@ import { MarketPulse } from './pages/MarketPulse'
 import { EventReplay } from './pages/EventReplay'
 import { AlertCenter } from './pages/AlertCenter'
 import { ScenarioLab } from './pages/ScenarioLab'
+import { MarketScreener } from './pages/MarketScreener'
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/market-pulse" replace />} />
             <Route path="/market-pulse" element={<MarketPulse />} />
+            <Route path="/screener" element={<MarketScreener />} />
             <Route path="/event-replay" element={<EventReplay />} />
             <Route path="/alerts" element={<AlertCenter />} />
             <Route path="/scenario" element={<ScenarioLab />} />

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from app.database import get_db
 from app.models import Ticker, Watchlist
-from app.schemas.market_pulse import MarketPulseResponse, TickerSummary, PostCard
+from app.schemas.market_pulse import MarketPulseResponse, TickerSummary, PostCard, NewsItem
 from app.services import yfinance_service as yf_svc
 from app.services import reddit_service as reddit_svc
 from app.services.hype_calculator import get_latest_hype, hype_label
@@ -75,6 +75,18 @@ def get_market_pulse(ticker_symbol: str, db: Session = Depends(get_db)):
         for p in recent_posts
     ]
 
+    raw_news = yf_svc.fetch_news_with_sentiment(ticker.symbol, limit=5)
+    news_items = [
+        NewsItem(
+            title=n["title"],
+            publisher=n["publisher"],
+            link=n["link"],
+            published_at=n["published_at"],
+            sentiment_score=n["sentiment_score"],
+        )
+        for n in raw_news
+    ]
+
     return MarketPulseResponse(
         ticker=ticker.symbol,
         price=latest_price["close"] if latest_price else 0.0,
@@ -94,4 +106,5 @@ def get_market_pulse(ticker_symbol: str, db: Session = Depends(get_db)):
             {"ts": p["ts"], "close": p["close"], "volume": p["volume"]}
             for p in price_history
         ],
+        news_items=news_items,
     )

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Activity, TrendingUp, TrendingDown, Users, Zap, BarChart2 } from 'lucide-react'
+import { Activity, TrendingUp, TrendingDown, Users, Zap, BarChart2, Newspaper } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { getMarketPulse } from '../api/marketPulse'
 import { TopBar } from '../components/layout/TopBar'
@@ -135,6 +135,80 @@ export function MarketPulse() {
                   </span>
                 )) : <div className="h-6 w-32 rounded-full animate-pulse" style={{ background: '#2d3148' }} />}
               </div>
+            </div>
+
+            {/* News section */}
+            <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <Newspaper size={13} color="#38bdf8" />
+                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748b' }}>
+                  最新新聞
+                </span>
+              </div>
+              {isLoading ? (
+                <div className="flex flex-col gap-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-12 rounded animate-pulse" style={{ background: '#131627' }} />
+                  ))}
+                </div>
+              ) : data?.news_items?.length ? (
+                <div className="flex flex-col gap-2">
+                  {data.news_items.slice(0, 5).map((item, i) => {
+                    const sentScore = item.sentiment_score
+                    const sentLabel = sentScore > 0.05 ? '看漲' : sentScore < -0.05 ? '看跌' : '中性'
+                    const sentColor = sentScore > 0.05 ? '#10b981' : sentScore < -0.05 ? '#ef4444' : '#38bdf8'
+                    const sentBg = sentScore > 0.05 ? '#052e16' : sentScore < -0.05 ? '#450a0a' : '#0c1a2e'
+                    const title =
+                      item.title.length > 80 ? item.title.slice(0, 80) + '…' : item.title
+                    const dateStr = item.published_at
+                      ? new Date(item.published_at).toLocaleDateString('zh-TW', {
+                          month: 'numeric',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : ''
+                    return (
+                      <a
+                        key={i}
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex flex-col gap-1 px-3 py-2 rounded-md transition-colors"
+                        style={{ background: '#131627', border: '1px solid #1f2235', textDecoration: 'none' }}
+                        onMouseEnter={(e) =>
+                          ((e.currentTarget as HTMLAnchorElement).style.background = '#1a1e30')
+                        }
+                        onMouseLeave={(e) =>
+                          ((e.currentTarget as HTMLAnchorElement).style.background = '#131627')
+                        }
+                      >
+                        <div className="text-xs font-medium leading-snug" style={{ color: '#f1f5f9' }}>
+                          {title}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs" style={{ color: '#64748b' }}>
+                            {item.publisher}
+                          </span>
+                          {dateStr && (
+                            <span className="text-xs" style={{ color: '#64748b' }}>
+                              · {dateStr}
+                            </span>
+                          )}
+                          <span
+                            className="text-xs font-semibold px-1.5 py-0.5 rounded-full ml-auto"
+                            style={{ background: sentBg, color: sentColor, border: `1px solid ${sentColor}33` }}
+                          >
+                            {sentLabel}
+                          </span>
+                        </div>
+                      </a>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-xs" style={{ color: '#64748b' }}>暫無新聞資料</div>
+              )}
             </div>
           </div>
 

@@ -15,6 +15,14 @@ export interface PostCard {
   ts: string
 }
 
+export interface NewsItem {
+  title: string
+  publisher: string
+  link: string
+  published_at: string
+  sentiment_score: number
+}
+
 export interface MarketPulseResponse {
   ticker: string
   price: number
@@ -31,6 +39,27 @@ export interface MarketPulseResponse {
   ml_risk_prob: number[]
   top_posts: PostCard[]
   price_history_24h: PricePoint[]
+  news_items: NewsItem[]
+}
+
+export interface ScreenerItem {
+  symbol: string
+  name: string
+  hype_score: number | null
+  hype_label: string
+  price: number | null
+  price_change_pct: number | null
+  volume_spike: number | null
+  ml_risk_label: number | null
+  ml_risk_text: string
+  mention_count_24h: number
+}
+
+export interface TrendingTicker {
+  symbol: string
+  mention_count: number
+  avg_sentiment: number
+  subreddits_active: string[]
 }
 
 export interface TickerSummary {

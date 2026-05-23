@@ -9,7 +9,7 @@ from app.config import get_settings
 from app.database import engine, SessionLocal
 from app.models import Base, Ticker, Watchlist
 from app.ml import inference
-from app.routers import market_pulse, event_replay, alerts, scenario
+from app.routers import market_pulse, event_replay, alerts, scenario, screener
 
 settings = get_settings()
 _scheduler = BackgroundScheduler()
@@ -42,7 +42,9 @@ def _sync_reddit():
                 ticker = db.execute(select(Ticker).where(Ticker.symbol == sym)).scalar_one_or_none()
             if not ticker:
                 continue
-            posts = reddit_service.fetch_reddit_posts(sym, limit=100)
+            posts = reddit_service.fetch_reddit_posts_multi(
+                sym, limit=100, subreddits=["wallstreetbets", "stocks", "StockMarket"]
+            )
             inserted = reddit_service.store_mentions(db, ticker.id, posts, sentiment_service.score_text)
             if inserted:
                 print(f"[scheduler] reddit: +{inserted} mentions for {sym}")
@@ -112,6 +114,7 @@ app.include_router(market_pulse.router)
 app.include_router(event_replay.router)
 app.include_router(alerts.router)
 app.include_router(scenario.router)
+app.include_router(screener.router)
 
 
 @app.get("/health")

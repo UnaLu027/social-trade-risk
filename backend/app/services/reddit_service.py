@@ -16,8 +16,12 @@ def _reddit_post_id(post: dict) -> str:
     return post.get("id", hashlib.md5(str(post).encode()).hexdigest()[:12])
 
 
-def fetch_reddit_posts(symbol: str, limit: int = 100) -> list[dict]:
-    url = f"{settings.reddit_base_url}/r/wallstreetbets/search.json"
+def fetch_reddit_posts(
+    symbol: str,
+    limit: int = 100,
+    subreddit: str = "wallstreetbets",
+) -> list[dict]:
+    url = f"{settings.reddit_base_url}/r/{subreddit}/search.json"
     params = {"q": symbol, "sort": "new", "limit": limit, "t": "day", "restrict_sr": "1"}
     try:
         with httpx.Client(timeout=10, headers=HEADERS) as client:
@@ -26,8 +30,28 @@ def fetch_reddit_posts(symbol: str, limit: int = 100) -> list[dict]:
             data = resp.json()
             return [item["data"] for item in data.get("data", {}).get("children", [])]
     except Exception as e:
-        print(f"[reddit] Fetch failed for {symbol}: {e}")
+        print(f"[reddit] Fetch failed for {symbol} in r/{subreddit}: {e}")
         return []
+
+
+def fetch_reddit_posts_multi(
+    symbol: str,
+    limit: int = 100,
+    subreddits: list[str] | None = None,
+) -> list[dict]:
+    """Fetch posts for a symbol across multiple subreddits, deduplicating by post id."""
+    if subreddits is None:
+        subreddits = ["wallstreetbets", "stocks", "StockMarket"]
+    seen_ids: set[str] = set()
+    all_posts: list[dict] = []
+    for sub in subreddits:
+        posts = fetch_reddit_posts(symbol, limit=limit, subreddit=sub)
+        for post in posts:
+            pid = _reddit_post_id(post)
+            if pid not in seen_ids:
+                seen_ids.add(pid)
+                all_posts.append(post)
+    return all_posts
 
 
 def store_mentions(db: Session, ticker_id: int, posts: list[dict], score_func) -> int:

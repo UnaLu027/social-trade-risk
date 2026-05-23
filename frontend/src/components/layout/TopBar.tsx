@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../../store/useAppStore'
 import { Bell, Search, RefreshCw } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -7,6 +9,16 @@ const TICKERS = ['GME', 'AMC', 'BBBY']
 export function TopBar({ title }: { title: string }) {
   const { activeTicker, setActiveTicker } = useAppStore()
   const qc = useQueryClient()
+  const navigate = useNavigate()
+  const [searchValue, setSearchValue] = useState('')
+
+  function handleSearch(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' && searchValue.trim()) {
+      setActiveTicker(searchValue.trim())
+      setSearchValue('')
+      navigate('/market-pulse')
+    }
+  }
 
   return (
     <header
@@ -39,7 +51,16 @@ export function TopBar({ title }: { title: string }) {
           style={{ background: '#1a1d27', border: '1px solid #2d3148', color: '#64748b' }}
         >
           <Search size={12} />
-          <span>搜尋代號…</span>
+          <input
+            type="text"
+            value={searchValue}
+            onChange={e => setSearchValue(e.target.value.toUpperCase())}
+            onKeyDown={handleSearch}
+            placeholder="搜尋代號…"
+            maxLength={6}
+            className="bg-transparent text-xs outline-none w-24"
+            style={{ color: '#f1f5f9' }}
+          />
         </div>
         <button
           onClick={() => qc.invalidateQueries()}

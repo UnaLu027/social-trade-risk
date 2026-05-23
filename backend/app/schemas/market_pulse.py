@@ -19,6 +19,14 @@ class PostCard(BaseModel):
     ts: datetime
 
 
+class NewsItem(BaseModel):
+    title: str
+    publisher: str
+    link: str
+    published_at: str
+    sentiment_score: float
+
+
 class MarketPulseResponse(BaseModel):
     ticker: str
     price: float
@@ -35,6 +43,7 @@ class MarketPulseResponse(BaseModel):
     ml_risk_prob: list[float]
     top_posts: list[PostCard]
     price_history_24h: list[PricePoint]
+    news_items: list[NewsItem] = []
 
 
 class TickerSummary(BaseModel):

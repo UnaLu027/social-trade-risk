@@ -109,3 +109,40 @@ def get_price_change_pct(db: Session, ticker_id: int, hours: int = 1) -> float:
     first = float(rows[0].close or 1)
     last = float(rows[-1].close or 1)
     return (last - first) / max(first, 0.01)
+
+
+def fetch_news_with_sentiment(symbol: str, limit: int = 5) -> list[dict]:
+    """
+    Fetch recent news headlines for a symbol via yfinance and score each
+    headline with VADER sentiment.  Returns [] on any failure.
+    """
+    try:
+        from app.services.sentiment_service import score_text
+        yf_ticker = yf.Ticker(symbol)
+        news = yf_ticker.news or []
+        results = []
+        for article in news[:limit]:
+            title = article.get("title", "")
+            publisher = article.get("publisher", "")
+            link = article.get("link", "")
+            pub_time = article.get("providerPublishTime", 0)
+            try:
+                published_at = datetime.fromtimestamp(pub_time, tz=timezone.utc).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
+            except Exception:
+                published_at = ""
+            sentiment_score = score_text(title)
+            results.append(
+                {
+                    "title": title,
+                    "publisher": publisher,
+                    "link": link,
+                    "published_at": published_at,
+                    "sentiment_score": round(sentiment_score, 4),
+                }
+            )
+        return results
+    except Exception as e:
+        print(f"[yfinance] fetch_news_with_sentiment failed for {symbol}: {e}")
+        return []
