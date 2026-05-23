@@ -22,7 +22,7 @@ function HypeBar({ score }: { score: number | null }) {
   )
 }
 
-function MlRiskBadge({ label }: { label: number | null; text: string }) {
+function MlRiskBadge({ label }: { label: number | null; text?: string }) {
   if (label === null) return <span style={{ color: '#64748b' }}>—</span>
   const configs = [
     { text: '低', color: '#10b981', bg: '#052e16' },
