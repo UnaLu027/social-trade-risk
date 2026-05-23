@@ -91,8 +91,9 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    _scheduler.shutdown(wait=False)
-    print("[scheduler] Stopped")
+    if _scheduler.running:
+        _scheduler.shutdown(wait=False)
+        print("[scheduler] Stopped")
 
 
 app = FastAPI(
