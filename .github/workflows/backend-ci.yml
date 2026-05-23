@@ -1,0 +1,36 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+        working-directory: backend
+
+      - name: Download NLTK data
+        run: python -c "import nltk; nltk.download('vader_lexicon', quiet=True)"
+        working-directory: backend
+
+      - name: Run tests
+        env:
+          DATABASE_URL: sqlite:///./test.db
+          SCHEDULER_ENABLED: "false"
+        run: pytest tests/ -v --tb=short
+        working-directory: backend

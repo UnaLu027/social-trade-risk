@@ -1,0 +1,28 @@
+{
+  "accuracy": 0.9975,
+  "f1_weighted": 0.9975,
+  "trained_at": "2026-05-23T08:06:24.637526+00:00",
+  "n_train": 6400,
+  "n_test": 1600,
+  "feature_names": [
+    "mention_count_1h",
+    "mention_count_24h",
+    "mention_growth_ratio",
+    "bullish_ratio",
+    "avg_sentiment",
+    "influencer_score",
+    "price_change_pct_1h",
+    "price_change_pct_24h",
+    "volume_spike_ratio",
+    "short_interest_ratio",
+    "option_volume_spike",
+    "hype_score_raw",
+    "hour_of_day"
+  ],
+  "label_map": {
+    "0": "low",
+    "1": "medium",
+    "2": "high"
+  },
+  "model_type": "StackingClassifier(RF + LR \u2192 GradientBoosting)"
+}
