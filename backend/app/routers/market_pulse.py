@@ -11,10 +11,28 @@ from app.services.hype_calculator import get_latest_hype, hype_label
 router = APIRouter(prefix="/api/v1/market-pulse", tags=["market-pulse"])
 
 
-def _get_ticker_or_404(db: Session, symbol: str) -> Ticker:
-    ticker = db.execute(select(Ticker).where(Ticker.symbol == symbol.upper())).scalar_one_or_none()
+def _auto_seed_ticker(db: Session, symbol: str) -> Ticker:
+    """Fetch ticker data from yfinance on first access and store it."""
+    symbol = symbol.upper()
+    ticker = db.execute(select(Ticker).where(Ticker.symbol == symbol)).scalar_one_or_none()
+    if ticker:
+        return ticker
+    # Auto-fetch price data (5 days hourly for enough data)
+    try:
+        inserted = yf_svc.fetch_and_store_prices(db, symbol, period="5d", interval="1h")
+        if inserted == 0:
+            # Try daily data as fallback
+            inserted = yf_svc.fetch_and_store_prices(db, symbol, period="1mo", interval="1d")
+    except Exception:
+        pass
+    ticker = db.execute(select(Ticker).where(Ticker.symbol == symbol)).scalar_one_or_none()
     if not ticker:
-        raise HTTPException(status_code=404, detail=f"Ticker {symbol} not found. Seed it first.")
+        raise HTTPException(status_code=404, detail=f"Ticker '{symbol}' not found. Check the symbol and try again.")
+    # Auto-add to watchlist
+    existing_wl = db.execute(select(Watchlist).where(Watchlist.symbol == symbol)).scalar_one_or_none()
+    if not existing_wl:
+        db.add(Watchlist(symbol=symbol))
+        db.commit()
     return ticker
 
 
@@ -40,7 +58,7 @@ def list_watchlist_tickers(db: Session = Depends(get_db)):
 
 @router.get("/{ticker_symbol}", response_model=MarketPulseResponse)
 def get_market_pulse(ticker_symbol: str, db: Session = Depends(get_db)):
-    ticker = _get_ticker_or_404(db, ticker_symbol)
+    ticker = _auto_seed_ticker(db, ticker_symbol)
     hype = get_latest_hype(db, ticker.id)
     latest_price = yf_svc.get_latest_price(db, ticker.id)
     price_history = yf_svc.get_price_history(db, ticker.id, hours=24)

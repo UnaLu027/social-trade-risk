@@ -24,7 +24,14 @@ from app.services import yfinance_service as yf_svc
 TICKERS = [
     ("GME", "GameStop Corp."),
     ("AMC", "AMC Entertainment Holdings"),
-    ("BBBY", "Bed Bath & Beyond"),
+    ("TSLA", "Tesla Inc."),
+    ("NVDA", "NVIDIA Corp."),
+    ("AAPL", "Apple Inc."),
+    ("MSFT", "Microsoft Corp."),
+    ("META", "Meta Platforms Inc."),
+    ("PLTR", "Palantir Technologies"),
+    ("MSTR", "MicroStrategy Inc."),
+    ("AMD", "Advanced Micro Devices"),
 ]
 
 GME_EVENTS_2021 = [
@@ -184,6 +191,20 @@ def seed():
             ))
             db.commit()
             print("Demo alerts seeded.")
+
+        # Compute initial hype scores for all tickers so screener shows real data
+        print("Computing initial hype scores...")
+        from app.services import hype_calculator, alert_engine
+        from sqlalchemy import select as sa_select3
+        all_tickers = db.execute(sa_select3(Ticker)).scalars().all()
+        for t in all_tickers:
+            try:
+                hype = hype_calculator.compute_and_store_hype(db, t)
+                if hype:
+                    alert_engine.evaluate_alerts(db, t, hype)
+                    print(f"  Hype computed: {t.symbol} = {hype.hype_score:.1f}")
+            except Exception as e:
+                print(f"  Hype failed for {t.symbol}: {e}")
 
         print("\nSeed complete. Ready for demo!")
 
