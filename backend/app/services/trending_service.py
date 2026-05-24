@@ -55,29 +55,33 @@ def _get_reddit_boost() -> dict[str, float]:
     return boosts
 
 
-def _get_stocktwits_boost(symbols: list[str]) -> dict[str, float]:
+def _get_finnhub_boost(symbols: list[str]) -> dict[str, float]:
     """
-    Fetch StockTwits watchlist_count for each symbol.
-    Returns boost scores (0-10 range). Skips silently if rate-limited.
+    Use Finnhub social sentiment (Reddit + Twitter mentions) to boost trending scores.
+    Returns boost scores (0-20 range). Only runs for top candidates to stay within rate limits.
+    Falls back to empty dict if FINNHUB_API_KEY not set.
     """
     boosts: dict[str, float] = {}
     try:
-        from app.services.stocktwits_service import get_symbol_sentiment_summary
-        # Only fetch for top candidates to avoid rate limits
+        from app.services.finnhub_service import get_social_sentiment
+        # Only fetch top 20 candidates to avoid hitting 60 calls/min rate limit
         sample = symbols[:20]
-        watchlist_counts = {}
+        mention_totals: dict[str, int] = {}
         for sym in sample:
-            summary = get_symbol_sentiment_summary(sym)
-            wc = summary.get("watchlist_count", 0)
-            if wc:
-                watchlist_counts[sym] = wc
-        if watchlist_counts:
-            max_wc = max(watchlist_counts.values())
-            if max_wc > 0:
-                for sym, wc in watchlist_counts.items():
-                    boosts[sym] = (wc / max_wc) * 10
+            data = get_social_sentiment(sym)
+            if data:
+                total = data.get("reddit_mentions", 0) + data.get("twitter_mentions", 0)
+                if total > 0:
+                    mention_totals[sym] = total
+        if mention_totals:
+            max_mentions = max(mention_totals.values())
+            if max_mentions > 0:
+                for sym, total in mention_totals.items():
+                    boosts[sym] = (total / max_mentions) * 20
+        if boosts:
+            print(f"[trending] Finnhub social boost active for {len(boosts)} tickers")
     except Exception as e:
-        print(f"[trending] StockTwits boost error: {e}")
+        print(f"[trending] Finnhub boost error: {e}")
     return boosts
 
 
@@ -117,11 +121,16 @@ async def get_trending_tickers(limit: int = 10) -> list[dict]:
                 price_5d_ago = float(df["Close"].iloc[-5])
                 price_now = float(df["Close"].iloc[-1])
                 price_chg_pct = abs((price_now - price_5d_ago) / max(price_5d_ago, 0.01))
-                # News count
+                # News count: prefer Finnhub (richer), fallback to yfinance
                 try:
-                    news_count = len(yf.Ticker(symbol).news or [])
+                    from app.services.finnhub_service import get_news as fh_get_news
+                    fh_articles = fh_get_news(symbol, limit=10)
+                    news_count = len(fh_articles) if fh_articles else len(yf.Ticker(symbol).news or [])
                 except Exception:
-                    news_count = 0
+                    try:
+                        news_count = len(yf.Ticker(symbol).news or [])
+                    except Exception:
+                        news_count = 0
                 # Composite trending score (0-100) from yfinance signals
                 score = min(100, (
                     min(vol_spike, 5) / 5 * 40 +        # volume spike: up to 40 points
@@ -145,27 +154,25 @@ async def get_trending_tickers(limit: int = 10) -> list[dict]:
         print(f"[trending] yfinance batch download error: {e}")
         return []
 
-    # Enrich with Reddit PRAW boosts (if configured)
+    # Enrich with Reddit PRAW boosts (if API key configured)
     reddit_boosts = _get_reddit_boost()
     if reddit_boosts:
         print(f"[trending] Reddit PRAW boost active for {len(reddit_boosts)} tickers")
 
-    # Enrich with StockTwits boosts for top candidates
+    # Enrich with Finnhub social sentiment (Reddit + Twitter mention counts)
     candidate_symbols = [r["symbol"] for r in results]
-    st_boosts = _get_stocktwits_boost(candidate_symbols)
-    if st_boosts:
-        print(f"[trending] StockTwits boost active for {len(st_boosts)} tickers")
+    fh_boosts = _get_finnhub_boost(candidate_symbols)
 
-    # Apply boosts and update subreddits_active field
+    # Apply boosts and update sources list
     for r in results:
         sym = r["symbol"]
-        total_boost = reddit_boosts.get(sym, 0.0) + st_boosts.get(sym, 0.0)
+        total_boost = reddit_boosts.get(sym, 0.0) + fh_boosts.get(sym, 0.0)
         r["mention_count"] = min(100, round(r["_base_score"] + total_boost))
         sources = ["market_data"]
         if sym in reddit_boosts:
             sources.append("reddit")
-        if sym in st_boosts:
-            sources.append("stocktwits")
+        if sym in fh_boosts:
+            sources.append("finnhub")
         r["subreddits_active"] = sources
         del r["_base_score"]
 

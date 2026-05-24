@@ -6,6 +6,8 @@ from app.models import Ticker, Watchlist
 from app.schemas.market_pulse import MarketPulseResponse, TickerSummary, PostCard, NewsItem
 from app.services import yfinance_service as yf_svc
 from app.services import reddit_service as reddit_svc
+from app.services import finnhub_service as fh_svc
+from app.services.sentiment_service import score_text
 from app.services.hype_calculator import get_latest_hype, hype_label
 
 router = APIRouter(prefix="/api/v1/market-pulse", tags=["market-pulse"])
@@ -93,17 +95,42 @@ def get_market_pulse(ticker_symbol: str, db: Session = Depends(get_db)):
         for p in recent_posts
     ]
 
-    raw_news = yf_svc.fetch_news_with_sentiment(ticker.symbol, limit=5)
-    news_items = [
-        NewsItem(
-            title=n["title"],
-            publisher=n["publisher"],
-            link=n["link"],
-            published_at=n["published_at"],
-            sentiment_score=n["sentiment_score"],
-        )
-        for n in raw_news
-    ]
+    # Prefer Finnhub news (richer, more sources); fall back to yfinance
+    fh_news = fh_svc.get_news(ticker.symbol, limit=6)
+    if fh_news:
+        news_items = [
+            NewsItem(
+                title=n["headline"],
+                publisher=n["source"],
+                link=n["url"],
+                published_at=n["published_at"],
+                sentiment_score=round(score_text(n["headline"] + " " + n["summary"]), 4),
+            )
+            for n in fh_news
+            if n.get("headline")
+        ]
+    else:
+        raw_news = yf_svc.fetch_news_with_sentiment(ticker.symbol, limit=5)
+        news_items = [
+            NewsItem(
+                title=n["title"],
+                publisher=n["publisher"],
+                link=n["link"],
+                published_at=n["published_at"],
+                sentiment_score=n["sentiment_score"],
+            )
+            for n in raw_news
+        ]
+
+    # Enrich sentiment stats with Finnhub social data when local DB is sparse
+    fh_social = fh_svc.get_social_sentiment(ticker.symbol)
+    if fh_social and (sentiment_stats["avg_sentiment"] == 0.0 or hype is None):
+        fh_reddit_sent = fh_social.get("reddit_sentiment", 0.0)
+        fh_twitter_sent = fh_social.get("twitter_sentiment", 0.0)
+        blended_sentiment = (fh_reddit_sent + fh_twitter_sent) / 2 if (fh_reddit_sent or fh_twitter_sent) else 0.0
+        if blended_sentiment != 0.0:
+            sentiment_stats["avg_sentiment"] = round(blended_sentiment, 4)
+            sentiment_stats["bullish_ratio"] = round(0.5 + blended_sentiment * 0.5, 3)
 
     return MarketPulseResponse(
         ticker=ticker.symbol,

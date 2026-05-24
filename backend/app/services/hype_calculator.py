@@ -4,6 +4,7 @@ from sqlalchemy import select
 from app.models import Ticker, HypeScore, SocialMention
 from app.services import yfinance_service as yf_svc
 from app.services import reddit_service as reddit_svc
+from app.services import finnhub_service as fh_svc
 from app.ml.feature_engineering import compute_hype_score, build_feature_row, identify_top_drivers
 from app.ml import inference
 
@@ -11,13 +12,39 @@ from app.ml import inference
 def compute_and_store_hype(db: Session, ticker: Ticker) -> HypeScore | None:
     now_utc = datetime.utcnow()
 
-    # Mention counts
+    # Mention counts from local DB (Reddit scraper)
     count_1h = reddit_svc.count_mentions(db, ticker.id, hours=1)
     count_1h_prev = reddit_svc.count_mentions(db, ticker.id, hours=2) - count_1h
     mention_growth = count_1h / max(count_1h_prev, 1)
 
     count_24h = reddit_svc.count_mentions(db, ticker.id, hours=24)
     sentiment_stats = reddit_svc.get_sentiment_stats(db, ticker.id, hours=24)
+
+    # Supplement with Finnhub social sentiment (Reddit + Twitter aggregated)
+    fh_social = fh_svc.get_social_sentiment(ticker.symbol)
+    if fh_social:
+        fh_reddit_mentions = fh_social.get("reddit_mentions", 0)
+        fh_twitter_mentions = fh_social.get("twitter_mentions", 0)
+        fh_total_mentions = fh_reddit_mentions + fh_twitter_mentions
+        # Estimate daily mentions from weekly Finnhub data
+        fh_daily_est = fh_total_mentions / 7
+        # Blend: use Finnhub if local DB has no mentions (not scraped yet)
+        if count_24h == 0 and fh_daily_est > 0:
+            count_24h = int(fh_daily_est)
+            count_1h = max(1, int(fh_daily_est / 24))
+            mention_growth = max(1.0, fh_daily_est / 10)
+        # Blend sentiment: average local + Finnhub when both available
+        fh_sent = (fh_social.get("reddit_sentiment", 0.0) + fh_social.get("twitter_sentiment", 0.0))
+        fh_sent_avg = fh_sent / 2 if (fh_social.get("reddit_sentiment") or fh_social.get("twitter_sentiment")) else 0.0
+        if fh_sent_avg != 0.0:
+            if sentiment_stats["avg_sentiment"] == 0.0:
+                sentiment_stats["avg_sentiment"] = round(fh_sent_avg, 4)
+                sentiment_stats["bullish_ratio"] = round(0.5 + fh_sent_avg * 0.5, 3)
+            else:
+                # Weighted blend: 60% local, 40% Finnhub
+                sentiment_stats["avg_sentiment"] = round(
+                    sentiment_stats["avg_sentiment"] * 0.6 + fh_sent_avg * 0.4, 4
+                )
 
     # Price metrics
     price_change_1h = yf_svc.get_price_change_pct(db, ticker.id, hours=1)
