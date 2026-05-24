@@ -32,6 +32,10 @@ jobs:
         run: python -m app.ml.train
         working-directory: backend
 
+      - name: Train fake news model
+        run: python -m app.ml.fakenews.train_fakenews
+        working-directory: backend
+
       - name: Run tests
         env:
           DATABASE_URL: sqlite:///./test.db

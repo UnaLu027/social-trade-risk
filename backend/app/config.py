@@ -14,6 +14,16 @@ class Settings(BaseSettings):
     reddit_base_url: str = "https://www.reddit.com"
     reddit_user_agent: str = "SocialTradeRisk/1.0"
 
+    # PRAW (official Reddit API)
+    reddit_client_id: str = ""
+    reddit_client_secret: str = ""
+
+    # StockTwits
+    stocktwits_access_token: str = ""
+
+    # Finnhub
+    finnhub_api_key: str = ""
+
     scheduler_enabled: bool = True
     price_sync_interval_minutes: int = 5
     reddit_sync_interval_minutes: int = 15

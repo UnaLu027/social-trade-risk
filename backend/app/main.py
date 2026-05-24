@@ -9,7 +9,8 @@ from app.config import get_settings
 from app.database import engine, SessionLocal
 from app.models import Base, Ticker, Watchlist
 from app.ml import inference
-from app.routers import market_pulse, event_replay, alerts, scenario, screener
+from app.ml.fakenews import inference_fakenews
+from app.routers import market_pulse, event_replay, alerts, scenario, screener, fake_news
 
 settings = get_settings()
 _scheduler = BackgroundScheduler()
@@ -78,6 +79,9 @@ async def lifespan(app: FastAPI):
     # Load ML model
     inference.load_model()
 
+    # Load fake news model (auto-trains if not found)
+    inference_fakenews.load_fakenews_model()
+
     # Start background scheduler
     if settings.scheduler_enabled:
         _scheduler.add_job(_sync_prices, "interval",
@@ -116,6 +120,7 @@ app.include_router(event_replay.router)
 app.include_router(alerts.router)
 app.include_router(scenario.router)
 app.include_router(screener.router)
+app.include_router(fake_news.router)
 
 
 @app.get("/health")

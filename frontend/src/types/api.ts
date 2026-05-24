@@ -134,3 +134,19 @@ export interface ScenarioResponse {
   explanation: string
   comparable_event: { ticker: string; date: string; similarity_pct: number } | null
 }
+
+export interface FakeNewsFeature {
+  name: string
+  value: number
+  importance: number
+  impact: string
+}
+
+export interface FakeNewsResponse {
+  fake_probability: number
+  label: string
+  confidence: number
+  contributing_features: FakeNewsFeature[]
+  stock_mentions: string[]
+  analysis_text: string
+}

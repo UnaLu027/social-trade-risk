@@ -5,6 +5,7 @@ import { EventReplay } from './pages/EventReplay'
 import { AlertCenter } from './pages/AlertCenter'
 import { ScenarioLab } from './pages/ScenarioLab'
 import { MarketScreener } from './pages/MarketScreener'
+import { FakeNewsDetector } from './pages/FakeNewsDetector'
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
             <Route path="/event-replay" element={<EventReplay />} />
             <Route path="/alerts" element={<AlertCenter />} />
             <Route path="/scenario" element={<ScenarioLab />} />
+            <Route path="/fake-news" element={<FakeNewsDetector />} />
           </Routes>
         </main>
       </div>
