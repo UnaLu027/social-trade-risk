@@ -8,7 +8,9 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./dev.db"
     secret_key: str = "dev-secret-change-in-production"
     environment: str = "development"
-    allowed_origins: str = "http://localhost:5173"
+    # Comma-separated list. Defaults include localhost dev + GitHub Pages wildcard.
+    # On Railway, set ALLOWED_ORIGINS=https://yourusername.github.io,https://yourapp.up.railway.app
+    allowed_origins: str = "http://localhost:5173,http://localhost:3000,https://unalu027.github.io"
 
     reddit_fetch_enabled: bool = True
     reddit_base_url: str = "https://www.reddit.com"

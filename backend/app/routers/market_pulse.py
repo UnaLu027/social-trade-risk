@@ -1,8 +1,11 @@
+import threading
+from datetime import datetime, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from app.database import get_db
-from app.models import Ticker, Watchlist
+from app.database import get_db, SessionLocal
+from app.models import Ticker, Watchlist, PriceSnapshot
 from app.schemas.market_pulse import MarketPulseResponse, TickerSummary, PostCard, NewsItem
 from app.services import yfinance_service as yf_svc
 from app.services import reddit_service as reddit_svc
@@ -13,49 +16,56 @@ from app.services.hype_calculator import get_latest_hype, hype_label
 router = APIRouter(prefix="/api/v1/market-pulse", tags=["market-pulse"])
 
 
+def _bg_fetch_prices(symbol: str) -> None:
+    """Fire-and-forget yfinance fetch in a daemon thread so it never blocks a request."""
+    def _work():
+        db = SessionLocal()
+        try:
+            n = yf_svc.fetch_and_store_prices(db, symbol, period="5d", interval="1h")
+            if not n:
+                n = yf_svc.fetch_and_store_prices(db, symbol, period="1mo", interval="1d")
+            print(f"[bg_fetch] {symbol}: +{n} rows stored")
+        except Exception as e:
+            print(f"[bg_fetch] {symbol} error: {e}")
+        finally:
+            db.close()
+
+    t = threading.Thread(target=_work, daemon=True)
+    t.start()
+
+
 def _auto_seed_ticker(db: Session, symbol: str) -> Ticker:
     """
-    Fetch ticker data from yfinance.
-    For NEW tickers: always fetch.
-    For EXISTING tickers: re-fetch if no price data in last 3 hours
-    (handles stale DB after deployment, weekends, etc.).
+    Ensure the ticker exists and schedule a background price refresh when stale.
+    The yfinance fetch is NEVER awaited inline — it runs in a daemon thread so
+    the API response is always fast.  Live fallbacks (get_live_price / Finnhub)
+    cover the gap until the background write completes.
     """
-    from datetime import datetime, timedelta
-    from app.models import PriceSnapshot
-    from sqlalchemy import select as sa_select
-
     symbol = symbol.upper()
-    ticker = db.execute(sa_select(Ticker).where(Ticker.symbol == symbol)).scalar_one_or_none()
+    ticker = db.execute(select(Ticker).where(Ticker.symbol == symbol)).scalar_one_or_none()
 
-    needs_fetch = ticker is None
-    if ticker and not needs_fetch:
-        # Check if we have any price data in the last 3 hours
-        cutoff = datetime.utcnow() - timedelta(hours=3)
+    # If ticker is brand-new, create a placeholder row immediately (fast DB write)
+    if ticker is None:
+        ticker = yf_svc._get_or_create_ticker(db, symbol)
+        if ticker is None:
+            raise HTTPException(status_code=404,
+                                detail=f"Ticker '{symbol}' not found. Check the symbol and try again.")
+        _bg_fetch_prices(symbol)      # populate prices in background
+
+    else:
+        # Check whether our price data is stale (no row in the last 6 hours)
+        cutoff = datetime.utcnow() - timedelta(hours=6)
         recent = db.execute(
-            sa_select(PriceSnapshot)
+            select(PriceSnapshot)
             .where(PriceSnapshot.ticker_id == ticker.id, PriceSnapshot.ts >= cutoff)
             .limit(1)
         ).scalar_one_or_none()
         if not recent:
-            needs_fetch = True
-            print(f"[market_pulse] No recent prices for {symbol}, re-fetching...")
-
-    if needs_fetch:
-        try:
-            inserted = yf_svc.fetch_and_store_prices(db, symbol, period="5d", interval="1h")
-            print(f"[market_pulse] fetch_and_store_prices(5d/1h) for {symbol}: +{inserted} rows")
-            if inserted == 0:
-                inserted = yf_svc.fetch_and_store_prices(db, symbol, period="1mo", interval="1d")
-                print(f"[market_pulse] fetch_and_store_prices(1mo/1d) for {symbol}: +{inserted} rows")
-        except Exception as e:
-            print(f"[market_pulse] yfinance fetch error for {symbol}: {e}")
-
-    ticker = db.execute(sa_select(Ticker).where(Ticker.symbol == symbol)).scalar_one_or_none()
-    if not ticker:
-        raise HTTPException(status_code=404, detail=f"Ticker '{symbol}' not found. Check the symbol and try again.")
+            print(f"[market_pulse] Stale prices for {symbol} — refreshing in background")
+            _bg_fetch_prices(symbol)  # non-blocking
 
     # Auto-add to watchlist
-    existing_wl = db.execute(sa_select(Watchlist).where(Watchlist.symbol == symbol)).scalar_one_or_none()
+    existing_wl = db.execute(select(Watchlist).where(Watchlist.symbol == symbol)).scalar_one_or_none()
     if not existing_wl:
         db.add(Watchlist(symbol=symbol))
         db.commit()
@@ -87,24 +97,36 @@ def get_market_pulse(ticker_symbol: str, db: Session = Depends(get_db)):
     ticker = _auto_seed_ticker(db, ticker_symbol)
     hype = get_latest_hype(db, ticker.id)
 
-    # ── Price: DB first, live yfinance as fallback ──────────────────────────
+    # ── Price: DB → live yfinance → Finnhub quote ───────────────────────────
     latest_price = yf_svc.get_latest_price(db, ticker.id)
     if not latest_price or latest_price["close"] == 0.0:
-        print(f"[market_pulse] DB price empty for {ticker.symbol} — fetching live")
+        print(f"[market_pulse] DB price empty for {ticker.symbol} — trying live yfinance")
         latest_price = yf_svc.get_live_price(ticker.symbol)
+    if not latest_price or latest_price["close"] == 0.0:
+        print(f"[market_pulse] yfinance live failed for {ticker.symbol} — trying Finnhub quote")
+        fh_q = fh_svc.get_quote(ticker.symbol)
+        if fh_q:
+            latest_price = {"close": fh_q["price"], "volume": fh_q.get("volume", 0), "ts": datetime.utcnow()}
 
-    # ── Price history: DB → 5-day DB → live yfinance ────────────────────────
+    # ── Price history: DB (24h) → DB (5-day) → yfinance live → Finnhub candles
     price_history = yf_svc.get_price_history(db, ticker.id, hours=24)
     if not price_history:
         price_history = yf_svc.get_price_history(db, ticker.id, hours=5 * 24)
     if not price_history:
-        print(f"[market_pulse] DB history empty for {ticker.symbol} — fetching live")
+        print(f"[market_pulse] DB history empty for {ticker.symbol} — trying live yfinance")
         price_history = yf_svc.get_live_history(ticker.symbol, days=5)
+    if not price_history:
+        print(f"[market_pulse] yfinance history failed for {ticker.symbol} — trying Finnhub candles")
+        price_history = fh_svc.get_candles(ticker.symbol, days=5)
 
-    # ── 24h price change: DB → 5-day DB → derive from available history ─────
+    # ── 24h price change: DB → 5-day DB → Finnhub → derive from history ─────
     price_change_24h = yf_svc.get_price_change_pct(db, ticker.id, hours=24)
     if price_change_24h == 0.0:
         price_change_24h = yf_svc.get_price_change_pct(db, ticker.id, hours=5 * 24)
+    if price_change_24h == 0.0:
+        fh_q = fh_svc.get_quote(ticker.symbol)
+        if fh_q and fh_q.get("change_pct"):
+            price_change_24h = fh_q["change_pct"] / 100
     if price_change_24h == 0.0 and len(price_history) >= 2:
         first_close = price_history[0]["close"]
         last_close = price_history[-1]["close"]
@@ -112,7 +134,7 @@ def get_market_pulse(ticker_symbol: str, db: Session = Depends(get_db)):
             price_change_24h = (last_close - first_close) / first_close
 
     volume_spike = yf_svc.get_volume_spike(db, ticker.id)
-    # If DB had < 10 rows the spike defaults to 1.0; derive from live history instead
+    # Derive from live history when DB has < 10 rows
     if volume_spike == 1.0 and price_history:
         vols = [p["volume"] for p in price_history if p["volume"] > 0]
         if len(vols) >= 2:

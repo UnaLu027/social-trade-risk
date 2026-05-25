@@ -121,6 +121,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
+    allow_origin_regex=r"https://.*\.github\.io",   # allow any GitHub Pages domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -150,3 +151,79 @@ def health():
 def model_info():
     from app.ml.inference import get_metadata
     return get_metadata()
+
+
+@app.get("/api/v1/debug/data-sources")
+def debug_data_sources():
+    """
+    Diagnostic endpoint — check which data sources are reachable.
+    Visit <railway-url>/api/v1/debug/data-sources to see live status.
+    """
+    import os
+    from app.database import SessionLocal
+    from sqlalchemy import text, select as sa_select
+    from app.models import PriceSnapshot, Ticker
+    from app.services import yfinance_service as yf_svc
+    from app.services import finnhub_service as fh_svc
+
+    result: dict = {}
+
+    # 1. Database connectivity + row counts
+    try:
+        db = SessionLocal()
+        row = db.execute(text("SELECT COUNT(*) FROM price_snapshots")).scalar()
+        tickers_count = db.execute(text("SELECT COUNT(*) FROM tickers")).scalar()
+        # Latest price snapshot
+        latest = db.execute(
+            sa_select(PriceSnapshot).order_by(PriceSnapshot.ts.desc()).limit(1)
+        ).scalar_one_or_none()
+        result["db"] = {
+            "status": "ok",
+            "price_snapshot_rows": row,
+            "tickers": tickers_count,
+            "latest_price_ts": str(latest.ts) if latest else None,
+        }
+        db.close()
+    except Exception as e:
+        result["db"] = {"status": "error", "detail": str(e)}
+
+    # 2. yfinance live price check (GME)
+    try:
+        p = yf_svc.get_live_price("GME")
+        result["yfinance"] = {"status": "ok", "gme_price": p["close"] if p else None}
+    except Exception as e:
+        result["yfinance"] = {"status": "error", "detail": str(e)}
+
+    # 3. Finnhub
+    fh_key = os.getenv("FINNHUB_API_KEY", "")
+    if fh_key:
+        try:
+            q = fh_svc.get_quote("GME")
+            result["finnhub"] = {"status": "ok", "gme_price": q["price"] if q else None}
+        except Exception as e:
+            result["finnhub"] = {"status": "error", "detail": str(e)}
+    else:
+        result["finnhub"] = {"status": "no_key"}
+
+    # 4. Reddit public API
+    try:
+        import httpx
+        resp = httpx.get(
+            "https://www.reddit.com/r/wallstreetbets/search.json",
+            params={"q": "GME", "limit": 1, "sort": "new"},
+            headers={"User-Agent": "SocialTradeRisk/1.0"},
+            timeout=8,
+        )
+        result["reddit"] = {"status": "ok" if resp.status_code == 200 else "http_error",
+                            "http_status": resp.status_code}
+    except Exception as e:
+        result["reddit"] = {"status": "error", "detail": str(e)}
+
+    # 5. CORS / env
+    result["env"] = {
+        "allowed_origins": os.getenv("ALLOWED_ORIGINS", "(not set — default localhost)"),
+        "environment": os.getenv("ENVIRONMENT", "development"),
+        "finnhub_key_set": bool(fh_key),
+    }
+
+    return result

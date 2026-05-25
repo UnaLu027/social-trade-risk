@@ -109,11 +109,13 @@ def get_recent_mentions(db: Session, ticker_id: int, hours: int = 24, limit: int
 
 def count_mentions(db: Session, ticker_id: int, hours: int) -> int:
     from datetime import timedelta
+    from sqlalchemy import func
     since = datetime.utcnow() - timedelta(hours=hours)
-    return db.execute(
-        select(SocialMention)
+    result = db.execute(
+        select(func.count()).select_from(SocialMention)
         .where(SocialMention.ticker_id == ticker_id, SocialMention.ts >= since)
-    ).scalars().all().__len__()
+    ).scalar()
+    return int(result or 0)
 
 
 def get_sentiment_stats(db: Session, ticker_id: int, hours: int = 24) -> dict:

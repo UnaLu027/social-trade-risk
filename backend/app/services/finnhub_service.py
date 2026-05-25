@@ -70,6 +70,86 @@ def get_market_news(category: str = "general", limit: int = 20) -> list[dict]:
         return []
 
 
+def get_quote(symbol: str) -> dict | None:
+    """
+    Real-time stock quote from Finnhub.
+    Returns: {price, change_pct, volume, prev_close, high, low, ts} or None.
+    Works for US symbols; Taiwan (.TW) symbols are not supported on free tier.
+    """
+    if not _key() or symbol.endswith(".TW"):
+        return None
+    try:
+        resp = httpx.get(
+            f"{BASE_URL}/quote",
+            params={"symbol": symbol, "token": _key()},
+            timeout=8,
+        )
+        if resp.status_code != 200:
+            return None
+        d = resp.json()
+        price = d.get("c") or d.get("pc")   # current or previous close
+        if not price or float(price) <= 0:
+            return None
+        return {
+            "price": float(price),
+            "change_pct": float(d.get("dp", 0)),   # % change
+            "volume": 0,                             # not in quote endpoint
+            "prev_close": float(d.get("pc", 0)),
+            "high": float(d.get("h", 0)),
+            "low": float(d.get("l", 0)),
+            "ts": int(d.get("t", 0)),               # Unix timestamp
+        }
+    except Exception as e:
+        print(f"[finnhub] Quote error for {symbol}: {e}")
+        return None
+
+
+def get_candles(symbol: str, days: int = 5) -> list[dict]:
+    """
+    OHLCV candlestick data from Finnhub (1-hour resolution).
+    Returns list of {ts, close, volume} dicts, empty on failure.
+    US symbols only — Taiwan (.TW) not supported on free tier.
+    """
+    if not _key() or symbol.endswith(".TW"):
+        return []
+    try:
+        now = datetime.now(timezone.utc)
+        from_ts = int((now - timedelta(days=days)).timestamp())
+        to_ts = int(now.timestamp())
+        resp = httpx.get(
+            f"{BASE_URL}/stock/candle",
+            params={
+                "symbol": symbol,
+                "resolution": "60",   # 1-hour bars
+                "from": from_ts,
+                "to": to_ts,
+                "token": _key(),
+            },
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return []
+        d = resp.json()
+        if d.get("s") != "ok":
+            return []
+        closes = d.get("c", [])
+        times = d.get("t", [])
+        volumes = d.get("v", [])
+        result = []
+        for i, (ts_unix, c) in enumerate(zip(times, closes)):
+            if c is None or float(c) <= 0:
+                continue
+            result.append({
+                "ts": datetime.fromtimestamp(ts_unix, tz=timezone.utc).replace(tzinfo=None),
+                "close": float(c),
+                "volume": int(volumes[i]) if i < len(volumes) else 0,
+            })
+        return result
+    except Exception as e:
+        print(f"[finnhub] Candles error for {symbol}: {e}")
+        return []
+
+
 def get_social_sentiment(symbol: str) -> dict:
     """Get Reddit + Twitter sentiment from Finnhub (free tier includes this)."""
     if not _key():
