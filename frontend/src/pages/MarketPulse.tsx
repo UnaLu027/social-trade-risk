@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Activity, TrendingUp, TrendingDown, Users, Zap, BarChart2, Newspaper } from 'lucide-react'
+import { Activity, TrendingUp, TrendingDown, Users, Zap, BarChart2, Newspaper, RefreshCw } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { getMarketPulse } from '../api/marketPulse'
 import { TopBar } from '../components/layout/TopBar'
@@ -18,13 +18,19 @@ function SkeletonCard() {
   )
 }
 
+function formatUpdatedAt(isoStr?: string | null, fallbackMs?: number): string {
+  const d = isoStr ? new Date(isoStr) : fallbackMs ? new Date(fallbackMs) : null
+  if (!d || isNaN(d.getTime())) return '—'
+  return d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
 export function MarketPulse() {
   const { activeTicker } = useAppStore()
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, isFetching, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['marketPulse', activeTicker],
     queryFn: () => getMarketPulse(activeTicker),
-    refetchInterval: 30_000,
-    staleTime: 25_000,
+    refetchInterval: 5 * 60_000,   // 每 5 分鐘自動更新
+    staleTime: 4 * 60_000,
     retry: 1,
   })
 
@@ -41,6 +47,36 @@ export function MarketPulse() {
       )}
 
       <div className="p-6 flex flex-col gap-6 animate-fadeIn">
+        {/* Last-update bar */}
+        <div className="flex items-center justify-between -mb-3">
+          <span className="text-xs" style={{ color: '#64748b' }}>
+            {activeTicker}
+            {data?.updated_at && (
+              <> &nbsp;·&nbsp; 資料時間 {formatUpdatedAt(data.updated_at)}</>
+            )}
+          </span>
+          <div className="flex items-center gap-2">
+            {isFetching && (
+              <span className="text-xs" style={{ color: '#38bdf8' }}>更新中…</span>
+            )}
+            {!isFetching && dataUpdatedAt > 0 && (
+              <span className="text-xs" style={{ color: '#64748b' }}>
+                最後更新 {formatUpdatedAt(null, dataUpdatedAt)}
+              </span>
+            )}
+            <button
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="flex items-center gap-1 px-2 py-1 rounded text-xs transition-opacity"
+              style={{ color: '#38bdf8', opacity: isFetching ? 0.4 : 1 }}
+              title="立即重新整理"
+            >
+              <RefreshCw size={11} className={isFetching ? 'animate-spin' : ''} />
+              重新整理
+            </button>
+          </div>
+        </div>
+
         {/* KPI Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {isLoading ? (

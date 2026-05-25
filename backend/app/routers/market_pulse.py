@@ -186,6 +186,9 @@ def get_market_pulse(ticker_symbol: str, db: Session = Depends(get_db)):
             sentiment_stats["avg_sentiment"] = round(blended_sentiment, 4)
             sentiment_stats["bullish_ratio"] = round(0.5 + blended_sentiment * 0.5, 3)
 
+    # updated_at: timestamp of the most recent price datapoint (or now if live)
+    updated_at = latest_price["ts"] if latest_price else None
+
     return MarketPulseResponse(
         ticker=ticker.symbol,
         price=latest_price["close"] if latest_price else 0.0,
@@ -206,4 +209,5 @@ def get_market_pulse(ticker_symbol: str, db: Session = Depends(get_db)):
             for p in price_history
         ],
         news_items=news_items,
+        updated_at=updated_at,
     )

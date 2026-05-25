@@ -17,14 +17,25 @@ _scheduler = BackgroundScheduler()
 
 
 def _sync_prices():
+    """
+    Fetch latest OHLCV data for every watchlist symbol.
+    Cascade: 1-day/5-min (intraday) → 5-day/1-hour (after-hours / weekends) → 1-month/1-day.
+    Taiwan stocks (.TW) skip the 5-min interval (not available via yfinance).
+    """
     db: Session = SessionLocal()
     try:
         symbols = [w.symbol for w in db.execute(select(Watchlist)).scalars().all()]
         from app.services import yfinance_service as yf_svc
         for sym in symbols:
-            inserted = yf_svc.fetch_and_store_prices(db, sym, period="1d", interval="5m")
-            if inserted:
-                print(f"[scheduler] prices: +{inserted} rows for {sym}")
+            is_tw = sym.endswith(".TW")
+            inserted = 0
+            if not is_tw:
+                inserted = yf_svc.fetch_and_store_prices(db, sym, period="1d", interval="5m")
+            if not inserted:
+                inserted = yf_svc.fetch_and_store_prices(db, sym, period="5d", interval="1h")
+            if not inserted:
+                inserted = yf_svc.fetch_and_store_prices(db, sym, period="1mo", interval="1d")
+            print(f"[scheduler] prices: +{inserted} rows for {sym}")
     except Exception as e:
         print(f"[scheduler] price sync error: {e}")
     finally:

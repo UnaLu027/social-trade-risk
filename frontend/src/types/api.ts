@@ -40,6 +40,7 @@ export interface MarketPulseResponse {
   top_posts: PostCard[]
   price_history_24h: PricePoint[]
   news_items: NewsItem[]
+  updated_at?: string | null   // ISO timestamp of the most recent price datapoint
 }
 
 export interface ScreenerItem {

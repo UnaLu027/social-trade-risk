@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { BarChart3, LayoutDashboard, TrendingUp } from 'lucide-react'
+import { BarChart3, LayoutDashboard, TrendingUp, RefreshCw } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { getScreener } from '../api/screener'
 import { TopBar } from '../components/layout/TopBar'
@@ -58,11 +58,11 @@ export function MarketOverview() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'all' | 'us' | 'tw'>('all')
 
-  const { data: screenerData, isLoading: screenerLoading } = useQuery({
+  const { data: screenerData, isLoading: screenerLoading, isFetching, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['screener'],
     queryFn: getScreener,
-    refetchInterval: 60_000,
-    staleTime: 55_000,
+    refetchInterval: 5 * 60_000,   // 每 5 分鐘自動更新
+    staleTime: 4 * 60_000,
     retry: 1,
   })
 
@@ -167,9 +167,31 @@ export function MarketOverview() {
               {filteredItems.length > 0 ? `${filteredItems.length} 個標的` : ''}
             </span>
 
+            {/* Update status (pushed to right with ml-auto) */}
+            <div className="flex items-center gap-2 mr-2 ml-auto">
+              {isFetching ? (
+                <span className="text-xs flex items-center gap-1" style={{ color: '#38bdf8' }}>
+                  <RefreshCw size={10} className="animate-spin" /> 更新中…
+                </span>
+              ) : dataUpdatedAt > 0 ? (
+                <span className="text-xs" style={{ color: '#64748b' }}>
+                  最後更新 {new Date(dataUpdatedAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </span>
+              ) : null}
+              <button
+                onClick={() => refetch()}
+                disabled={isFetching}
+                className="p-1 rounded transition-opacity"
+                style={{ color: '#38bdf8', opacity: isFetching ? 0.4 : 1 }}
+                title="立即重新整理"
+              >
+                <RefreshCw size={11} />
+              </button>
+            </div>
+
             {/* Tab pill group */}
             <div
-              className="flex items-center ml-auto rounded-md overflow-hidden text-xs font-semibold"
+              className="flex items-center rounded-md overflow-hidden text-xs font-semibold"
               style={{ background: '#0d0f1a', border: '1px solid #2d3148' }}
             >
               {(

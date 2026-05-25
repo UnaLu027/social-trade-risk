@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from pydantic import BaseModel
 
 
@@ -44,6 +45,7 @@ class MarketPulseResponse(BaseModel):
     top_posts: list[PostCard]
     price_history_24h: list[PricePoint]
     news_items: list[NewsItem] = []
+    updated_at: Optional[datetime] = None   # timestamp of the most recent price data point
 
 
 class TickerSummary(BaseModel):
