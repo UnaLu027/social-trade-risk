@@ -111,6 +111,76 @@ def get_price_change_pct(db: Session, ticker_id: int, hours: int = 1) -> float:
     return (last - first) / max(first, 0.01)
 
 
+def get_live_price(symbol: str) -> Optional[dict]:
+    """
+    Direct yfinance call that bypasses the DB.
+    Used as fallback when PriceSnapshot table has no recent rows.
+    Tries fast_info first; falls back to a 2-day history() call.
+    """
+    try:
+        ticker_obj = yf.Ticker(symbol)
+
+        # Attempt 1: fast_info (single lightweight request)
+        try:
+            fast = ticker_obj.fast_info
+            price = getattr(fast, "last_price", None)
+            if not price or float(price) <= 0:
+                price = getattr(fast, "previous_close", None)
+            volume = int(getattr(fast, "three_month_average_volume", 0) or 0)
+            if price and float(price) > 0:
+                return {
+                    "close": float(price),
+                    "volume": volume,
+                    "ts": datetime.utcnow(),
+                }
+        except Exception:
+            pass
+
+        # Attempt 2: recent 2-day history
+        hist = ticker_obj.history(period="2d", interval="1d", auto_adjust=True)
+        if not hist.empty:
+            last = hist.iloc[-1]
+            if not pd.isna(last["Close"]) and float(last["Close"]) > 0:
+                return {
+                    "close": float(last["Close"]),
+                    "volume": int(last["Volume"]) if not pd.isna(last["Volume"]) else 0,
+                    "ts": datetime.utcnow(),
+                }
+    except Exception as e:
+        print(f"[yfinance] get_live_price failed for {symbol}: {e}")
+    return None
+
+
+def get_live_history(symbol: str, days: int = 5) -> list[dict]:
+    """
+    Direct yfinance history call that bypasses the DB.
+    Used as fallback when price_history returns an empty list.
+    """
+    try:
+        ticker_obj = yf.Ticker(symbol)
+        hist = ticker_obj.history(period=f"{days}d", interval="1h", auto_adjust=True)
+        if hist.empty:
+            hist = ticker_obj.history(period=f"{days}d", interval="1d", auto_adjust=True)
+        if hist.empty:
+            return []
+        result = []
+        for ts, row in hist.iterrows():
+            if pd.isna(row["Close"]):
+                continue
+            ts_dt = ts.to_pydatetime()
+            if ts_dt.tzinfo is not None:
+                ts_dt = ts_dt.astimezone(timezone.utc).replace(tzinfo=None)
+            result.append({
+                "ts": ts_dt,
+                "close": float(row["Close"]),
+                "volume": int(row["Volume"]) if not pd.isna(row["Volume"]) else 0,
+            })
+        return result
+    except Exception as e:
+        print(f"[yfinance] get_live_history failed for {symbol}: {e}")
+    return []
+
+
 def fetch_news_with_sentiment(symbol: str, limit: int = 5) -> list[dict]:
     """
     Fetch recent news headlines for a symbol via yfinance and score each

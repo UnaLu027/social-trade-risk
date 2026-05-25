@@ -43,8 +43,10 @@ def _auto_seed_ticker(db: Session, symbol: str) -> Ticker:
     if needs_fetch:
         try:
             inserted = yf_svc.fetch_and_store_prices(db, symbol, period="5d", interval="1h")
+            print(f"[market_pulse] fetch_and_store_prices(5d/1h) for {symbol}: +{inserted} rows")
             if inserted == 0:
                 inserted = yf_svc.fetch_and_store_prices(db, symbol, period="1mo", interval="1d")
+                print(f"[market_pulse] fetch_and_store_prices(1mo/1d) for {symbol}: +{inserted} rows")
         except Exception as e:
             print(f"[market_pulse] yfinance fetch error for {symbol}: {e}")
 
@@ -84,15 +86,40 @@ def list_watchlist_tickers(db: Session = Depends(get_db)):
 def get_market_pulse(ticker_symbol: str, db: Session = Depends(get_db)):
     ticker = _auto_seed_ticker(db, ticker_symbol)
     hype = get_latest_hype(db, ticker.id)
+
+    # ── Price: DB first, live yfinance as fallback ──────────────────────────
     latest_price = yf_svc.get_latest_price(db, ticker.id)
-    # Extend to 5-day history if last 24h has no data (e.g. weekend / market closed)
+    if not latest_price or latest_price["close"] == 0.0:
+        print(f"[market_pulse] DB price empty for {ticker.symbol} — fetching live")
+        latest_price = yf_svc.get_live_price(ticker.symbol)
+
+    # ── Price history: DB → 5-day DB → live yfinance ────────────────────────
     price_history = yf_svc.get_price_history(db, ticker.id, hours=24)
     if not price_history:
         price_history = yf_svc.get_price_history(db, ticker.id, hours=5 * 24)
+    if not price_history:
+        print(f"[market_pulse] DB history empty for {ticker.symbol} — fetching live")
+        price_history = yf_svc.get_live_history(ticker.symbol, days=5)
+
+    # ── 24h price change: DB → 5-day DB → derive from available history ─────
     price_change_24h = yf_svc.get_price_change_pct(db, ticker.id, hours=24)
     if price_change_24h == 0.0:
         price_change_24h = yf_svc.get_price_change_pct(db, ticker.id, hours=5 * 24)
+    if price_change_24h == 0.0 and len(price_history) >= 2:
+        first_close = price_history[0]["close"]
+        last_close = price_history[-1]["close"]
+        if first_close > 0:
+            price_change_24h = (last_close - first_close) / first_close
+
     volume_spike = yf_svc.get_volume_spike(db, ticker.id)
+    # If DB had < 10 rows the spike defaults to 1.0; derive from live history instead
+    if volume_spike == 1.0 and price_history:
+        vols = [p["volume"] for p in price_history if p["volume"] > 0]
+        if len(vols) >= 2:
+            avg_vol = sum(vols[:-1]) / len(vols[:-1])
+            if avg_vol > 0:
+                volume_spike = round(vols[-1] / avg_vol, 2)
+
     recent_posts = reddit_svc.get_recent_mentions(db, ticker.id, hours=24, limit=5)
     sentiment_stats = reddit_svc.get_sentiment_stats(db, ticker.id, hours=24)
 
