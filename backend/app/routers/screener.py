@@ -48,26 +48,12 @@ def _realtime_score(symbol: str, db: Session, ticker_id: int) -> dict:
     is_tw = symbol.endswith(".TW")
     base_symbol = symbol.replace(".TW", "")   # Finnhub uses bare symbol
 
-    # ── yfinance signals (DB first; live fallback if DB empty) ────────────────
+    # ── yfinance signals (DB only — no inline yfinance calls to prevent timeout) ──
+    # Background scheduler (_sync_prices) populates the DB every 5 min.
+    # If DB is empty the screener shows 0 for these fields; Finnhub signals still work.
     volume_spike  = yf_svc.get_volume_spike(db, ticker_id) or 1.0
     price_chg_24h = yf_svc.get_price_change_pct(db, ticker_id, hours=24) or 0.0
     price_chg_5d  = yf_svc.get_price_change_pct(db, ticker_id, hours=120) or 0.0
-
-    # If DB has no data, derive from live history
-    if price_chg_24h == 0.0 or volume_spike == 1.0:
-        live_hist = yf_svc.get_live_history(symbol, days=5)
-        if live_hist and len(live_hist) >= 2:
-            if price_chg_24h == 0.0:
-                f = live_hist[0]["close"]
-                l = live_hist[-1]["close"]
-                if f > 0:
-                    price_chg_24h = (l - f) / f
-            if volume_spike == 1.0:
-                vols = [p["volume"] for p in live_hist if p["volume"] > 0]
-                if len(vols) >= 2:
-                    avg_v = sum(vols[:-1]) / len(vols[:-1])
-                    if avg_v > 0:
-                        volume_spike = vols[-1] / avg_v
 
     # ── Finnhub signals (US stocks only) ─────────────────────────────────────
     news_count       = 0

@@ -103,8 +103,23 @@ def seed():
         db.commit()
         print("Watchlist seeded.")
 
-        # Fetch real price data
+        # Fetch real price data — skip if this ticker already has price rows in DB
+        # (avoids hammering yfinance on every re-deployment when data already exists)
+        from sqlalchemy import select as sa_price_select
+        from app.models import PriceSnapshot
         for symbol, _ in TICKERS:
+            ticker_row = db.execute(
+                sa_price_select(Ticker).where(Ticker.symbol == symbol)
+            ).scalar_one_or_none()
+            if ticker_row:
+                existing_price = db.execute(
+                    sa_price_select(PriceSnapshot)
+                    .where(PriceSnapshot.ticker_id == ticker_row.id)
+                    .limit(1)
+                ).scalar_one_or_none()
+                if existing_price:
+                    print(f"Price history: {symbol} already has data, skipping fetch")
+                    continue
             n = yf_svc.fetch_and_store_prices(db, symbol, period="2y", interval="1d")
             print(f"Price history: {symbol} +{n} rows")
 
