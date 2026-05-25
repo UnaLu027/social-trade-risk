@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Activity, TrendingUp, TrendingDown, Users, Zap, BarChart2, Newspaper, RefreshCw } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { getMarketPulse } from '../api/marketPulse'
+import { BASE_URL } from '../api/client'
 import { TopBar } from '../components/layout/TopBar'
 import { HypeGauge } from '../components/charts/HypeGauge'
 import { PriceChart } from '../components/charts/PriceChart'
@@ -41,8 +42,14 @@ export function MarketPulse() {
       <TopBar title="市場脈動" />
 
       {error && (
-        <div className="mx-6 mt-4 px-4 py-3 rounded-lg text-sm" style={{ background: '#450a0a', border: '1px solid #7f1d1d', color: '#ef4444' }}>
-          後端伺服器未回應。請啟動 FastAPI 並重新整理。
+        <div className="mx-6 mt-4 px-4 py-3 rounded-lg" style={{ background: '#450a0a', border: '1px solid #7f1d1d' }}>
+          <p className="text-sm font-semibold" style={{ color: '#ef4444' }}>無法連線到後端伺服器</p>
+          <p className="text-xs mt-1" style={{ color: '#fca5a5' }}>
+            API 位址：<code className="font-mono">{BASE_URL}</code>
+          </p>
+          <p className="text-xs mt-1" style={{ color: '#fca5a5' }}>
+            請確認 Railway 部署正常，或至 <a href={`${BASE_URL}/health`} target="_blank" rel="noopener noreferrer" className="underline">{BASE_URL}/health</a> 檢查後端狀態。
+          </p>
         </div>
       )}
 

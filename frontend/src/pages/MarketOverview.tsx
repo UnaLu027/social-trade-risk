@@ -5,6 +5,7 @@ import { BarChart3, LayoutDashboard, TrendingUp, RefreshCw } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { getScreener } from '../api/screener'
 import { TopBar } from '../components/layout/TopBar'
+import { BASE_URL } from '../api/client'
 
 function HypeBar({ score }: { score: number | null }) {
   if (score === null) return <span style={{ color: '#64748b' }}>—</span>
@@ -58,7 +59,7 @@ export function MarketOverview() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'all' | 'us' | 'tw'>('all')
 
-  const { data: screenerData, isLoading: screenerLoading, isFetching, refetch, dataUpdatedAt } = useQuery({
+  const { data: screenerData, isLoading: screenerLoading, isFetching, error: screenerError, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['screener'],
     queryFn: getScreener,
     refetchInterval: 5 * 60_000,   // 每 5 分鐘自動更新
@@ -89,6 +90,17 @@ export function MarketOverview() {
   return (
     <div className="flex flex-col flex-1 overflow-auto">
       <TopBar title="市場總覽" />
+
+      {screenerError && (
+        <div className="mx-6 mt-4 px-4 py-3 rounded-lg" style={{ background: '#450a0a', border: '1px solid #7f1d1d' }}>
+          <p className="text-sm font-semibold" style={{ color: '#ef4444' }}>無法連線到後端伺服器</p>
+          <p className="text-xs mt-1" style={{ color: '#fca5a5' }}>
+            API 位址：<code className="font-mono">{BASE_URL}</code>
+            &nbsp;·&nbsp;
+            <a href={`${BASE_URL}/health`} target="_blank" rel="noopener noreferrer" className="underline">檢查後端狀態</a>
+          </p>
+        </div>
+      )}
 
       <div className="p-6 flex flex-col gap-6">
         {/* Bullish Leaderboard */}
