@@ -42,6 +42,10 @@ class MarketPulseResponse(BaseModel):
     avg_sentiment: float
     top_drivers: list[str]
     ml_risk_prob: list[float]
+    # "live"        – probabilities from a fresh predict_proba() call
+    # "estimated"   – reconstructed from stored label + single prob (less reliable)
+    # "insufficient"– not enough signal data; probabilities are placeholder (1/3 each)
+    ml_data_quality: str = "estimated"
     top_posts: list[PostCard]
     price_history_24h: list[PricePoint]
     news_items: list[NewsItem] = []

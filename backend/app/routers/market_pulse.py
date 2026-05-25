@@ -12,6 +12,9 @@ from app.services import reddit_service as reddit_svc
 from app.services import finnhub_service as fh_svc
 from app.services.sentiment_service import score_text
 from app.services.hype_calculator import get_latest_hype, hype_label
+from app.services.ticker_utils import normalize_symbol
+from app.ml.feature_engineering import build_feature_row
+from app.ml import inference
 
 router = APIRouter(prefix="/api/v1/market-pulse", tags=["market-pulse"])
 
@@ -34,18 +37,6 @@ def _bg_fetch_prices(symbol: str) -> None:
     t.start()
 
 
-def _normalize_symbol(symbol: str) -> str:
-    """
-    Normalise ticker input:
-    - Uppercase everything
-    - 4-digit Taiwan stock codes (e.g. '2330') → '2330.TW'
-    """
-    s = symbol.strip().upper()
-    if s.isdigit() and len(s) == 4:
-        return f"{s}.TW"
-    return s
-
-
 def _auto_seed_ticker(db: Session, symbol: str) -> Ticker:
     """
     Ensure the ticker exists and schedule a background price refresh when stale.
@@ -53,7 +44,7 @@ def _auto_seed_ticker(db: Session, symbol: str) -> Ticker:
     the API response is always fast.  Live fallbacks (get_live_price / Finnhub)
     cover the gap until the background write completes.
     """
-    symbol = _normalize_symbol(symbol)
+    symbol = normalize_symbol(symbol)   # shared util: '2330' → '2330.TW'
     ticker = db.execute(select(Ticker).where(Ticker.symbol == symbol)).scalar_one_or_none()
 
     # If ticker is brand-new, create a placeholder row immediately (fast DB write)
@@ -180,16 +171,61 @@ def get_market_pulse(ticker_symbol: str, db: Session = Depends(get_db)):
     sentiment_stats = reddit_svc.get_sentiment_stats(db, ticker.id, hours=24)
 
     hs_val = float(hype.hype_score) if hype else 0.0
-    ml_probs = [0.5, 0.35, 0.15]
-    if hype and hype.ml_risk_label is not None:
-        label = hype.ml_risk_label
+
+    # ── ML probabilities: live inference when we have signal data ─────────────
+    # We always run inference rather than reconstructing 3-class probs from a
+    # single stored probability (which was misleading — the other two classes
+    # were set to (1-p)/2 arbitrarily).
+    mention_24h = int(sentiment_stats.get("count", 0))
+    if hype:
+        mention_24h = max(mention_24h, int(hype.mention_count_24h or 0))
+
+    has_signal = (
+        mention_24h > 0
+        or volume_spike != 1.0
+        or (price_change_24h != 0.0)
+    )
+
+    ml_probs: list[float]
+    ml_data_quality: str
+    if has_signal:
+        try:
+            br  = float(hype.bullish_ratio)  if hype else sentiment_stats.get("bullish_ratio", 0.5)
+            sa  = float(hype.avg_sentiment)  if hype else sentiment_stats.get("avg_sentiment", 0.0)
+            mc1h = max(1, mention_24h // 24)
+            feat = build_feature_row(
+                mention_count_1h=mc1h,
+                mention_count_24h=max(1, mention_24h),
+                mention_growth_ratio=max(1.0, mention_24h / 10.0),
+                bullish_ratio=br,
+                avg_sentiment=sa,
+                influencer_score=min(float(sentiment_stats.get("influencer_score", 0)) / 50.0, 1.0),
+                price_change_pct_1h=price_change_24h / 24,
+                price_change_pct_24h=price_change_24h,
+                volume_spike_ratio=volume_spike,
+                short_interest_ratio=0.1,
+                option_volume_spike=min(volume_spike * 0.4, 5.0),
+            )
+            risk_result = inference.predict_risk(feat)
+            ml_probs = [round(p, 4) for p in risk_result["probabilities"]]
+            ml_data_quality = "live"
+        except Exception:
+            ml_probs = [1/3, 1/3, 1/3]
+            ml_data_quality = "insufficient"
+    elif hype and hype.ml_risk_label is not None:
+        # Stored label + single prob — mark as estimated so UI can caveat it
+        lbl  = int(hype.ml_risk_label)
         prob = float(hype.ml_risk_prob or 0.5)
         ml_probs = [0.0, 0.0, 0.0]
-        ml_probs[label] = prob
-        remaining = (1 - prob) / 2
+        ml_probs[lbl] = prob
+        rem = (1 - prob) / 2
         for i in range(3):
-            if i != label:
-                ml_probs[i] = remaining
+            if i != lbl:
+                ml_probs[i] = rem
+        ml_data_quality = "estimated"
+    else:
+        ml_probs = [1/3, 1/3, 1/3]
+        ml_data_quality = "insufficient"
 
     top_posts = [
         PostCard(
@@ -263,6 +299,7 @@ def get_market_pulse(ticker_symbol: str, db: Session = Depends(get_db)):
         avg_sentiment=float(hype.avg_sentiment) if hype else sentiment_stats["avg_sentiment"],
         top_drivers=hype.top_drivers if hype else ["No data"],
         ml_risk_prob=ml_probs,
+        ml_data_quality=ml_data_quality,
         top_posts=top_posts,
         price_history_24h=[
             {"ts": p["ts"], "close": p["close"], "volume": p["volume"]}

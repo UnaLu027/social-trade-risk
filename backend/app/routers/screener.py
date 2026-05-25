@@ -37,6 +37,8 @@ class ScreenerItem(BaseModel):
     ml_risk_text: Optional[str]
     mention_count_24h: int = 0
     currency: str = "USD"
+    # "ok" / "partial" / "insufficient" — helps UI decide whether to flag low-confidence scores
+    data_quality: str = "unknown"
 
 
 def _realtime_score(symbol: str, db: Session, ticker_id: int) -> dict:
@@ -92,6 +94,16 @@ def _realtime_score(symbol: str, db: Session, ticker_id: int) -> dict:
 
     hype_score = round(vol_pts + price_pts + news_pts + social_pts + sent_pts, 1)
 
+    # Data quality: flag when hype score is driven only by default / fallback values
+    has_price_signal  = (volume_spike != 1.0 or abs(price_chg_24h) > 0.001)
+    has_social_signal = social_mentions > 0
+    if has_price_signal and has_social_signal:
+        data_quality = "ok"
+    elif has_price_signal or has_social_signal:
+        data_quality = "partial"
+    else:
+        data_quality = "insufficient"
+
     # ── ML risk label ─────────────────────────────────────────────────────────
     mention_24h = int(social_mentions / 7) if social_mentions > 0 else 0
     try:
@@ -120,6 +132,7 @@ def _realtime_score(symbol: str, db: Session, ticker_id: int) -> dict:
         "price_change_pct": round(price_chg_24h * 100, 2),
         "mention_count_24h": mention_24h,
         "ml_risk_label": ml_risk_label,
+        "data_quality": data_quality,
     }
 
 
@@ -137,10 +150,18 @@ def get_screener(db: Session = Depends(get_db)):
 
     items: list[ScreenerItem] = []
     for ticker in tickers:
-        latest_price = yf_svc.get_latest_price(db, ticker.id)
-        if not latest_price or latest_price["close"] == 0.0:
+        is_tw = ticker.symbol.endswith(".TW")
+        currency = "TWD" if is_tw else "USD"
+
+        # Price: TWSE for Taiwan stocks, DB then yfinance live for US stocks
+        if is_tw:
+            latest_price = yf_svc.get_twse_price(ticker.symbol)
+            if not latest_price:
+                latest_price = yf_svc.get_latest_price(db, ticker.id)
+        else:
+            latest_price = yf_svc.get_latest_price(db, ticker.id)
+        if not latest_price or (latest_price.get("close") or 0) == 0.0:
             latest_price = yf_svc.get_live_price(ticker.symbol)
-        currency = "TWD" if ticker.symbol.endswith(".TW") else "USD"
 
         try:
             rt = _realtime_score(ticker.symbol, db, ticker.id)
@@ -154,6 +175,7 @@ def get_screener(db: Session = Depends(get_db)):
                 "price_change_pct": round((yf_svc.get_price_change_pct(db, ticker.id, hours=24) or 0) * 100, 2),
                 "mention_count_24h": int(hype.mention_count_24h) if hype else 0,
                 "ml_risk_label": int(hype.ml_risk_label) if hype and hype.ml_risk_label is not None else None,
+                "data_quality": "insufficient",
             }
 
         ml_label = rt.get("ml_risk_label")
@@ -171,6 +193,7 @@ def get_screener(db: Session = Depends(get_db)):
             ml_risk_text=_ML_RISK_TEXT.get(ml_label) if ml_label is not None else None,
             mention_count_24h=rt.get("mention_count_24h", 0),
             currency=currency,
+            data_quality=rt.get("data_quality", "unknown"),
         ))
 
     # Sort by hype_score descending, nulls last

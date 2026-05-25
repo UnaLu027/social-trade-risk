@@ -45,6 +45,11 @@ def simulate_scenario(body: ScenarioRequest):
         option_volume_spike=body.option_activity,
     )
 
+    # Honor the manual hype_score override from the frontend slider.
+    # build_feature_row() auto-computes hype_score_raw from the other signals;
+    # the slider lets the user directly override it for "what-if" analysis.
+    features["hype_score_raw"] = float(body.hype_score)
+
     if body.trading_restriction:
         features["mention_growth_ratio"] *= 1.5
         features["hype_score_raw"] = min(features["hype_score_raw"] * 1.3, 100)

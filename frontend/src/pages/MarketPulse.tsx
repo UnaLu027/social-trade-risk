@@ -36,6 +36,9 @@ export function MarketPulse() {
   })
 
   const isPositive = (data?.price_change_pct ?? 0) >= 0
+  const isTwd = data?.ticker.endsWith('.TW') ?? activeTicker.endsWith('.TW')
+  const currency = isTwd ? 'TWD' : 'USD'
+  const fmtPrice = (p: number) => isTwd ? `NT$${p.toFixed(0)}` : `$${p.toFixed(2)}`
 
   return (
     <div className="flex flex-col flex-1 overflow-auto">
@@ -92,7 +95,7 @@ export function MarketPulse() {
             <>
               <StatCard
                 label="股價"
-                value={data?.price != null ? `$${data.price.toFixed(2)}` : '—'}
+                value={data?.price != null ? fmtPrice(data.price) : '—'}
                 subValue={data?.price_change_pct != null
                   ? `${data.price_change_pct >= 0 ? '+' : ''}${data.price_change_pct.toFixed(2)}% 24小時`
                   : undefined}
@@ -142,7 +145,7 @@ export function MarketPulse() {
                 </span>
               </div>
               {data ? (
-                <PriceChart data={data.price_history_24h} positive={isPositive} />
+                <PriceChart data={data.price_history_24h} positive={isPositive} currency={currency} />
               ) : (
                 <div className="h-40 animate-pulse rounded" style={{ background: '#131627' }} />
               )}
@@ -276,9 +279,24 @@ export function MarketPulse() {
 
             {/* ML probability */}
             <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
-              <span className="text-xs font-semibold uppercase tracking-wider block mb-3" style={{ color: '#64748b' }}>
-                ML 風險機率
-              </span>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748b' }}>
+                  ML 風險機率
+                </span>
+                {data?.ml_data_quality && data.ml_data_quality !== 'live' && (
+                  <span
+                    className="text-xs px-1.5 py-0.5 rounded"
+                    style={{
+                      background: data.ml_data_quality === 'insufficient' ? '#1a0a00' : '#1a1200',
+                      color: data.ml_data_quality === 'insufficient' ? '#9a6700' : '#a16207',
+                      border: `1px solid ${data.ml_data_quality === 'insufficient' ? '#92400e44' : '#a16207'}`,
+                    }}
+                    title="信號資料不足，使用歷史記錄估算"
+                  >
+                    {data.ml_data_quality === 'insufficient' ? '資料不足' : '估算值'}
+                  </span>
+                )}
+              </div>
               {data ? (
                 <div className="flex flex-col gap-2">
                   {[

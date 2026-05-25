@@ -10,10 +10,14 @@ function formatTime(ts: string) {
 interface PriceChartProps {
   data: PricePoint[]
   positive?: boolean
+  currency?: string
 }
 
-export function PriceChart({ data, positive = true }: PriceChartProps) {
+export function PriceChart({ data, positive = true, currency = 'USD' }: PriceChartProps) {
   const color = positive ? '#10b981' : '#ef4444'
+  const isTwd = currency === 'TWD'
+  const fmtPrice = (v: number) => isTwd ? `NT$${v.toFixed(0)}` : `$${v.toFixed(2)}`
+  const fmtAxis  = (v: number) => isTwd ? `NT$${v.toFixed(0)}` : `$${v.toFixed(0)}`
 
   return (
     <ResponsiveContainer width="100%" height={160}>
@@ -38,14 +42,14 @@ export function PriceChart({ data, positive = true }: PriceChartProps) {
           tick={{ fill: '#64748b', fontSize: 10 }}
           tickLine={false}
           axisLine={false}
-          width={55}
-          tickFormatter={(v: number) => `$${v.toFixed(0)}`}
+          width={isTwd ? 68 : 55}
+          tickFormatter={fmtAxis}
         />
         <Tooltip
           contentStyle={{ background: '#1a1d27', border: '1px solid #2d3148', borderRadius: 6 }}
           labelStyle={{ color: '#94a3b8', fontSize: 11 }}
           itemStyle={{ color: color, fontSize: 12 }}
-          formatter={(v) => [`$${Number(v).toFixed(2)}`, 'Price']}
+          formatter={(v) => [fmtPrice(Number(v)), '股價']}
           labelFormatter={(ts) => formatTime(String(ts))}
         />
         <Area

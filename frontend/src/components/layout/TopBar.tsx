@@ -3,19 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../../store/useAppStore'
 import { Bell, Search, RefreshCw } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
+import { normalizeTicker } from '../../utils/ticker'
 
 const TICKERS = ['GME', 'AMC', 'TSLA', '2330.TW']
-
-/**
- * Normalise a raw ticker input:
- * - Uppercases everything
- * - 4-digit Taiwan stock codes (e.g. "2330") auto-append ".TW"
- */
-function normalizeTicker(input: string): string {
-  const value = input.trim().toUpperCase()
-  if (/^\d{4}$/.test(value)) return `${value}.TW`
-  return value
-}
 
 export function TopBar({ title }: { title: string }) {
   const { activeTicker, setActiveTicker } = useAppStore()

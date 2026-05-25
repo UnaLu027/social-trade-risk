@@ -22,7 +22,7 @@ function HypeBar({ score }: { score: number | null }) {
   )
 }
 
-function MlRiskBadge({ label }: { label: number | null; text?: string }) {
+function MlRiskBadge({ label, dataQuality }: { label: number | null; text?: string; dataQuality?: string }) {
   if (label === null) return <span style={{ color: '#64748b' }}>—</span>
   const configs = [
     { text: '低', color: '#10b981', bg: '#052e16' },
@@ -31,12 +31,23 @@ function MlRiskBadge({ label }: { label: number | null; text?: string }) {
   ]
   const cfg = configs[label] ?? configs[0]
   return (
-    <span
-      className="text-xs font-semibold px-2 py-0.5 rounded-full"
-      style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.color}33` }}
-    >
-      {cfg.text}
-    </span>
+    <div className="flex items-center gap-1">
+      <span
+        className="text-xs font-semibold px-2 py-0.5 rounded-full"
+        style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.color}33` }}
+      >
+        {cfg.text}
+      </span>
+      {dataQuality === 'insufficient' && (
+        <span
+          className="text-xs px-1 py-0.5 rounded"
+          style={{ background: '#1a0a00', color: '#6b7280', border: '1px solid #374151', fontSize: 9 }}
+          title="信號資料不足"
+        >
+          ?
+        </span>
+      )}
+    </div>
   )
 }
 
@@ -92,7 +103,7 @@ export function MarketScreener() {
             <span className="text-sm font-semibold text-white">熱門偵測</span>
           </div>
           <div className="text-xs mb-3" style={{ color: '#64748b' }}>
-            自動偵測 Reddit 熱門股票
+            依成交量、價格波動與社群熱度偵測異動股票
           </div>
           <div className="flex flex-wrap gap-2">
             {trendingLoading
@@ -184,7 +195,7 @@ export function MarketScreener() {
 
                           {/* ML risk */}
                           <td className="px-4 py-3">
-                            <MlRiskBadge label={item.ml_risk_label} text={item.ml_risk_text} />
+                            <MlRiskBadge label={item.ml_risk_label} text={item.ml_risk_text} dataQuality={item.data_quality} />
                           </td>
 
                           {/* Price + change */}

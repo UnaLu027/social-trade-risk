@@ -37,6 +37,8 @@ export interface MarketPulseResponse {
   avg_sentiment: number
   top_drivers: string[]
   ml_risk_prob: number[]
+  // "live" | "estimated" | "insufficient"
+  ml_data_quality?: string
   top_posts: PostCard[]
   price_history_24h: PricePoint[]
   news_items: NewsItem[]
@@ -55,6 +57,8 @@ export interface ScreenerItem {
   ml_risk_text: string
   mention_count_24h: number
   currency: string
+  // "ok" | "partial" | "insufficient" | "unknown"
+  data_quality?: string
 }
 
 export interface TrendingTicker {

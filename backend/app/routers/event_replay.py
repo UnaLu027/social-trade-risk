@@ -5,6 +5,7 @@ from sqlalchemy import select
 from app.database import get_db
 from app.models import Ticker, PriceSnapshot, SocialMention, HypeScore
 from app.schemas.event_replay import EventReplayResponse, TimelinePoint, EventMarker
+from app.services.ticker_utils import normalize_symbol
 
 router = APIRouter(prefix="/api/v1/event-replay", tags=["event-replay"])
 
@@ -42,7 +43,7 @@ _GME_EVENTS = [
 
 
 def _build_explanation(ticker_symbol: str, timeline: list[TimelinePoint],
-                       start: datetime, end: datetime) -> str:
+                       start: datetime, end: datetime, is_gme: bool = False) -> str:
     if not timeline:
         return "No data available for the selected period."
 
@@ -61,7 +62,7 @@ def _build_explanation(ticker_symbol: str, timeline: list[TimelinePoint],
     else:
         level = "low"
 
-    return _EXPLANATIONS[level].format(
+    body = _EXPLANATIONS[level].format(
         ticker=ticker_symbol,
         start=start.strftime("%b %d"),
         end=end.strftime("%b %d"),
@@ -71,6 +72,15 @@ def _build_explanation(ticker_symbol: str, timeline: list[TimelinePoint],
         hours_before=48,
     )
 
+    if not is_gme:
+        disclaimer = (
+            f"[注意] 詳細歷史事件標記目前僅支援 GME（2021 年軋空事件）。"
+            f"{ticker_symbol} 顯示的為一般時間序列分析，不含事件驅動敘述。\n\n"
+        )
+        return disclaimer + body
+
+    return body
+
 
 @router.get("/{ticker_symbol}", response_model=EventReplayResponse)
 def get_event_replay(
@@ -79,7 +89,8 @@ def get_event_replay(
     end_date: str = Query(default=None, description="ISO date YYYY-MM-DD"),
     db: Session = Depends(get_db),
 ):
-    ticker = db.execute(select(Ticker).where(Ticker.symbol == ticker_symbol.upper())).scalar_one_or_none()
+    ticker_symbol = normalize_symbol(ticker_symbol)
+    ticker = db.execute(select(Ticker).where(Ticker.symbol == ticker_symbol)).scalar_one_or_none()
     if not ticker:
         raise HTTPException(status_code=404, detail=f"Ticker {ticker_symbol} not found")
 
@@ -136,8 +147,10 @@ def get_event_replay(
             events=[{"label": e["label"], "type": e["type"]} for e in events_on_day],
         ))
 
+    is_gme = ticker_symbol == "GME"
+
     event_markers = []
-    if ticker_symbol.upper() == "GME":
+    if is_gme:
         for e in _GME_EVENTS:
             event_dt = datetime.strptime(e["date"], "%Y-%m-%d")
             if start <= event_dt <= end:
@@ -147,7 +160,7 @@ def get_event_replay(
                     type=e["type"],
                 ))
 
-    ai_explanation = _build_explanation(ticker_symbol.upper(), timeline, start, end)
+    ai_explanation = _build_explanation(ticker_symbol, timeline, start, end, is_gme=is_gme)
 
     return EventReplayResponse(
         ticker=ticker.symbol,
