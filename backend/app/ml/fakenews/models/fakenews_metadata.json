@@ -1,0 +1,40 @@
+{
+  "accuracy": 0.9967,
+  "f1_weighted": 0.9967,
+  "trained_at": "2026-05-25T03:06:15.478862+00:00",
+  "n_train": 4800,
+  "n_test": 1200,
+  "feature_names": [
+    "word_count",
+    "uppercase_ratio",
+    "exclamation_count",
+    "question_count",
+    "sentiment_score",
+    "sentiment_extremity",
+    "avg_word_length",
+    "unique_word_ratio",
+    "stock_mention_count",
+    "url_count",
+    "quote_count",
+    "source_credibility"
+  ],
+  "label_map": {
+    "0": "real",
+    "1": "fake"
+  },
+  "model_type": "GradientBoostingClassifier",
+  "feature_importances": {
+    "word_count": 5.759260712648995e-05,
+    "uppercase_ratio": 0.022417596302419816,
+    "exclamation_count": 0.9243688419812445,
+    "question_count": 5.43859182287014e-18,
+    "sentiment_score": -1.4155962858573755e-17,
+    "sentiment_extremity": 0.05028680658208435,
+    "avg_word_length": 0.00016849716933757156,
+    "unique_word_ratio": 0.0005688857476374641,
+    "stock_mention_count": 6.41637662646764e-19,
+    "url_count": 0.001616161616162412,
+    "quote_count": 0.0002515214332845647,
+    "source_credibility": 0.00026409656070288084
+  }
+}

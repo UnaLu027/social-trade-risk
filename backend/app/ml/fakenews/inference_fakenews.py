@@ -44,18 +44,34 @@ def _get_vader() -> SentimentIntensityAnalyzer:
     return _vader
 
 
-def load_fakenews_model() -> bool:
-    """Load the fake news model at startup. Auto-trains if not found."""
-    global _model, _metadata
-    if not os.path.exists(MODEL_PATH):
-        print(f"[fakenews] Model not found at {MODEL_PATH}. Training now...")
+def _train_in_background():
+    """Train the fake news model in a daemon thread (non-blocking startup)."""
+    import threading
+
+    def _do_train():
+        global _model, _metadata
         try:
             from app.ml.fakenews.train_fakenews import train
             _model, _metadata = train()
-            return True
+            print("[fakenews] Background training complete.")
         except Exception as e:
-            print(f"[fakenews] Auto-training failed: {e}")
-            return False
+            print(f"[fakenews] Background training failed: {e}")
+
+    t = threading.Thread(target=_do_train, daemon=True)
+    t.start()
+
+
+def load_fakenews_model() -> bool:
+    """
+    Load the fake news model at startup.
+    If the .pkl is missing, trains in a BACKGROUND THREAD so uvicorn
+    can respond to healthcheck requests immediately.
+    """
+    global _model, _metadata
+    if not os.path.exists(MODEL_PATH):
+        print(f"[fakenews] Model not found — training in background (won't block startup).")
+        _train_in_background()
+        return True   # Startup continues; predict_fakenews() returns 'uncertain' until ready
 
     _model = joblib.load(MODEL_PATH)
     if os.path.exists(METADATA_PATH):
