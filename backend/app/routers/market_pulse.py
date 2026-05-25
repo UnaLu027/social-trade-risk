@@ -34,6 +34,18 @@ def _bg_fetch_prices(symbol: str) -> None:
     t.start()
 
 
+def _normalize_symbol(symbol: str) -> str:
+    """
+    Normalise ticker input:
+    - Uppercase everything
+    - 4-digit Taiwan stock codes (e.g. '2330') → '2330.TW'
+    """
+    s = symbol.strip().upper()
+    if s.isdigit() and len(s) == 4:
+        return f"{s}.TW"
+    return s
+
+
 def _auto_seed_ticker(db: Session, symbol: str) -> Ticker:
     """
     Ensure the ticker exists and schedule a background price refresh when stale.
@@ -41,7 +53,7 @@ def _auto_seed_ticker(db: Session, symbol: str) -> Ticker:
     the API response is always fast.  Live fallbacks (get_live_price / Finnhub)
     cover the gap until the background write completes.
     """
-    symbol = symbol.upper()
+    symbol = _normalize_symbol(symbol)
     ticker = db.execute(select(Ticker).where(Ticker.symbol == symbol)).scalar_one_or_none()
 
     # If ticker is brand-new, create a placeholder row immediately (fast DB write)

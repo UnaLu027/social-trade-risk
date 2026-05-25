@@ -4,7 +4,18 @@ import { useAppStore } from '../../store/useAppStore'
 import { Bell, Search, RefreshCw } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 
-const TICKERS = ['GME', 'AMC', 'BBBY']
+const TICKERS = ['GME', 'AMC', 'TSLA', '2330.TW']
+
+/**
+ * Normalise a raw ticker input:
+ * - Uppercases everything
+ * - 4-digit Taiwan stock codes (e.g. "2330") auto-append ".TW"
+ */
+function normalizeTicker(input: string): string {
+  const value = input.trim().toUpperCase()
+  if (/^\d{4}$/.test(value)) return `${value}.TW`
+  return value
+}
 
 export function TopBar({ title }: { title: string }) {
   const { activeTicker, setActiveTicker } = useAppStore()
@@ -14,7 +25,7 @@ export function TopBar({ title }: { title: string }) {
 
   function handleSearch(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter' && searchValue.trim()) {
-      setActiveTicker(searchValue.trim())
+      setActiveTicker(normalizeTicker(searchValue))
       setSearchValue('')
       navigate('/market-pulse')
     }
@@ -56,8 +67,8 @@ export function TopBar({ title }: { title: string }) {
             value={searchValue}
             onChange={e => setSearchValue(e.target.value.toUpperCase())}
             onKeyDown={handleSearch}
-            placeholder="搜尋代號…"
-            maxLength={6}
+            placeholder="代號 (如 GME、2330)…"
+            maxLength={10}
             className="bg-transparent text-xs outline-none w-24"
             style={{ color: '#f1f5f9' }}
           />

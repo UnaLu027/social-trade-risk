@@ -2,7 +2,7 @@
 builder = "NIXPACKS"
 
 [deploy]
-preDeployCommand = "alembic upgrade head && python scripts/seed_data.py"
+preDeployCommand = "alembic upgrade head"
 startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/health"
 healthcheckTimeout = 120
