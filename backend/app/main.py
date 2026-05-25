@@ -10,7 +10,7 @@ from app.database import engine, SessionLocal
 from app.models import Base, Ticker, Watchlist
 from app.ml import inference
 from app.ml.fakenews import inference_fakenews
-from app.routers import market_pulse, event_replay, alerts, scenario, screener, fake_news
+from app.routers import market_pulse, event_replay, alerts, scenario, screener, fake_news, model_insights
 
 settings = get_settings()
 _scheduler = BackgroundScheduler()
@@ -133,6 +133,7 @@ app.include_router(alerts.router)
 app.include_router(scenario.router)
 app.include_router(screener.router)
 app.include_router(fake_news.router)
+app.include_router(model_insights.router)
 
 
 @app.get("/health")
@@ -141,9 +142,12 @@ def health():
     meta = get_metadata()
     return {
         "status": "ok",
-        "model_accuracy": meta.get("accuracy"),
-        "model_f1": meta.get("f1_weighted"),
-        "trained_at": meta.get("trained_at"),
+        # best_model fields
+        "model_name":    meta.get("best_model_name", "StackingClassifier"),
+        "model_accuracy":meta.get("test_accuracy", meta.get("accuracy")),
+        "model_f1":      meta.get("test_weighted_f1", meta.get("f1_weighted")),
+        "macro_f1":      meta.get("test_macro_f1"),
+        "trained_at":    meta.get("trained_at"),
     }
 
 

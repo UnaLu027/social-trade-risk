@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Activity, Clock, Bell, FlaskConical, TrendingUp, BarChart3, ShieldAlert, LayoutDashboard } from 'lucide-react'
+import { Activity, Clock, Bell, FlaskConical, TrendingUp, BarChart3, ShieldAlert, LayoutDashboard, Brain } from 'lucide-react'
 
 const navItems = [
   { to: '/market-pulse', icon: Activity, label: '市場脈動' },
@@ -8,6 +8,7 @@ const navItems = [
   { to: '/alerts', icon: Bell, label: '警報中心' },
   { to: '/scenario', icon: FlaskConical, label: '情境模擬' },
   { to: '/fake-news', icon: ShieldAlert, label: '假新聞偵測' },
+  { to: '/model-insights', icon: Brain, label: '模型洞察' },
 ]
 
 export function Sidebar() {
@@ -57,10 +58,10 @@ export function Sidebar() {
       {/* Footer */}
       <div className="px-3 pt-4" style={{ borderTop: '1px solid #1f2235' }}>
         <div className="text-[10px]" style={{ color: '#3d4163' }}>
-          採用疊加集成分類器
+          RandomForest · 5 模型比較優選
         </div>
         <div className="text-[10px] mt-0.5" style={{ color: '#3d4163' }}>
-          F1 加權分數：0.9975
+          高風險召回率：96.5%
         </div>
       </div>
     </aside>

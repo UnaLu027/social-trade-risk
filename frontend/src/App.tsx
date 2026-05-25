@@ -7,6 +7,7 @@ import { ScenarioLab } from './pages/ScenarioLab'
 import { MarketScreener } from './pages/MarketScreener'
 import { MarketOverview } from './pages/MarketOverview'
 import { FakeNewsDetector } from './pages/FakeNewsDetector'
+import { ModelInsights } from './pages/ModelInsights'
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
             <Route path="/alerts" element={<AlertCenter />} />
             <Route path="/scenario" element={<ScenarioLab />} />
             <Route path="/fake-news" element={<FakeNewsDetector />} />
+            <Route path="/model-insights" element={<ModelInsights />} />
           </Routes>
         </main>
       </div>

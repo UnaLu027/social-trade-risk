@@ -57,8 +57,9 @@ from app.ml.generate_dataset import OUTPUT_PATH, generate
 # ── Paths ────────────────────────────────────────────────────────────────────
 MODELS_DIR      = os.path.join(os.path.dirname(__file__), "models")
 EXPERIMENTS_DIR = os.path.join(os.path.dirname(__file__), "experiments")
-BEST_MODEL_PATH = os.path.join(MODELS_DIR, "best_model.pkl")
-BEST_META_PATH  = os.path.join(MODELS_DIR, "best_model_metadata.json")
+BEST_MODEL_PATH      = os.path.join(MODELS_DIR, "best_model.pkl")
+BEST_META_PATH       = os.path.join(MODELS_DIR, "best_model_metadata.json")
+MODEL_COMPARISON_PATH = os.path.join(MODELS_DIR, "model_comparison.json")
 
 # ── Model catalogue with RandomizedSearch param grids ───────────────────────
 # cv=3, n_iter=20 keeps wall-clock time under ~5 min on a laptop CPU.
@@ -373,7 +374,33 @@ def run_experiment(
         json.dump(metadata, f, indent=2)
     print(f"  Saved best_model_metadata.json → {BEST_META_PATH}")
 
-    # ── 10. Full experiment log ────────────────────────────────────────────────
+    # ── 10. Model comparison table (committed artifact for the API) ─────────────
+    comparison = {
+        "experiment_id":   metadata["experiment_id"],
+        "feature_set":     feature_set,
+        "split_method":    split_method,
+        "best_model_name": best_candidate_name,
+        "selection_metric": "val_macro_f1",
+        "trained_at":      metadata["trained_at"],
+        "candidates": [
+            {
+                "name":                r["model_name"],
+                "val_accuracy":        r["val_metrics"]["accuracy"],
+                "val_macro_f1":        r["val_metrics"]["macro_f1"],
+                "val_weighted_f1":     r["val_metrics"]["weighted_f1"],
+                "val_high_risk_recall":r["val_metrics"]["high_risk_recall"],
+                "cv_best_score":       r["cv_best_score"],
+                "val_per_class":       r["val_metrics"]["per_class"],
+                "best_params":         r["best_params"],
+            }
+            for r in results
+        ],
+    }
+    with open(MODEL_COMPARISON_PATH, "w") as f:
+        json.dump(comparison, f, indent=2)
+    print(f"  Model comparison → {MODEL_COMPARISON_PATH}")
+
+    # ── 11. Full experiment log (gitignored, local only) ─────────────────────
     exp_log = {
         **metadata,
         "note": note,
