@@ -106,7 +106,8 @@ def get_quote(symbol: str) -> dict | None:
 
 def get_candles(symbol: str, days: int = 5) -> list[dict]:
     """
-    OHLCV candlestick data from Finnhub (1-hour resolution).
+    OHLCV candlestick data from Finnhub.
+    Tries 1-hour resolution first, falls back to daily if no_data.
     Returns list of {ts, close, volume} dicts, empty on failure.
     US symbols only — Taiwan (.TW) not supported on free tier.
     """
@@ -116,35 +117,39 @@ def get_candles(symbol: str, days: int = 5) -> list[dict]:
         now = datetime.now(timezone.utc)
         from_ts = int((now - timedelta(days=days)).timestamp())
         to_ts = int(now.timestamp())
-        resp = httpx.get(
-            f"{BASE_URL}/stock/candle",
-            params={
-                "symbol": symbol,
-                "resolution": "60",   # 1-hour bars
-                "from": from_ts,
-                "to": to_ts,
-                "token": _key(),
-            },
-            timeout=10,
-        )
-        if resp.status_code != 200:
-            return []
-        d = resp.json()
-        if d.get("s") != "ok":
-            return []
-        closes = d.get("c", [])
-        times = d.get("t", [])
-        volumes = d.get("v", [])
-        result = []
-        for i, (ts_unix, c) in enumerate(zip(times, closes)):
-            if c is None or float(c) <= 0:
+
+        for resolution in ["60", "D"]:  # try hourly first, then daily
+            resp = httpx.get(
+                f"{BASE_URL}/stock/candle",
+                params={
+                    "symbol": symbol,
+                    "resolution": resolution,
+                    "from": from_ts,
+                    "to": to_ts,
+                    "token": _key(),
+                },
+                timeout=10,
+            )
+            if resp.status_code != 200:
                 continue
-            result.append({
-                "ts": datetime.fromtimestamp(ts_unix, tz=timezone.utc).replace(tzinfo=None),
-                "close": float(c),
-                "volume": int(volumes[i]) if i < len(volumes) else 0,
-            })
-        return result
+            d = resp.json()
+            if d.get("s") != "ok":
+                continue
+            closes = d.get("c", [])
+            times = d.get("t", [])
+            volumes = d.get("v", [])
+            result = []
+            for i, (ts_unix, c) in enumerate(zip(times, closes)):
+                if c is None or float(c) <= 0:
+                    continue
+                result.append({
+                    "ts": datetime.fromtimestamp(ts_unix, tz=timezone.utc).replace(tzinfo=None),
+                    "close": float(c),
+                    "volume": int(volumes[i]) if i < len(volumes) else 0,
+                })
+            if result:
+                return result
+        return []
     except Exception as e:
         print(f"[finnhub] Candles error for {symbol}: {e}")
         return []

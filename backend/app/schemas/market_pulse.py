@@ -30,10 +30,10 @@ class NewsItem(BaseModel):
 
 class MarketPulseResponse(BaseModel):
     ticker: str
-    price: float
-    price_change_pct: float
-    volume: int
-    volume_spike_ratio: float
+    price: Optional[float] = None
+    price_change_pct: Optional[float] = None
+    volume: Optional[int] = None
+    volume_spike_ratio: Optional[float] = None
     hype_score: float
     hype_label: str
     mention_count_1h: int

@@ -25,10 +25,10 @@ export interface NewsItem {
 
 export interface MarketPulseResponse {
   ticker: string
-  price: number
-  price_change_pct: number
-  volume: number
-  volume_spike_ratio: number
+  price: number | null
+  price_change_pct: number | null
+  volume: number | null
+  volume_spike_ratio: number | null
   hype_score: number
   hype_label: string
   mention_count_1h: number
@@ -40,7 +40,7 @@ export interface MarketPulseResponse {
   top_posts: PostCard[]
   price_history_24h: PricePoint[]
   news_items: NewsItem[]
-  updated_at?: string | null   // ISO timestamp of the most recent price datapoint
+  updated_at?: string | null
 }
 
 export interface ScreenerItem {

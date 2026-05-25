@@ -97,46 +97,68 @@ def get_market_pulse(ticker_symbol: str, db: Session = Depends(get_db)):
     ticker = _auto_seed_ticker(db, ticker_symbol)
     hype = get_latest_hype(db, ticker.id)
 
-    # ── Price: DB → live yfinance → Finnhub quote ───────────────────────────
-    latest_price = yf_svc.get_latest_price(db, ticker.id)
-    if not latest_price or latest_price["close"] == 0.0:
-        print(f"[market_pulse] DB price empty for {ticker.symbol} — trying live yfinance")
-        latest_price = yf_svc.get_live_price(ticker.symbol)
-    if not latest_price or latest_price["close"] == 0.0:
-        print(f"[market_pulse] yfinance live failed for {ticker.symbol} — trying Finnhub quote")
-        fh_q = fh_svc.get_quote(ticker.symbol)
-        if fh_q:
-            latest_price = {"close": fh_q["price"], "volume": fh_q.get("volume", 0), "ts": datetime.utcnow()}
+    is_tw = ticker.symbol.endswith(".TW")
 
-    # ── Price history: DB (24h) → DB (5-day) → yfinance live → Finnhub candles
+    # ── Price: fastest reliable source first ──────────────────────────────────
+    latest_price = None
+
+    if not is_tw:
+        # US stocks: Finnhub quote is fast and reliable
+        fh_q = fh_svc.get_quote(ticker.symbol)
+        if fh_q and fh_q.get("price", 0) > 0:
+            latest_price = {
+                "close": fh_q["price"],
+                "volume": 0,
+                "ts": datetime.utcnow(),
+                "_fh_change_pct": fh_q.get("change_pct", 0.0),
+            }
+    else:
+        # Taiwan stocks: TWSE public API (free, no key needed)
+        latest_price = yf_svc.get_twse_price(ticker.symbol)
+
+    # Fall back to DB snapshot
+    if not latest_price or latest_price.get("close", 0) == 0.0:
+        db_price = yf_svc.get_latest_price(db, ticker.id)
+        if db_price and db_price["close"] > 0:
+            latest_price = db_price
+
+    # Last resort: yfinance live
+    if not latest_price or latest_price.get("close", 0) == 0.0:
+        live = yf_svc.get_live_price(ticker.symbol)
+        if live and live["close"] > 0:
+            latest_price = live
+
+    # ── Price history: DB → Yahoo direct → Finnhub candles ────────────────────
     price_history = yf_svc.get_price_history(db, ticker.id, hours=24)
     if not price_history:
         price_history = yf_svc.get_price_history(db, ticker.id, hours=5 * 24)
     if not price_history:
-        print(f"[market_pulse] DB history empty for {ticker.symbol} — trying live yfinance")
-        price_history = yf_svc.get_live_history(ticker.symbol, days=5)
-    if not price_history:
-        print(f"[market_pulse] yfinance history failed for {ticker.symbol} — trying Finnhub candles")
+        price_history = yf_svc.get_yahoo_chart_direct(ticker.symbol, days=5)
+    if not price_history and not is_tw:
         price_history = fh_svc.get_candles(ticker.symbol, days=5)
 
-    # ── 24h price change: DB → 5-day DB → Finnhub → derive from history ─────
-    price_change_24h = yf_svc.get_price_change_pct(db, ticker.id, hours=24)
-    if price_change_24h == 0.0:
-        price_change_24h = yf_svc.get_price_change_pct(db, ticker.id, hours=5 * 24)
-    if price_change_24h == 0.0:
-        fh_q = fh_svc.get_quote(ticker.symbol)
-        if fh_q and fh_q.get("change_pct"):
-            price_change_24h = fh_q["change_pct"] / 100
-    if price_change_24h == 0.0 and len(price_history) >= 2:
-        first_close = price_history[0]["close"]
-        last_close = price_history[-1]["close"]
-        if first_close > 0:
-            price_change_24h = (last_close - first_close) / first_close
+    # Fill volume from history if Finnhub quote gave 0
+    if latest_price and latest_price.get("volume", 0) == 0 and price_history:
+        last_vol = next((p["volume"] for p in reversed(price_history) if p.get("volume", 0) > 0), 0)
+        latest_price = {**latest_price, "volume": last_vol}
+
+    # ── 24h price change ──────────────────────────────────────────────────────
+    fh_change_pct = latest_price.get("_fh_change_pct") if latest_price else None
+    if fh_change_pct is not None:
+        price_change_24h = fh_change_pct / 100.0  # Finnhub gives % as float e.g. 2.5
+    else:
+        price_change_24h = yf_svc.get_price_change_pct(db, ticker.id, hours=24)
+        if price_change_24h == 0.0:
+            price_change_24h = yf_svc.get_price_change_pct(db, ticker.id, hours=5 * 24)
+        if price_change_24h == 0.0 and len(price_history) >= 2:
+            first_close = price_history[0]["close"]
+            last_close = price_history[-1]["close"]
+            if first_close > 0:
+                price_change_24h = (last_close - first_close) / first_close
 
     volume_spike = yf_svc.get_volume_spike(db, ticker.id)
-    # Derive from live history when DB has < 10 rows
     if volume_spike == 1.0 and price_history:
-        vols = [p["volume"] for p in price_history if p["volume"] > 0]
+        vols = [p["volume"] for p in price_history if p.get("volume", 0) > 0]
         if len(vols) >= 2:
             avg_vol = sum(vols[:-1]) / len(vols[:-1])
             if avg_vol > 0:
@@ -211,12 +233,16 @@ def get_market_pulse(ticker_symbol: str, db: Session = Depends(get_db)):
     # updated_at: timestamp of the most recent price datapoint (or now if live)
     updated_at = latest_price["ts"] if latest_price else None
 
+    # Strip internal helper key before building response
+    if latest_price and "_fh_change_pct" in latest_price:
+        latest_price = {k: v for k, v in latest_price.items() if k != "_fh_change_pct"}
+
     return MarketPulseResponse(
         ticker=ticker.symbol,
-        price=latest_price["close"] if latest_price else 0.0,
-        price_change_pct=round(price_change_24h * 100, 2),
-        volume=latest_price["volume"] if latest_price else 0,
-        volume_spike_ratio=round(volume_spike, 2),
+        price=latest_price["close"] if latest_price else None,
+        price_change_pct=round(price_change_24h * 100, 2) if price_change_24h is not None else None,
+        volume=latest_price["volume"] if latest_price else None,
+        volume_spike_ratio=round(volume_spike, 2) if volume_spike != 1.0 else None,
         hype_score=hs_val,
         hype_label=hype_label(hs_val),
         mention_count_1h=hype.mention_count_1h if hype else 0,

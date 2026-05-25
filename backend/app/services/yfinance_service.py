@@ -2,6 +2,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 import yfinance as yf
 import pandas as pd
+import httpx
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from app.models import Ticker, PriceSnapshot
@@ -179,6 +180,101 @@ def get_live_history(symbol: str, days: int = 5) -> list[dict]:
     except Exception as e:
         print(f"[yfinance] get_live_history failed for {symbol}: {e}")
     return []
+
+
+def get_twse_price(symbol: str) -> Optional[dict]:
+    """
+    Fetch latest price for Taiwan stocks via TWSE public API (no key needed).
+    symbol: e.g. '2330.TW'
+    Returns {close, volume, ts} or None.
+    """
+    try:
+        code = symbol.upper().replace(".TW", "")
+        url = (
+            f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
+            f"?ex_ch=tse_{code}.tw&json=1&delay=0"
+        )
+        resp = httpx.get(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        msg_array = data.get("msgArray", [])
+        if not msg_array:
+            return None
+        item = msg_array[0]
+        # z = last trade price, y = previous close fallback; may be "-" after hours
+        price_str = item.get("z", "-")
+        if price_str == "-" or not price_str:
+            price_str = item.get("y", "-")
+        if price_str == "-" or not price_str:
+            return None
+        close = float(price_str)
+        if close <= 0:
+            return None
+        # v = accumulated volume (in lots/thousands of shares)
+        vol_str = item.get("v", "0")
+        try:
+            volume = int(float(vol_str) * 1000)
+        except (ValueError, TypeError):
+            volume = 0
+        return {"close": close, "volume": volume, "ts": datetime.utcnow()}
+    except Exception as e:
+        print(f"[twse] get_twse_price failed for {symbol}: {e}")
+        return None
+
+
+def get_yahoo_chart_direct(symbol: str, days: int = 5) -> list[dict]:
+    """
+    Fetch OHLCV history directly from Yahoo Finance v8 chart API,
+    bypassing the yfinance library (more reliable on Railway).
+    Returns list of {ts, close, volume} dicts, empty on failure.
+    """
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+
+    def _fetch_interval(interval: str) -> list[dict]:
+        try:
+            url = (
+                f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}"
+                f"?range={days}d&interval={interval}&includePrePost=false"
+            )
+            resp = httpx.get(url, headers=headers, timeout=15)
+            if resp.status_code != 200:
+                return []
+            data = resp.json()
+            result_list = data.get("chart", {}).get("result") or []
+            if not result_list:
+                return []
+            result = result_list[0]
+            timestamps = result.get("timestamp", [])
+            quote = result.get("indicators", {}).get("quote", [{}])[0]
+            closes = quote.get("close", [])
+            volumes = quote.get("volume", [])
+            out = []
+            for i, ts_unix in enumerate(timestamps):
+                c = closes[i] if i < len(closes) else None
+                v = volumes[i] if i < len(volumes) else 0
+                if c is None or float(c) <= 0:
+                    continue
+                out.append({
+                    "ts": datetime.fromtimestamp(ts_unix, tz=timezone.utc).replace(tzinfo=None),
+                    "close": float(c),
+                    "volume": int(v) if v is not None else 0,
+                })
+            return out
+        except Exception as e:
+            print(f"[yahoo_direct] {symbol} interval={interval} failed: {e}")
+            return []
+
+    result = _fetch_interval("1h")
+    if not result:
+        result = _fetch_interval("1d")
+    return result
 
 
 def fetch_news_with_sentiment(symbol: str, limit: int = 5) -> list[dict]:

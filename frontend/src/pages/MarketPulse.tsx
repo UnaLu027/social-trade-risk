@@ -92,17 +92,19 @@ export function MarketPulse() {
             <>
               <StatCard
                 label="股價"
-                value={data ? `$${data.price.toFixed(2)}` : '—'}
-                subValue={data ? `${isPositive ? '+' : ''}${data.price_change_pct.toFixed(2)}% 24小時` : undefined}
-                trend={isPositive ? 'up' : 'down'}
-                icon={isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                accentColor={isPositive ? '#10b981' : '#ef4444'}
+                value={data?.price != null ? `$${data.price.toFixed(2)}` : '—'}
+                subValue={data?.price_change_pct != null
+                  ? `${data.price_change_pct >= 0 ? '+' : ''}${data.price_change_pct.toFixed(2)}% 24小時`
+                  : undefined}
+                trend={data?.price_change_pct != null ? (data.price_change_pct >= 0 ? 'up' : 'down') : 'neutral'}
+                icon={data?.price_change_pct != null && data.price_change_pct < 0 ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
+                accentColor={data?.price_change_pct != null && data.price_change_pct < 0 ? '#ef4444' : '#10b981'}
               />
               <StatCard
                 label="成交量"
-                value={data ? `${(data.volume / 1_000_000).toFixed(1)}M` : '—'}
-                subValue={data ? `${data.volume_spike_ratio.toFixed(1)}× 均量` : undefined}
-                trend={data && data.volume_spike_ratio > 2 ? 'up' : 'neutral'}
+                value={data?.volume != null ? `${(data.volume / 1_000_000).toFixed(1)}M` : '—'}
+                subValue={data?.volume_spike_ratio != null ? `${data.volume_spike_ratio.toFixed(1)}× 均量` : undefined}
+                trend={data?.volume_spike_ratio != null && data.volume_spike_ratio > 2 ? 'up' : 'neutral'}
                 icon={<BarChart2 size={14} />}
                 accentColor="#38bdf8"
               />
@@ -136,7 +138,7 @@ export function MarketPulse() {
                   股價走勢 — 24小時
                 </span>
                 <span className="text-xs tabular-nums" style={{ color: isPositive ? '#10b981' : '#ef4444' }}>
-                  {data ? `${isPositive ? '▲' : '▼'} ${Math.abs(data.price_change_pct).toFixed(2)}%` : ''}
+                  {data ? (data.price_change_pct != null ? `${data.price_change_pct >= 0 ? '▲' : '▼'} ${Math.abs(data.price_change_pct).toFixed(2)}%` : '—') : ''}
                 </span>
               </div>
               {data ? (
