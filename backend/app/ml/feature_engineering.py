@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+# ── Original 13 features (backward-compatible, used by hype_rf_model.pkl) ──────
 FEATURE_NAMES = [
     "mention_count_1h",
     "mention_count_24h",
@@ -15,6 +16,17 @@ FEATURE_NAMES = [
     "option_volume_spike",
     "hype_score_raw",
     "hour_of_day",
+]
+
+# ── Extended 16 features (used by experiment_train.py / best_model.pkl) ────────
+# Three derived features added:
+#   mention_accel     – 24h mention count vs extrapolated 1h rate; >1 = accelerating
+#   sentiment_volume  – sentiment × volume spike composite signal
+#   risk_composite    – mention_growth × volume_spike × (1 + short_interest)
+EXTENDED_FEATURE_NAMES = FEATURE_NAMES + [
+    "mention_accel",
+    "sentiment_volume",
+    "risk_composite",
 ]
 
 LABEL_MAP = {0: "low", 1: "medium", 2: "high"}
@@ -82,6 +94,42 @@ def build_feature_row(
         "option_volume_spike": option_volume_spike,
         "hype_score_raw": hype_score_raw,
         "hour_of_day": hour_of_day,
+    }
+
+
+def build_extended_feature_row(
+    mention_count_1h: int,
+    mention_count_24h: int,
+    mention_growth_ratio: float,
+    bullish_ratio: float,
+    avg_sentiment: float,
+    influencer_score: float,
+    price_change_pct_1h: float,
+    price_change_pct_24h: float,
+    volume_spike_ratio: float,
+    short_interest_ratio: float,
+    option_volume_spike: float,
+    hour_of_day: int = 12,
+) -> dict:
+    """Like build_feature_row but appends 3 derived features (for experiment_train.py)."""
+    base = build_feature_row(
+        mention_count_1h, mention_count_24h, mention_growth_ratio,
+        bullish_ratio, avg_sentiment, influencer_score,
+        price_change_pct_1h, price_change_pct_24h,
+        volume_spike_ratio, short_interest_ratio, option_volume_spike,
+        hour_of_day,
+    )
+    # mention_accel: >1 means mentions are accelerating beyond the hourly run-rate
+    mention_accel = mention_count_24h / max(mention_count_1h * 24, 1)
+    # sentiment_volume: bullish sentiment amplified by volume spike
+    sentiment_volume = float(np.clip(bullish_ratio, 0, 1)) * float(np.clip(volume_spike_ratio / 5.0, 0, 1))
+    # risk_composite: combined squeeze-pressure signal
+    risk_composite = mention_growth_ratio * volume_spike_ratio * (1.0 + short_interest_ratio)
+    return {
+        **base,
+        "mention_accel": round(float(np.clip(mention_accel, 0, 10)), 4),
+        "sentiment_volume": round(float(np.clip(sentiment_volume, 0, 1)), 4),
+        "risk_composite": round(float(np.clip(risk_composite, 0, 50)), 4),
     }
 
 

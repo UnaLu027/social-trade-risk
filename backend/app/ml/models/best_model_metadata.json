@@ -1,0 +1,81 @@
+{
+  "experiment_id": "20260525T183749Z",
+  "feature_set": "extended",
+  "feature_names": [
+    "mention_count_1h",
+    "mention_count_24h",
+    "mention_growth_ratio",
+    "bullish_ratio",
+    "avg_sentiment",
+    "influencer_score",
+    "price_change_pct_1h",
+    "price_change_pct_24h",
+    "volume_spike_ratio",
+    "short_interest_ratio",
+    "option_volume_spike",
+    "hype_score_raw",
+    "hour_of_day",
+    "mention_accel",
+    "sentiment_volume",
+    "risk_composite"
+  ],
+  "n_features": 16,
+  "split_method": "time-based",
+  "n_train": 5200,
+  "n_val": 1200,
+  "n_test": 1600,
+  "class_distribution": {
+    "low": 1474,
+    "medium": 4347,
+    "high": 2179
+  },
+  "best_model_name": "RandomForest",
+  "test_accuracy": 0.9244,
+  "test_macro_f1": 0.6134,
+  "test_weighted_f1": 0.9211,
+  "test_high_risk_recall": 0.9649,
+  "test_confusion_matrix": [
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      22,
+      68
+    ],
+    [
+      0,
+      53,
+      1457
+    ]
+  ],
+  "test_per_class": {
+    "low": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 0
+    },
+    "medium": {
+      "precision": 0.2933,
+      "recall": 0.2444,
+      "f1": 0.2667,
+      "support": 90
+    },
+    "high": {
+      "precision": 0.9554,
+      "recall": 0.9649,
+      "f1": 0.9601,
+      "support": 1510
+    }
+  },
+  "label_map": {
+    "0": "low",
+    "1": "medium",
+    "2": "high"
+  },
+  "leakage_warning": "[WARNING] hype_score_raw is a weighted composite of other training features AND is used as a labelling threshold (>75 -> high risk). High F1 may partly reflect rule memorisation. Re-run with --noleakage to compare.",
+  "trained_at": "2026-05-25T18:37:49.241830+00:00"
+}
