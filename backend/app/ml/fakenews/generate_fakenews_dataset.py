@@ -113,8 +113,10 @@ def _generate_real_samples(n: int) -> list[dict]:
         exclamation_count = int(RNG.integers(0, 2))          # rarely any
         question_count = int(RNG.integers(0, 4))
 
-        # Moderate, balanced sentiment
-        sentiment_score = float(RNG.uniform(-0.42, 0.42))
+        # Financial journalism can express STRONG opinions (negative earnings,
+        # market crashes, positive breakthroughs) — range must be wide.
+        # Key differentiators from fake: structure, not just magnitude.
+        sentiment_score = float(RNG.uniform(-0.82, 0.82))
         sentiment_extremity = abs(sentiment_score)
 
         avg_word_length = float(RNG.uniform(5.0, 8.5))      # formal vocabulary

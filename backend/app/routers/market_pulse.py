@@ -14,24 +14,46 @@ router = APIRouter(prefix="/api/v1/market-pulse", tags=["market-pulse"])
 
 
 def _auto_seed_ticker(db: Session, symbol: str) -> Ticker:
-    """Fetch ticker data from yfinance on first access and store it."""
+    """
+    Fetch ticker data from yfinance.
+    For NEW tickers: always fetch.
+    For EXISTING tickers: re-fetch if no price data in last 3 hours
+    (handles stale DB after deployment, weekends, etc.).
+    """
+    from datetime import datetime, timedelta
+    from app.models import PriceSnapshot
+    from sqlalchemy import select as sa_select
+
     symbol = symbol.upper()
-    ticker = db.execute(select(Ticker).where(Ticker.symbol == symbol)).scalar_one_or_none()
-    if ticker:
-        return ticker
-    # Auto-fetch price data (5 days hourly for enough data)
-    try:
-        inserted = yf_svc.fetch_and_store_prices(db, symbol, period="5d", interval="1h")
-        if inserted == 0:
-            # Try daily data as fallback
-            inserted = yf_svc.fetch_and_store_prices(db, symbol, period="1mo", interval="1d")
-    except Exception:
-        pass
-    ticker = db.execute(select(Ticker).where(Ticker.symbol == symbol)).scalar_one_or_none()
+    ticker = db.execute(sa_select(Ticker).where(Ticker.symbol == symbol)).scalar_one_or_none()
+
+    needs_fetch = ticker is None
+    if ticker and not needs_fetch:
+        # Check if we have any price data in the last 3 hours
+        cutoff = datetime.utcnow() - timedelta(hours=3)
+        recent = db.execute(
+            sa_select(PriceSnapshot)
+            .where(PriceSnapshot.ticker_id == ticker.id, PriceSnapshot.ts >= cutoff)
+            .limit(1)
+        ).scalar_one_or_none()
+        if not recent:
+            needs_fetch = True
+            print(f"[market_pulse] No recent prices for {symbol}, re-fetching...")
+
+    if needs_fetch:
+        try:
+            inserted = yf_svc.fetch_and_store_prices(db, symbol, period="5d", interval="1h")
+            if inserted == 0:
+                inserted = yf_svc.fetch_and_store_prices(db, symbol, period="1mo", interval="1d")
+        except Exception as e:
+            print(f"[market_pulse] yfinance fetch error for {symbol}: {e}")
+
+    ticker = db.execute(sa_select(Ticker).where(Ticker.symbol == symbol)).scalar_one_or_none()
     if not ticker:
         raise HTTPException(status_code=404, detail=f"Ticker '{symbol}' not found. Check the symbol and try again.")
+
     # Auto-add to watchlist
-    existing_wl = db.execute(select(Watchlist).where(Watchlist.symbol == symbol)).scalar_one_or_none()
+    existing_wl = db.execute(sa_select(Watchlist).where(Watchlist.symbol == symbol)).scalar_one_or_none()
     if not existing_wl:
         db.add(Watchlist(symbol=symbol))
         db.commit()
@@ -63,8 +85,13 @@ def get_market_pulse(ticker_symbol: str, db: Session = Depends(get_db)):
     ticker = _auto_seed_ticker(db, ticker_symbol)
     hype = get_latest_hype(db, ticker.id)
     latest_price = yf_svc.get_latest_price(db, ticker.id)
+    # Extend to 5-day history if last 24h has no data (e.g. weekend / market closed)
     price_history = yf_svc.get_price_history(db, ticker.id, hours=24)
+    if not price_history:
+        price_history = yf_svc.get_price_history(db, ticker.id, hours=5 * 24)
     price_change_24h = yf_svc.get_price_change_pct(db, ticker.id, hours=24)
+    if price_change_24h == 0.0:
+        price_change_24h = yf_svc.get_price_change_pct(db, ticker.id, hours=5 * 24)
     volume_spike = yf_svc.get_volume_spike(db, ticker.id)
     recent_posts = reddit_svc.get_recent_mentions(db, ticker.id, hours=24, limit=5)
     sentiment_stats = reddit_svc.get_sentiment_stats(db, ticker.id, hours=24)

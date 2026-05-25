@@ -1,9 +1,9 @@
 import { NavLink } from 'react-router-dom'
-import { Activity, Clock, Bell, FlaskConical, TrendingUp, BarChart3, ShieldAlert } from 'lucide-react'
+import { Activity, Clock, Bell, FlaskConical, TrendingUp, BarChart3, ShieldAlert, LayoutDashboard } from 'lucide-react'
 
 const navItems = [
   { to: '/market-pulse', icon: Activity, label: '市場脈動' },
-  { to: '/screener', icon: BarChart3, label: '市場篩選器' },
+  { to: '/overview', icon: LayoutDashboard, label: '市場總覽' },
   { to: '/event-replay', icon: Clock, label: '事件回放' },
   { to: '/alerts', icon: Bell, label: '警報中心' },
   { to: '/scenario', icon: FlaskConical, label: '情境模擬' },

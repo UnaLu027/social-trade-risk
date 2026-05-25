@@ -5,6 +5,7 @@ import { EventReplay } from './pages/EventReplay'
 import { AlertCenter } from './pages/AlertCenter'
 import { ScenarioLab } from './pages/ScenarioLab'
 import { MarketScreener } from './pages/MarketScreener'
+import { MarketOverview } from './pages/MarketOverview'
 import { FakeNewsDetector } from './pages/FakeNewsDetector'
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/market-pulse" replace />} />
             <Route path="/market-pulse" element={<MarketPulse />} />
+            <Route path="/overview" element={<MarketOverview />} />
             <Route path="/screener" element={<MarketScreener />} />
             <Route path="/event-replay" element={<EventReplay />} />
             <Route path="/alerts" element={<AlertCenter />} />

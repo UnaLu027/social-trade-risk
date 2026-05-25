@@ -126,9 +126,9 @@ def extract_features(text: str, url: str = "") -> list[float]:
     quote_count = len(_QUOTE_RE.findall(text))
 
     # source_credibility: based on URL domain if provided.
-    # Default 0.2 (unknown/no URL = treat as lower credibility, e.g. social media post)
-    # This intentionally biases toward detecting potential fake news when source is unknown.
-    source_credibility = 0.2
+    # Default 0.5 = truly neutral (model must rely on linguistic features,
+    # not source alone, to classify unknown-source texts).
+    source_credibility = 0.5
     if url:
         cleaned = url.lower().replace("https://", "").replace("http://", "").replace("www.", "")
         domain = cleaned.split("/")[0]
@@ -189,17 +189,25 @@ def predict_fakenews(text: str, url: str = "") -> dict:
     contributing = []
     for fname, fval in feature_dict.items():
         importance = feature_importances.get(fname, 0.0)
-        # Compute impact direction: high uppercase/exclamation push toward fake
-        fake_indicators = {
-            "uppercase_ratio", "exclamation_count", "sentiment_extremity", "stock_mention_count"
-        }
-        real_indicators = {
-            "avg_word_length", "unique_word_ratio", "source_credibility", "word_count", "quote_count"
-        }
-        if fname in fake_indicators:
-            impact = "fake_signal"
-        elif fname in real_indicators:
-            impact = "real_signal"
+        # Impact is VALUE-CONDITIONAL: high uppercase = fake, low uppercase = real, etc.
+        if fname == "uppercase_ratio":
+            impact = "fake_signal" if fval > 0.15 else "real_signal"
+        elif fname == "exclamation_count":
+            impact = "fake_signal" if fval >= 3 else "real_signal"
+        elif fname == "sentiment_extremity":
+            impact = "fake_signal" if fval > 0.75 else ("neutral" if fval > 0.45 else "real_signal")
+        elif fname == "stock_mention_count":
+            impact = "fake_signal" if fval >= 5 else "neutral"
+        elif fname == "avg_word_length":
+            impact = "real_signal" if fval >= 5.0 else "fake_signal"
+        elif fname == "unique_word_ratio":
+            impact = "real_signal" if fval >= 0.55 else "fake_signal"
+        elif fname == "source_credibility":
+            impact = "real_signal" if fval >= 0.55 else ("neutral" if fval >= 0.35 else "fake_signal")
+        elif fname == "quote_count":
+            impact = "real_signal" if fval >= 2 else "neutral"
+        elif fname == "word_count":
+            impact = "real_signal" if fval >= 80 else "neutral"
         else:
             impact = "neutral"
         contributing.append({
