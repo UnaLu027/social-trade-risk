@@ -1,6 +1,11 @@
 """
 Generates a synthetic fake news training dataset with research-backed patterns.
 No external downloads needed — fully self-contained.
+
+KEY FIX: source_credibility distributions now OVERLAP significantly so the model
+CANNOT rely solely on this one feature. It must learn the true linguistic signals:
+uppercase ratio, exclamation density, sentiment extremity, word diversity, etc.
+
 Run: python -m app.ml.fakenews.generate_fakenews_dataset
 """
 import os
@@ -28,23 +33,49 @@ FEATURE_NAMES = [
 
 
 def _generate_fake_samples(n: int) -> list[dict]:
-    """Generate fake news feature vectors (label=1)."""
+    """
+    Generate fake news feature vectors (label=1).
+    Characteristics:
+    - Short to medium length (sensational social-media style)
+    - HIGH uppercase ratio (shouting)
+    - MANY exclamation marks
+    - EXTREME sentiment (very pos or very neg)
+    - LOW unique word ratio (repetitive)
+    - SHORT average word length (simple words)
+    - source_credibility OVERLAPS with real (0.1 – 0.7) so model can't cheat
+    """
     rows = []
     for _ in range(n):
-        word_count = int(RNG.integers(30, 300))
-        uppercase_ratio = float(RNG.uniform(0.18, 0.60))  # high uppercase
-        exclamation_count = int(RNG.integers(3, 20))       # many exclamations
+        # Fake news comes in two flavours: short social posts and longer articles
+        if RNG.random() < 0.4:
+            # Short sensational post (10-60 words)
+            word_count = int(RNG.integers(10, 60))
+            uppercase_ratio = float(RNG.uniform(0.35, 0.95))   # very high
+            exclamation_count = int(RNG.integers(3, 15))
+            unique_word_ratio = float(RNG.uniform(0.50, 0.85)) # short text → naturally higher
+            avg_word_length = float(RNG.uniform(3.5, 5.0))
+        else:
+            # Longer fake article (60-400 words)
+            word_count = int(RNG.integers(60, 400))
+            uppercase_ratio = float(RNG.uniform(0.12, 0.50))
+            exclamation_count = int(RNG.integers(2, 12))
+            unique_word_ratio = float(RNG.uniform(0.28, 0.55))
+            avg_word_length = float(RNG.uniform(3.8, 5.5))
+
         question_count = int(RNG.integers(0, 8))
-        # Extreme sentiment (very positive or very negative)
+
+        # Extreme sentiment (very positive OR very negative)
         polarity = RNG.choice([-1, 1])
-        sentiment_score = float(polarity * RNG.uniform(0.6, 1.0))
+        sentiment_score = float(polarity * RNG.uniform(0.55, 1.0))
         sentiment_extremity = abs(sentiment_score)
-        avg_word_length = float(RNG.uniform(3.5, 5.5))     # shorter words
-        unique_word_ratio = float(RNG.uniform(0.30, 0.55)) # more repetition
-        stock_mention_count = int(RNG.integers(0, 8))
+
+        stock_mention_count = int(RNG.integers(1, 9))  # fake news loves name-dropping tickers
         url_count = int(RNG.integers(0, 3))
         quote_count = int(RNG.integers(0, 2))
-        source_credibility = float(RNG.uniform(0.0, 0.35)) # low credibility
+
+        # OVERLAPPING credibility: fake articles can appear on semi-credible sites
+        source_credibility = float(RNG.uniform(0.05, 0.65))
+
         rows.append({
             "word_count": word_count,
             "uppercase_ratio": uppercase_ratio,
@@ -64,22 +95,38 @@ def _generate_fake_samples(n: int) -> list[dict]:
 
 
 def _generate_real_samples(n: int) -> list[dict]:
-    """Generate real news feature vectors (label=0)."""
+    """
+    Generate real news feature vectors (label=0).
+    Characteristics:
+    - Medium to long length (journalistic style)
+    - LOW uppercase ratio
+    - FEW or zero exclamation marks
+    - MODERATE sentiment
+    - HIGH unique word ratio (varied vocabulary)
+    - LONGER average word length (formal language)
+    - source_credibility OVERLAPS with fake (0.35 – 1.0)
+    """
     rows = []
     for _ in range(n):
-        word_count = int(RNG.integers(80, 800))
-        uppercase_ratio = float(RNG.uniform(0.01, 0.10))   # low uppercase
-        exclamation_count = int(RNG.integers(0, 2))          # few exclamations
+        word_count = int(RNG.integers(80, 900))
+        uppercase_ratio = float(RNG.uniform(0.00, 0.12))   # low
+        exclamation_count = int(RNG.integers(0, 2))          # rarely any
         question_count = int(RNG.integers(0, 4))
-        # Moderate sentiment
-        sentiment_score = float(RNG.uniform(-0.45, 0.45))
+
+        # Moderate, balanced sentiment
+        sentiment_score = float(RNG.uniform(-0.42, 0.42))
         sentiment_extremity = abs(sentiment_score)
-        avg_word_length = float(RNG.uniform(5.0, 8.0))      # longer words
-        unique_word_ratio = float(RNG.uniform(0.55, 0.90))  # more variety
-        stock_mention_count = int(RNG.integers(0, 5))
-        url_count = int(RNG.integers(0, 5))
-        quote_count = int(RNG.integers(1, 6))
-        source_credibility = float(RNG.uniform(0.55, 1.0))  # high credibility
+
+        avg_word_length = float(RNG.uniform(5.0, 8.5))      # formal vocabulary
+        unique_word_ratio = float(RNG.uniform(0.55, 0.92))  # diverse wording
+
+        stock_mention_count = int(RNG.integers(0, 4))
+        url_count = int(RNG.integers(0, 6))
+        quote_count = int(RNG.integers(1, 7))               # real journalism quotes sources
+
+        # OVERLAPPING credibility: some real news on lesser-known sites
+        source_credibility = float(RNG.uniform(0.35, 1.0))
+
         rows.append({
             "word_count": word_count,
             "uppercase_ratio": uppercase_ratio,
@@ -101,10 +148,9 @@ def _generate_real_samples(n: int) -> list[dict]:
 def _add_noise(rows: list[dict], noise_scale: float = 0.08) -> list[dict]:
     """Add Gaussian noise to numeric features to increase diversity."""
     noisy = []
-    numeric_fields = FEATURE_NAMES
     for row in rows:
         r = dict(row)
-        for field in numeric_fields:
+        for field in FEATURE_NAMES:
             v = r[field]
             if field in ("word_count", "exclamation_count", "question_count",
                          "stock_mention_count", "url_count", "quote_count"):
@@ -120,12 +166,12 @@ def _add_noise(rows: list[dict], noise_scale: float = 0.08) -> list[dict]:
     return noisy
 
 
-def generate(output_path: str = OUTPUT_PATH, target_rows: int = 5000) -> pd.DataFrame:
+def generate(output_path: str = OUTPUT_PATH, target_rows: int = 6000) -> pd.DataFrame:
     """Generate synthetic fake news dataset and save to CSV."""
     n_fake = target_rows // 2
     n_real = target_rows - n_fake
 
-    # Generate base samples
+    # Generate base samples (1/3 of target each)
     fake_base = _generate_fake_samples(n_fake // 3)
     real_base = _generate_real_samples(n_real // 3)
 
@@ -135,22 +181,18 @@ def generate(output_path: str = OUTPUT_PATH, target_rows: int = 5000) -> pd.Data
 
     all_rows = fake_augmented + real_augmented
     df = pd.DataFrame(all_rows)
-
-    # Reorder columns
     df = df[FEATURE_NAMES + ["label"]]
 
     # Clip edge cases
-    df["uppercase_ratio"] = df["uppercase_ratio"].clip(0, 1)
-    df["unique_word_ratio"] = df["unique_word_ratio"].clip(0, 1)
+    df["uppercase_ratio"]    = df["uppercase_ratio"].clip(0, 1)
+    df["unique_word_ratio"]  = df["unique_word_ratio"].clip(0, 1)
     df["source_credibility"] = df["source_credibility"].clip(0, 1)
-    df["sentiment_score"] = df["sentiment_score"].clip(-1, 1)
-    df["sentiment_extremity"] = df["sentiment_extremity"].clip(0, 1)
-    df["word_count"] = df["word_count"].clip(1, None)
-    df["avg_word_length"] = df["avg_word_length"].clip(2.0, None)
+    df["sentiment_score"]    = df["sentiment_score"].clip(-1, 1)
+    df["sentiment_extremity"]= df["sentiment_extremity"].clip(0, 1)
+    df["word_count"]         = df["word_count"].clip(1, None)
+    df["avg_word_length"]    = df["avg_word_length"].clip(2.0, None)
 
-    # Shuffle
-    df = df.sample(frac=1, random_state=42).reset_index(drop=True)
-    df = df.iloc[:target_rows]
+    df = df.sample(frac=1, random_state=42).reset_index(drop=True).iloc[:target_rows]
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df.to_csv(output_path, index=False)

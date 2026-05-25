@@ -109,14 +109,15 @@ def extract_features(text: str, url: str = "") -> list[float]:
     # quote_count: number of quoted phrases
     quote_count = len(_QUOTE_RE.findall(text))
 
-    # source_credibility: based on URL domain if provided
-    source_credibility = 0.5  # default: unknown
+    # source_credibility: based on URL domain if provided.
+    # Default 0.2 (unknown/no URL = treat as lower credibility, e.g. social media post)
+    # This intentionally biases toward detecting potential fake news when source is unknown.
+    source_credibility = 0.2
     if url:
         cleaned = url.lower().replace("https://", "").replace("http://", "").replace("www.", "")
         domain = cleaned.split("/")[0]
-        # Check against known credible domains
         is_credible = any(domain.endswith(d) for d in _CREDIBLE_DOMAINS)
-        source_credibility = 0.9 if is_credible else 0.3
+        source_credibility = 0.9 if is_credible else 0.35
 
     return [
         float(word_count),

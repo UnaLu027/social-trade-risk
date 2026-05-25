@@ -28,12 +28,10 @@ METADATA_PATH = os.path.join(MODELS_DIR, "fakenews_metadata.json")
 def train():
     os.makedirs(MODELS_DIR, exist_ok=True)
 
-    # Generate (or load existing) training data
-    if not os.path.exists(OUTPUT_PATH):
-        df = generate()
-    else:
-        df = pd.read_csv(OUTPUT_PATH)
-        print(f"Loaded existing dataset: {len(df)} rows")
+    # Always regenerate dataset to pick up any changes to generation logic
+    if os.path.exists(OUTPUT_PATH):
+        os.remove(OUTPUT_PATH)
+    df = generate()
 
     X = df[FEATURE_NAMES].values
     y = df["label"].values

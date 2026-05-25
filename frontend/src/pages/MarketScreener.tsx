@@ -190,7 +190,11 @@ export function MarketScreener() {
                           {/* Price + change */}
                           <td className="px-4 py-3">
                             <div className="font-mono text-white">
-                              {item.price != null ? `$${item.price.toFixed(2)}` : '—'}
+                              {item.price != null
+                                ? item.currency === 'TWD'
+                                  ? `NT$${item.price.toFixed(0)}`
+                                  : `$${item.price.toFixed(2)}`
+                                : '—'}
                             </div>
                             {item.price_change_pct != null && (
                               <div

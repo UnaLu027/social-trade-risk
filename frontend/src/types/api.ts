@@ -53,6 +53,7 @@ export interface ScreenerItem {
   ml_risk_label: number | null
   ml_risk_text: string
   mention_count_24h: number
+  currency: string
 }
 
 export interface TrendingTicker {

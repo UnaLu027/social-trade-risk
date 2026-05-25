@@ -22,16 +22,30 @@ Base.metadata.create_all(bind=engine)
 from app.services import yfinance_service as yf_svc
 
 TICKERS = [
-    ("GME", "GameStop Corp."),
-    ("AMC", "AMC Entertainment Holdings"),
-    ("TSLA", "Tesla Inc."),
-    ("NVDA", "NVIDIA Corp."),
-    ("AAPL", "Apple Inc."),
-    ("MSFT", "Microsoft Corp."),
-    ("META", "Meta Platforms Inc."),
-    ("PLTR", "Palantir Technologies"),
-    ("MSTR", "MicroStrategy Inc."),
-    ("AMD", "Advanced Micro Devices"),
+    # US stocks
+    ("GME",     "GameStop Corp."),
+    ("AMC",     "AMC Entertainment Holdings"),
+    ("TSLA",    "Tesla Inc."),
+    ("NVDA",    "NVIDIA Corp."),
+    ("AAPL",    "Apple Inc."),
+    ("MSFT",    "Microsoft Corp."),
+    ("META",    "Meta Platforms Inc."),
+    ("PLTR",    "Palantir Technologies"),
+    ("MSTR",    "MicroStrategy Inc."),
+    ("AMD",     "Advanced Micro Devices"),
+    ("COIN",    "Coinbase Global Inc."),
+    ("HOOD",    "Robinhood Markets Inc."),
+    # Taiwan ADRs (US-listed)
+    ("TSM",     "Taiwan Semiconductor (ADR)"),
+    # Taiwan Exchange stocks (TWD)
+    ("2330.TW", "台積電 TSMC"),
+    ("2454.TW", "聯發科 MediaTek"),
+    ("2317.TW", "鴻海精密 Foxconn"),
+    ("2303.TW", "聯電 UMC"),
+    ("2308.TW", "台達電 Delta Electronics"),
+    ("2881.TW", "富邦金控 Fubon Financial"),
+    ("2882.TW", "國泰金控 Cathay Financial"),
+    ("2603.TW", "長榮海運 Evergreen Marine"),
 ]
 
 GME_EVENTS_2021 = [
