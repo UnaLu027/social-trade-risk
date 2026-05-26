@@ -29,6 +29,14 @@ EXTENDED_FEATURE_NAMES = FEATURE_NAMES + [
     "risk_composite",
 ]
 
+# ── Text-extended 21 features (Phase 3) ─────────────────────────────────────
+# Five text signal features added (see text_features.py for extraction logic).
+# In production  → computed from real post body_snippet via VADER + heuristics.
+# In training    → simulated from numeric signals (see simulate_from_signals).
+# Design is compatible with future Transformer embedding replacement.
+from app.ml.text_features import TEXT_FEATURE_NAMES   # noqa: E402
+TEXT_EXTENDED_FEATURE_NAMES = EXTENDED_FEATURE_NAMES + TEXT_FEATURE_NAMES
+
 LABEL_MAP = {0: "low", 1: "medium", 2: "high"}
 LABEL_TEXT_MAP = {0: "Low Risk", 1: "Medium Risk", 2: "High Risk"}
 

@@ -77,3 +77,16 @@ def get_model_insights():
 def get_model_comparison():
     """Return the per-candidate comparison table from the last experiment run."""
     return _load_json("model_comparison.json")
+
+
+@router.get("/experiments-summary")
+def get_experiments_summary():
+    """
+    Return the cross-run summary (base vs extended vs noleakage vs textfeatures).
+    Shows progression across all experiments that have been run.
+    """
+    path = os.path.join(_MODELS_DIR, "experiments_summary.json")
+    if not os.path.exists(path):
+        return []
+    with open(path) as f:
+        return json.load(f)

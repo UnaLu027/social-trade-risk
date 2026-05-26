@@ -1,0 +1,38 @@
+[
+  {
+    "experiment_id": "20260525T190927Z",
+    "feature_set": "extended",
+    "n_features": 16,
+    "best_model_name": "RandomForest",
+    "test_accuracy": 0.9244,
+    "test_macro_f1": 0.6134,
+    "test_weighted_f1": 0.9211,
+    "test_high_risk_recall": 0.9649,
+    "trained_at": "2026-05-25T19:09:27.949886+00:00",
+    "note": "16 extended features including hype_score_raw and 3 derived features"
+  },
+  {
+    "experiment_id": "20260526T020713Z",
+    "feature_set": "noleakage",
+    "n_features": 15,
+    "best_model_name": "GradientBoosting",
+    "test_accuracy": 0.9237,
+    "test_macro_f1": 0.608,
+    "test_weighted_f1": 0.9202,
+    "test_high_risk_recall": 0.9649,
+    "trained_at": "2026-05-26T02:07:13.152008+00:00",
+    "note": "15 extended features, hype_score_raw EXCLUDED to measure leakage"
+  },
+  {
+    "experiment_id": "20260526T021418Z",
+    "feature_set": "textfeatures",
+    "n_features": 21,
+    "best_model_name": "GradientBoosting",
+    "test_accuracy": 0.9237,
+    "test_macro_f1": 0.608,
+    "test_weighted_f1": 0.9202,
+    "test_high_risk_recall": 0.9649,
+    "trained_at": "2026-05-26T02:14:18.893185+00:00",
+    "note": "21 text-extended features: 16 extended + 5 text signal features (text_sentiment_compound, text_exclamation_density, text_manipulation_score, text_urgency_score, text_credibility_score). Text features simulated from numeric signals in training; computed from real post body_snippet in production via VADER + heuristics."
+  }
+]

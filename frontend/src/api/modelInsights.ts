@@ -55,8 +55,24 @@ export interface ModelComparisonResponse {
   candidates: CandidateResult[]
 }
 
+export interface ExperimentSummaryItem {
+  experiment_id: string
+  feature_set: string
+  n_features: number
+  best_model_name: string
+  test_accuracy: number
+  test_macro_f1: number
+  test_weighted_f1: number
+  test_high_risk_recall: number
+  trained_at: string
+  note: string
+}
+
 export const getModelInsights = () =>
   api.get<ModelInsightsResponse>('/api/v1/model-insights/').then((r) => r.data)
 
 export const getModelComparison = () =>
   api.get<ModelComparisonResponse>('/api/v1/model-insights/comparison').then((r) => r.data)
+
+export const getExperimentsSummary = () =>
+  api.get<ExperimentSummaryItem[]>('/api/v1/model-insights/experiments-summary').then((r) => r.data)

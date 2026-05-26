@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 from app.ml.feature_engineering import compute_hype_score, FEATURE_NAMES, EXTENDED_FEATURE_NAMES
+from app.ml.text_features import simulate_from_signals, TEXT_FEATURE_NAMES
 
 RNG = np.random.default_rng(42)
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "training_data.csv")
@@ -138,6 +139,27 @@ def _add_derived_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _add_text_features(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Simulate 5 text signal features from existing numeric signals.
+    Each row gets VADER-proxy + linguistic heuristic values computed via
+    simulate_from_signals(), so experiment_train --textfeatures can use them.
+    """
+    rng = np.random.default_rng(99)   # separate seed for reproducibility
+    text_rows = [
+        simulate_from_signals(
+            avg_sentiment=float(row["avg_sentiment"]),
+            bullish_ratio=float(row["bullish_ratio"]),
+            mention_growth_ratio=float(row["mention_growth_ratio"]),
+            hype_score_raw=float(row["hype_score_raw"]),
+            rng=rng,
+        )
+        for _, row in df.iterrows()
+    ]
+    text_df = pd.DataFrame(text_rows, index=df.index)
+    return pd.concat([df, text_df], axis=1)
+
+
 def generate(output_path: str = OUTPUT_PATH, target_rows: int = 8000) -> pd.DataFrame:
     base_scenarios = _make_base_scenarios()
     per_base = target_rows // len(base_scenarios) + 1
@@ -177,8 +199,11 @@ def generate(output_path: str = OUTPUT_PATH, target_rows: int = 8000) -> pd.Data
     timestamps = [base_ts + timedelta(hours=int(i * 3)) for i in range(len(df))]
     df["synthetic_ts"] = timestamps
 
-    # ── Derived features ────────────────────────────────────────────────────────
+    # ── Derived features (16-feature set) ───────────────────────────────────────
     df = _add_derived_features(df)
+
+    # ── Text signal features (21-feature set, Phase 3) ──────────────────────────
+    df = _add_text_features(df)
 
     df = df.sample(frac=1, random_state=42).reset_index(drop=True)
     df = df.iloc[:target_rows]

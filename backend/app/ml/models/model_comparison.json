@@ -1,18 +1,18 @@
 {
-  "experiment_id": "20260525T184814Z",
-  "feature_set": "extended",
+  "experiment_id": "20260526T021418Z",
+  "feature_set": "textfeatures",
   "split_method": "time-based",
-  "best_model_name": "RandomForest",
+  "best_model_name": "GradientBoosting",
   "selection_metric": "val_macro_f1",
-  "trained_at": "2026-05-25T18:48:14.017754+00:00",
+  "trained_at": "2026-05-26T02:14:18.893185+00:00",
   "candidates": [
     {
       "name": "LogisticRegression",
-      "val_accuracy": 0.6467,
-      "val_macro_f1": 0.4621,
-      "val_weighted_f1": 0.7,
-      "val_high_risk_recall": 0.3182,
-      "cv_best_score": 0.5774,
+      "val_accuracy": 0.65,
+      "val_macro_f1": 0.4635,
+      "val_weighted_f1": 0.7018,
+      "val_high_risk_recall": 0.3236,
+      "cv_best_score": 0.5744,
       "val_per_class": {
         "low": {
           "precision": 0.0,
@@ -21,15 +21,15 @@
           "support": 15
         },
         "medium": {
-          "precision": 0.8812,
-          "recall": 0.9465,
-          "f1": 0.9127,
+          "precision": 0.8763,
+          "recall": 0.948,
+          "f1": 0.9107,
           "support": 635
         },
         "high": {
-          "precision": 0.9259,
-          "recall": 0.3182,
-          "f1": 0.4736,
+          "precision": 0.9271,
+          "recall": 0.3236,
+          "f1": 0.4798,
           "support": 550
         }
       },
@@ -41,11 +41,11 @@
     },
     {
       "name": "RandomForest",
-      "val_accuracy": 0.9042,
-      "val_macro_f1": 0.6062,
-      "val_weighted_f1": 0.8983,
-      "val_high_risk_recall": 0.8636,
-      "cv_best_score": 0.6887,
+      "val_accuracy": 0.9008,
+      "val_macro_f1": 0.6039,
+      "val_weighted_f1": 0.8949,
+      "val_high_risk_recall": 0.8564,
+      "cv_best_score": 0.6846,
       "val_per_class": {
         "low": {
           "precision": 0.0,
@@ -54,33 +54,33 @@
           "support": 15
         },
         "medium": {
-          "precision": 0.8714,
+          "precision": 0.8665,
           "recall": 0.9606,
-          "f1": 0.9139,
+          "f1": 0.9111,
           "support": 635
         },
         "high": {
-          "precision": 0.95,
-          "recall": 0.8636,
-          "f1": 0.9048,
+          "precision": 0.9496,
+          "recall": 0.8564,
+          "f1": 0.9006,
           "support": 550
         }
       },
       "best_params": {
-        "model__n_estimators": 300,
-        "model__min_samples_split": 2,
-        "model__min_samples_leaf": 2,
-        "model__max_depth": 12,
+        "model__n_estimators": 200,
+        "model__min_samples_split": 10,
+        "model__min_samples_leaf": 1,
+        "model__max_depth": 10,
         "model__class_weight": null
       }
     },
     {
       "name": "GradientBoosting",
-      "val_accuracy": 0.8325,
-      "val_macro_f1": 0.5554,
-      "val_weighted_f1": 0.8244,
-      "val_high_risk_recall": 0.7127,
-      "cv_best_score": 0.6801,
+      "val_accuracy": 0.905,
+      "val_macro_f1": 0.6068,
+      "val_weighted_f1": 0.8991,
+      "val_high_risk_recall": 0.8691,
+      "cv_best_score": 0.6889,
       "val_per_class": {
         "low": {
           "precision": 0.0,
@@ -89,33 +89,33 @@
           "support": 15
         },
         "medium": {
-          "precision": 0.7782,
-          "recall": 0.9559,
-          "f1": 0.858,
+          "precision": 0.8748,
+          "recall": 0.9575,
+          "f1": 0.9143,
           "support": 635
         },
         "high": {
-          "precision": 0.9333,
-          "recall": 0.7127,
-          "f1": 0.8082,
+          "precision": 0.9465,
+          "recall": 0.8691,
+          "f1": 0.9062,
           "support": 550
         }
       },
       "best_params": {
-        "model__subsample": 1.0,
+        "model__subsample": 0.7,
         "model__n_estimators": 150,
-        "model__min_samples_leaf": 1,
+        "model__min_samples_leaf": 5,
         "model__max_depth": 5,
-        "model__learning_rate": 0.15
+        "model__learning_rate": 0.05
       }
     },
     {
       "name": "MLP",
-      "val_accuracy": 0.7183,
-      "val_macro_f1": 0.4623,
-      "val_weighted_f1": 0.6913,
-      "val_high_risk_recall": 0.4436,
-      "cv_best_score": 0.5629,
+      "val_accuracy": 0.78,
+      "val_macro_f1": 0.5149,
+      "val_weighted_f1": 0.7663,
+      "val_high_risk_recall": 0.5836,
+      "cv_best_score": 0.5773,
       "val_per_class": {
         "low": {
           "precision": 0.0,
@@ -124,36 +124,35 @@
           "support": 15
         },
         "medium": {
-          "precision": 0.6581,
-          "recall": 0.9732,
-          "f1": 0.7853,
+          "precision": 0.7159,
+          "recall": 0.9685,
+          "f1": 0.8233,
           "support": 635
         },
         "high": {
-          "precision": 0.9349,
-          "recall": 0.4436,
-          "f1": 0.6017,
+          "precision": 0.9441,
+          "recall": 0.5836,
+          "f1": 0.7213,
           "support": 550
         }
       },
       "best_params": {
         "model__learning_rate_init": 0.001,
         "model__hidden_layer_sizes": [
-          128,
           64,
           32
         ],
-        "model__alpha": 0.0001,
-        "model__activation": "relu"
+        "model__alpha": 0.01,
+        "model__activation": "tanh"
       }
     },
     {
       "name": "StackingClassifier",
-      "val_accuracy": 0.8675,
-      "val_macro_f1": 0.581,
-      "val_weighted_f1": 0.8614,
-      "val_high_risk_recall": 0.7909,
-      "cv_best_score": 0.5166,
+      "val_accuracy": 0.8533,
+      "val_macro_f1": 0.5724,
+      "val_weighted_f1": 0.8493,
+      "val_high_risk_recall": 0.7564,
+      "cv_best_score": 0.4876,
       "val_per_class": {
         "low": {
           "precision": 0.0,
@@ -162,22 +161,22 @@
           "support": 15
         },
         "medium": {
-          "precision": 0.8234,
-          "recall": 0.9543,
-          "f1": 0.884,
+          "precision": 0.8128,
+          "recall": 0.9575,
+          "f1": 0.8792,
           "support": 635
         },
         "high": {
-          "precision": 0.9395,
-          "recall": 0.7909,
-          "f1": 0.8588,
+          "precision": 0.9391,
+          "recall": 0.7564,
+          "f1": 0.8379,
           "support": 550
         }
       },
       "best_params": {
         "model__final_estimator__n_estimators": 50,
-        "model__final_estimator__max_depth": 4,
-        "model__final_estimator__learning_rate": 0.15
+        "model__final_estimator__max_depth": 3,
+        "model__final_estimator__learning_rate": 0.05
       }
     }
   ]

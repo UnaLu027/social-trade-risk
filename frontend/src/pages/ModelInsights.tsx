@@ -2,10 +2,10 @@ import { useQuery } from '@tanstack/react-query'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts'
-import { Brain, AlertTriangle, CheckCircle, Trophy } from 'lucide-react'
+import { Brain, AlertTriangle, CheckCircle, Trophy, FlaskConical } from 'lucide-react'
 import { TopBar } from '../components/layout/TopBar'
-import { getModelInsights, getModelComparison } from '../api/modelInsights'
-import type { CandidateResult } from '../api/modelInsights'
+import { getModelInsights, getModelComparison, getExperimentsSummary } from '../api/modelInsights'
+import type { CandidateResult, ExperimentSummaryItem } from '../api/modelInsights'
 
 // ── Colour helpers ──────────────────────────────────────────────────────────
 const CLASS_COLORS: Record<string, string> = {
@@ -160,6 +160,104 @@ function ModelComparisonTable({ candidates, bestName }: { candidates: CandidateR
   )
 }
 
+// ── Experiments progression table ──────────────────────────────────────────
+const FEATURE_SET_LABEL: Record<string, string> = {
+  base:         '基礎 (base)',
+  extended:     '延伸 (extended)',
+  noleakage:    '無洩漏 (no-leakage)',
+  textfeatures: '文字特徵 (text)',
+}
+const FEATURE_SET_NOTE: Record<string, string> = {
+  base:         '原始 13 特徵，無衍生特徵',
+  extended:     '16 特徵：含 hype_score_raw + 3 個衍生特徵',
+  noleakage:    '移除 hype_score_raw，量化標籤洩漏影響',
+  textfeatures: '21 特徵：加入 5 個 NLP 文字訊號特徵',
+}
+
+function ExperimentsProgressionTable({
+  items,
+  activeSet,
+}: {
+  items: ExperimentSummaryItem[]
+  activeSet: string
+}) {
+  // Sort by a canonical order
+  const ORDER = ['base', 'extended', 'noleakage', 'textfeatures']
+  const sorted = [...items].sort(
+    (a, b) => ORDER.indexOf(a.feature_set) - ORDER.indexOf(b.feature_set),
+  )
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs border-collapse">
+        <thead>
+          <tr style={{ borderBottom: '1px solid #2d3148' }}>
+            {['特徵集', '特徵數', '最佳模型', 'Test macro F1', 'Test weighted F1', '高風險召回率', '訓練日期'].map(h => (
+              <th key={h} className="px-3 py-2 text-left font-semibold whitespace-nowrap" style={{ color: '#64748b' }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map(item => {
+            const isActive = item.feature_set === activeSet
+            return (
+              <tr
+                key={item.experiment_id}
+                style={{
+                  borderBottom: '1px solid #1f2235',
+                  background: isActive ? '#071326' : 'transparent',
+                }}
+              >
+                <td className="px-3 py-2">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-semibold" style={{ color: isActive ? '#38bdf8' : '#f1f5f9' }}>
+                      {isActive && <span className="mr-1 text-sky-400">▶</span>}
+                      {FEATURE_SET_LABEL[item.feature_set] ?? item.feature_set}
+                    </span>
+                    <span style={{ color: '#475569', fontSize: '10px' }}>
+                      {FEATURE_SET_NOTE[item.feature_set] ?? item.note.slice(0, 55)}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-3 py-2 font-mono tabular-nums" style={{ color: '#94a3b8' }}>
+                  {item.n_features}
+                </td>
+                <td className="px-3 py-2 font-semibold" style={{ color: '#f1f5f9' }}>
+                  {item.best_model_name}
+                </td>
+                {[item.test_macro_f1, item.test_weighted_f1, item.test_high_risk_recall].map((v, i) => (
+                  <td key={i} className="px-3 py-2 font-mono tabular-nums"
+                    style={{ color: v > 0.7 ? '#10b981' : v > 0.5 ? '#f59e0b' : '#ef4444' }}>
+                    {pct(v)}
+                  </td>
+                ))}
+                <td className="px-3 py-2 font-mono tabular-nums" style={{ color: '#64748b' }}>
+                  {item.trained_at ? new Date(item.trained_at).toLocaleDateString('zh-TW') : '—'}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+
+      {/* Leakage finding callout */}
+      {sorted.some(i => i.feature_set === 'noleakage') && sorted.some(i => i.feature_set === 'extended') && (() => {
+        const ext = sorted.find(i => i.feature_set === 'extended')!
+        const nl  = sorted.find(i => i.feature_set === 'noleakage')!
+        const delta = ((ext.test_macro_f1 - nl.test_macro_f1) * 100).toFixed(1)
+        return (
+          <div className="mt-3 px-3 py-2 rounded-lg text-xs leading-relaxed"
+            style={{ background: '#0c1a12', border: '1px solid #166534', color: '#4ade80' }}>
+            <CheckCircle size={11} className="inline mr-1.5 relative -top-0.5" />
+            <strong>洩漏分析：</strong>移除 <code className="font-mono px-1" style={{ background: '#052e16' }}>hype_score_raw</code> 後，macro F1 僅下降 {delta}%（{pct(ext.test_macro_f1)} → {pct(nl.test_macro_f1)}），
+            驗證模型從多特徵組合學習，而非單純記憶標籤規則。
+          </div>
+        )
+      })()}
+    </div>
+  )
+}
+
 // ── Feature importance chart ────────────────────────────────────────────────
 const FEAT_LABEL: Record<string, string> = {
   mention_count_1h:       'mention/1h',
@@ -192,6 +290,13 @@ export function ModelInsights() {
   const { data: comparison, isLoading: compLoading } = useQuery({
     queryKey: ['modelComparison'],
     queryFn: getModelComparison,
+    staleTime: 10 * 60_000,
+    retry: 1,
+  })
+
+  const { data: experimentsSummary, isLoading: expLoading } = useQuery({
+    queryKey: ['experimentsSummary'],
+    queryFn: getExperimentsSummary,
     staleTime: 10 * 60_000,
     retry: 1,
   })
@@ -426,6 +531,40 @@ export function ModelInsights() {
 
           </div>
         </div>
+
+        {/* Experiments progression section */}
+        <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
+          <div className="flex items-center gap-2 mb-4">
+            <FlaskConical size={13} color="#a78bfa" />
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748b' }}>
+              多輪實驗進展比較
+            </span>
+            <span className="text-xs ml-auto" style={{ color: '#475569' }}>
+              特徵集演進：base → extended → noleakage → textfeatures
+            </span>
+          </div>
+          {expLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-10 rounded animate-pulse" style={{ background: '#131627' }} />
+              ))}
+            </div>
+          ) : experimentsSummary && experimentsSummary.length > 0 ? (
+            <ExperimentsProgressionTable
+              items={experimentsSummary}
+              activeSet={insights?.feature_set ?? ''}
+            />
+          ) : (
+            <div className="text-xs py-4 text-center" style={{ color: '#64748b' }}>
+              尚無多輪實驗記錄。執行{' '}
+              <code className="font-mono px-1" style={{ background: '#131627' }}>
+                python -m app.ml.experiment_train --base --noleakage --textfeatures
+              </code>{' '}
+              以生成。
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   )

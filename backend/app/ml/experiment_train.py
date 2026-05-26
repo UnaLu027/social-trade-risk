@@ -6,13 +6,17 @@ hold-out test set, and saves the best model + a full experiment log.
 
 Usage (from repo root):
     cd backend
-    python -m app.ml.experiment_train               # default: extended features
-    python -m app.ml.experiment_train --noleakage   # exclude hype_score_raw
-    python -m app.ml.experiment_train --base        # use original 13 features only
+    python -m app.ml.experiment_train                  # default: extended (16 features)
+    python -m app.ml.experiment_train --noleakage      # exclude hype_score_raw (15 feats)
+    python -m app.ml.experiment_train --base           # original 13 features
+    python -m app.ml.experiment_train --textfeatures   # text-extended (21 features, Phase 3)
+    python -m app.ml.experiment_train --regen          # regenerate training_data.csv first
 
 Outputs:
     backend/app/ml/models/best_model.pkl
     backend/app/ml/models/best_model_metadata.json
+    backend/app/ml/models/model_comparison.json
+    backend/app/ml/models/experiments_summary.json  (appended, all runs)
     backend/app/ml/experiments/<timestamp>_experiment.json
 """
 
@@ -51,15 +55,18 @@ from app.ml.feature_engineering import (
     EXTENDED_FEATURE_NAMES,
     FEATURE_NAMES,
     LABEL_MAP,
+    TEXT_EXTENDED_FEATURE_NAMES,
 )
+from app.ml.text_features import TEXT_FEATURE_NAMES
 from app.ml.generate_dataset import OUTPUT_PATH, generate
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 MODELS_DIR      = os.path.join(os.path.dirname(__file__), "models")
 EXPERIMENTS_DIR = os.path.join(os.path.dirname(__file__), "experiments")
-BEST_MODEL_PATH      = os.path.join(MODELS_DIR, "best_model.pkl")
-BEST_META_PATH       = os.path.join(MODELS_DIR, "best_model_metadata.json")
-MODEL_COMPARISON_PATH = os.path.join(MODELS_DIR, "model_comparison.json")
+BEST_MODEL_PATH         = os.path.join(MODELS_DIR, "best_model.pkl")
+BEST_META_PATH          = os.path.join(MODELS_DIR, "best_model_metadata.json")
+MODEL_COMPARISON_PATH   = os.path.join(MODELS_DIR, "model_comparison.json")
+EXPERIMENTS_SUMMARY_PATH = os.path.join(MODELS_DIR, "experiments_summary.json")
 
 # ── Model catalogue with RandomizedSearch param grids ───────────────────────
 # cv=3, n_iter=20 keeps wall-clock time under ~5 min on a laptop CPU.
@@ -190,6 +197,13 @@ def run_experiment(
     elif feature_set == "noleakage":
         feat_names = [f for f in EXTENDED_FEATURE_NAMES if f != "hype_score_raw"]
         note = "15 extended features, hype_score_raw EXCLUDED to measure leakage"
+    elif feature_set == "textfeatures":
+        feat_names = TEXT_EXTENDED_FEATURE_NAMES
+        note = ("21 text-extended features: 16 extended + 5 text signal features "
+                "(text_sentiment_compound, text_exclamation_density, "
+                "text_manipulation_score, text_urgency_score, text_credibility_score). "
+                "Text features simulated from numeric signals in training; "
+                "computed from real post body_snippet in production via VADER + heuristics.")
     else:  # extended (default)
         feat_names = EXTENDED_FEATURE_NAMES
         note = "16 extended features including hype_score_raw and 3 derived features"
@@ -203,6 +217,25 @@ def run_experiment(
                 df[col] = (df["bullish_ratio"].clip(0, 1) * (df["volume_spike_ratio"] / 5).clip(0, 1))
             elif col == "risk_composite":
                 df[col] = (df["mention_growth_ratio"] * df["volume_spike_ratio"] * (1 + df["short_interest_ratio"])).clip(0, 50)
+
+    # Ensure text signal columns exist (Phase 3)
+    for col in TEXT_FEATURE_NAMES:
+        if col not in df.columns:
+            from app.ml.text_features import simulate_from_signals
+            rng_txt = np.random.default_rng(99)
+            text_rows = [
+                simulate_from_signals(
+                    avg_sentiment=float(row["avg_sentiment"]),
+                    bullish_ratio=float(row["bullish_ratio"]),
+                    mention_growth_ratio=float(row["mention_growth_ratio"]),
+                    hype_score_raw=float(row["hype_score_raw"]),
+                    rng=rng_txt,
+                )
+                for _, row in df.iterrows()
+            ]
+            text_df = pd.DataFrame(text_rows, index=df.index)
+            df = pd.concat([df, text_df], axis=1)
+            break   # all 5 text cols added at once
 
     # Only keep feature columns that actually exist in the dataframe
     feat_names = [f for f in feat_names if f in df.columns]
@@ -400,6 +433,33 @@ def run_experiment(
         json.dump(comparison, f, indent=2)
     print(f"  Model comparison → {MODEL_COMPARISON_PATH}")
 
+    # ── Append to experiments_summary.json (cross-run comparison) ─────────────
+    summary_entry = {
+        "experiment_id":      metadata["experiment_id"],
+        "feature_set":        feature_set,
+        "n_features":         len(feat_names),
+        "best_model_name":    best_candidate_name,
+        "test_accuracy":      test_metrics["accuracy"],
+        "test_macro_f1":      test_metrics["macro_f1"],
+        "test_weighted_f1":   test_metrics["weighted_f1"],
+        "test_high_risk_recall": test_metrics["high_risk_recall"],
+        "trained_at":         metadata["trained_at"],
+        "note":               note,
+    }
+    summary: list = []
+    if os.path.exists(EXPERIMENTS_SUMMARY_PATH):
+        try:
+            with open(EXPERIMENTS_SUMMARY_PATH) as f:
+                summary = json.load(f)
+        except Exception:
+            summary = []
+    # replace existing entry for same feature_set, or append
+    summary = [s for s in summary if s.get("feature_set") != feature_set]
+    summary.append(summary_entry)
+    with open(EXPERIMENTS_SUMMARY_PATH, "w") as f:
+        json.dump(summary, f, indent=2)
+    print(f"  Experiments summary → {EXPERIMENTS_SUMMARY_PATH}")
+
     # ── 11. Full experiment log (gitignored, local only) ─────────────────────
     exp_log = {
         **metadata,
@@ -427,8 +487,9 @@ def run_experiment(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Iterative ML experiment pipeline")
     group = parser.add_mutually_exclusive_group()
-    group.add_argument("--base",      action="store_true", help="Use original 13 features")
-    group.add_argument("--noleakage", action="store_true", help="Exclude hype_score_raw")
+    group.add_argument("--base",         action="store_true", help="Use original 13 features")
+    group.add_argument("--noleakage",    action="store_true", help="Exclude hype_score_raw")
+    group.add_argument("--textfeatures", action="store_true", help="21-feature text-extended set (Phase 3)")
     parser.add_argument("--cv",       type=int, default=3,    help="Cross-validation folds (default 3)")
     parser.add_argument("--regen",    action="store_true",    help="Regenerate training data")
     args = parser.parse_args()
@@ -441,6 +502,8 @@ if __name__ == "__main__":
         feat_set = "base"
     elif args.noleakage:
         feat_set = "noleakage"
+    elif args.textfeatures:
+        feat_set = "textfeatures"
     else:
         feat_set = "extended"
 
