@@ -260,7 +260,18 @@ def run_experiment(
     print(f"Class distribution: {label_counts}")
 
     # ── 4. Train / Val / Test split ───────────────────────────────────────────
-    # Use time-based split if synthetic_ts column is available
+    # Use time-based split if synthetic_ts column is available, with automatic
+    # fallback to stratified split if any class has 0 test samples.
+    def _stratified_split():
+        X_tmp_, X_test_, y_tmp_, y_test_ = train_test_split(
+            X_all, y_all, test_size=test_size, random_state=random_state, stratify=y_all
+        )
+        val_ratio_ = val_size / (1 - test_size)
+        X_train_, X_val_, y_train_, y_val_ = train_test_split(
+            X_tmp_, y_tmp_, test_size=val_ratio_, random_state=random_state, stratify=y_tmp_
+        )
+        return X_train_, X_val_, X_test_, y_train_, y_val_, y_test_
+
     if "synthetic_ts" in df.columns:
         df_sorted = df.sort_values("synthetic_ts").reset_index(drop=True)
         n = len(df_sorted)
@@ -273,14 +284,23 @@ def run_experiment(
         X_test  = df_sorted[feat_names].values[val_end:]
         y_test  = df_sorted["label"].values[val_end:].astype(int)
         split_method = "time-based"
+
+        # Safety check: fall back to stratified if any class absent in test/val
+        all_classes  = set(np.unique(y_all))
+        test_classes = set(np.unique(y_test))
+        val_classes  = set(np.unique(y_val))
+        missing_test = all_classes - test_classes
+        missing_val  = all_classes - val_classes
+        if missing_test or missing_val:
+            print(
+                f"[split] Time-based split missing classes — "
+                f"test missing: {missing_test}, val missing: {missing_val}. "
+                f"Falling back to stratified split."
+            )
+            X_train, X_val, X_test, y_train, y_val, y_test = _stratified_split()
+            split_method = "stratified-random (fallback: time-based had missing class)"
     else:
-        X_tmp, X_test, y_tmp, y_test = train_test_split(
-            X_all, y_all, test_size=test_size, random_state=random_state, stratify=y_all
-        )
-        val_ratio = val_size / (1 - test_size)
-        X_train, X_val, y_train, y_val = train_test_split(
-            X_tmp, y_tmp, test_size=val_ratio, random_state=random_state, stratify=y_tmp
-        )
+        X_train, X_val, X_test, y_train, y_val, y_test = _stratified_split()
         split_method = "stratified-random"
 
     print(f"Split ({split_method}): train={len(y_train)}, val={len(y_val)}, test={len(y_test)}")

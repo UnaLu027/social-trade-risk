@@ -141,6 +141,56 @@ def build_extended_feature_row(
     }
 
 
+def build_full_feature_row(
+    mention_count_1h: int,
+    mention_count_24h: int,
+    mention_growth_ratio: float,
+    bullish_ratio: float,
+    avg_sentiment: float,
+    influencer_score: float,
+    price_change_pct_1h: float,
+    price_change_pct_24h: float,
+    volume_spike_ratio: float,
+    short_interest_ratio: float,
+    option_volume_spike: float,
+    hour_of_day: int = 12,
+    post_text: str = "",
+) -> dict:
+    """
+    Returns a 21-feature dict (16 extended + 5 text signal features).
+
+    This is the canonical entry point for production inference.  Always use
+    this when calling inference.predict_risk() so the feature vector matches
+    best_model.pkl (textfeatures, 21 features) exactly.
+
+    Text features:
+    - post_text supplied → VADER + linguistic heuristics (real signal)
+    - post_text empty   → derived deterministically from numeric signals
+      (no noise, stable predictions across identical inputs)
+    """
+    from app.ml.text_features import compute_from_text, compute_from_signals_deterministic
+
+    base = build_extended_feature_row(
+        mention_count_1h, mention_count_24h, mention_growth_ratio,
+        bullish_ratio, avg_sentiment, influencer_score,
+        price_change_pct_1h, price_change_pct_24h,
+        volume_spike_ratio, short_interest_ratio, option_volume_spike,
+        hour_of_day,
+    )
+
+    if post_text:
+        text_feats = compute_from_text(post_text)
+    else:
+        text_feats = compute_from_signals_deterministic(
+            avg_sentiment=avg_sentiment,
+            bullish_ratio=bullish_ratio,
+            mention_growth_ratio=mention_growth_ratio,
+            hype_score_raw=base["hype_score_raw"],
+        )
+
+    return {**base, **text_feats}
+
+
 def identify_top_drivers(features: dict, hype_score: float) -> list[str]:
     drivers = []
     if features.get("mention_growth_ratio", 0) > 2.0:

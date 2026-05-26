@@ -5,7 +5,7 @@ from app.models import Ticker, HypeScore, SocialMention
 from app.services import yfinance_service as yf_svc
 from app.services import reddit_service as reddit_svc
 from app.services import finnhub_service as fh_svc
-from app.ml.feature_engineering import compute_hype_score, build_feature_row, identify_top_drivers
+from app.ml.feature_engineering import compute_hype_score, build_full_feature_row, identify_top_drivers
 from app.ml import inference
 
 
@@ -57,7 +57,7 @@ def compute_and_store_hype(db: Session, ticker: Ticker) -> HypeScore | None:
     # Option activity proxy (volume spike carries this signal)
     option_spike = min(volume_spike * 0.4, 5.0)
 
-    features = build_feature_row(
+    features = build_full_feature_row(
         mention_count_1h=count_1h,
         mention_count_24h=count_24h,
         mention_growth_ratio=mention_growth,

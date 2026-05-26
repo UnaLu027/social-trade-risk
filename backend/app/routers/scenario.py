@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from app.schemas.scenario import ScenarioRequest, ScenarioResponse, ComparableEvent
-from app.ml.feature_engineering import build_feature_row, identify_top_drivers, LABEL_MAP, LABEL_TEXT_MAP
+from app.ml.feature_engineering import build_full_feature_row, identify_top_drivers, LABEL_MAP, LABEL_TEXT_MAP
 from app.ml import inference
 
 router = APIRouter(prefix="/api/v1/scenario", tags=["scenario"])
@@ -31,7 +31,7 @@ _EXPLANATIONS = {
 
 @router.post("/simulate", response_model=ScenarioResponse)
 def simulate_scenario(body: ScenarioRequest):
-    features = build_feature_row(
+    features = build_full_feature_row(
         mention_count_1h=int(body.mention_growth * 100),
         mention_count_24h=int(body.mention_growth * 100 * 18),
         mention_growth_ratio=body.mention_growth,

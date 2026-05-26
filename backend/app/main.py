@@ -151,6 +151,34 @@ def health():
     }
 
 
+@app.get("/api/v1/version")
+def version():
+    """
+    Deployment diagnostic: shows which git commit is running on Railway.
+    Visit <railway-url>/api/v1/version to confirm the live code matches main.
+    """
+    import os
+    return {
+        "app_version":  app.version,
+        "git_commit":   os.getenv("RAILWAY_GIT_COMMIT_SHA", "local-dev"),
+        "git_branch":   os.getenv("RAILWAY_GIT_BRANCH", "local-dev"),
+        "environment":  os.getenv("ENVIRONMENT", "development"),
+    }
+
+
+@app.get("/api/v1/debug/routes")
+def debug_routes():
+    """
+    Returns all registered FastAPI route paths.
+    Use this to confirm /api/v1/screener is present in the live deployment.
+    """
+    from fastapi.routing import APIRoute
+    paths = sorted(
+        {r.path for r in app.routes if isinstance(r, APIRoute)}
+    )
+    return {"route_count": len(paths), "routes": paths}
+
+
 @app.get("/api/v1/model-info")
 def model_info():
     from app.ml.inference import get_metadata

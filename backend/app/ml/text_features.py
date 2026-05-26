@@ -179,3 +179,44 @@ TEXT_FEATURE_NAMES = [
     "text_urgency_score",
     "text_credibility_score",
 ]
+
+
+# ── Production (no text available): derive deterministically from signals ─────
+
+def compute_from_signals_deterministic(
+    avg_sentiment: float,
+    bullish_ratio: float,
+    mention_growth_ratio: float,
+    hype_score_raw: float,
+) -> dict:
+    """
+    Derive text signal features from numeric signals *without* noise.
+
+    Used in production inference when no real post body_snippet is available.
+    Matches the expected value (mean) of simulate_from_signals() — same mapping
+    rules, no Gaussian term — so repeated calls with identical inputs return
+    identical values (stable predictions).
+
+    Mapping rationale
+    ─────────────────
+    text_sentiment_compound   ← avg_sentiment  (direct VADER proxy)
+    text_exclamation_density  ← bullish_ratio × clip(mention_growth/3, 0, 1)
+    text_manipulation_score   ← hype_score_raw / 100
+    text_urgency_score        ← clip(mention_growth / 5, 0, 1)
+    text_credibility_score    ← 1 - manipulation_score
+    """
+    sentiment_compound   = float(np.clip(avg_sentiment, -1, 1))
+    exclamation_density  = float(np.clip(
+        bullish_ratio * min(mention_growth_ratio / 3.0, 1.0), 0, 1
+    ))
+    manipulation_score   = float(np.clip(hype_score_raw / 100.0, 0, 1))
+    urgency_score        = float(np.clip(mention_growth_ratio / 5.0, 0, 1))
+    credibility_score    = float(np.clip(1.0 - manipulation_score, 0, 1))
+
+    return {
+        "text_sentiment_compound":  round(sentiment_compound, 4),
+        "text_exclamation_density": round(exclamation_density, 4),
+        "text_manipulation_score":  round(manipulation_score, 4),
+        "text_urgency_score":       round(urgency_score, 4),
+        "text_credibility_score":   round(credibility_score, 4),
+    }

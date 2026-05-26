@@ -18,7 +18,7 @@ from app.services import yfinance_service as yf_svc
 from app.services import finnhub_service as fh_svc
 from app.services.trending_service import get_trending_tickers
 from app.ml import inference
-from app.ml.feature_engineering import build_feature_row
+from app.ml.feature_engineering import build_full_feature_row
 
 router = APIRouter(tags=["screener"])
 
@@ -107,7 +107,7 @@ def _realtime_score(symbol: str, db: Session, ticker_id: int) -> dict:
     # ── ML risk label ─────────────────────────────────────────────────────────
     mention_24h = int(social_mentions / 7) if social_mentions > 0 else 0
     try:
-        features = build_feature_row(
+        features = build_full_feature_row(
             mention_count_1h=max(1, mention_24h // 24),
             mention_count_24h=mention_24h,
             mention_growth_ratio=max(1.0, mention_24h / 10.0),

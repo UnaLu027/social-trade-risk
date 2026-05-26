@@ -13,7 +13,7 @@ from app.services import finnhub_service as fh_svc
 from app.services.sentiment_service import score_text
 from app.services.hype_calculator import get_latest_hype, hype_label
 from app.services.ticker_utils import normalize_symbol
-from app.ml.feature_engineering import build_feature_row
+from app.ml.feature_engineering import build_full_feature_row
 from app.ml import inference
 
 router = APIRouter(prefix="/api/v1/market-pulse", tags=["market-pulse"])
@@ -193,7 +193,11 @@ def get_market_pulse(ticker_symbol: str, db: Session = Depends(get_db)):
             br  = float(hype.bullish_ratio)  if hype else sentiment_stats.get("bullish_ratio", 0.5)
             sa  = float(hype.avg_sentiment)  if hype else sentiment_stats.get("avg_sentiment", 0.0)
             mc1h = max(1, mention_24h // 24)
-            feat = build_feature_row(
+            # Aggregate recent post text so text_features use real language signals
+            recent_text = " ".join(
+                p.body_snippet for p in recent_posts if p.body_snippet
+            )
+            feat = build_full_feature_row(
                 mention_count_1h=mc1h,
                 mention_count_24h=max(1, mention_24h),
                 mention_growth_ratio=max(1.0, mention_24h / 10.0),
@@ -205,6 +209,7 @@ def get_market_pulse(ticker_symbol: str, db: Session = Depends(get_db)):
                 volume_spike_ratio=volume_spike,
                 short_interest_ratio=0.1,
                 option_volume_spike=min(volume_spike * 0.4, 5.0),
+                post_text=recent_text,
             )
             risk_result = inference.predict_risk(feat)
             ml_probs = [round(p, 4) for p in risk_result["probabilities"]]

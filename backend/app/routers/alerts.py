@@ -6,6 +6,7 @@ from app.models import Alert, Ticker, Watchlist, HypeScore
 from app.schemas.alert import AlertResponse, WatchlistItem, WatchlistAddRequest
 from app.services.hype_calculator import get_latest_hype, hype_label
 from app.services import yfinance_service as yf_svc
+from app.services.ticker_utils import normalize_symbol
 
 router = APIRouter(prefix="/api/v1", tags=["alerts"])
 
@@ -75,7 +76,8 @@ def get_watchlist(db: Session = Depends(get_db)):
 
 @router.post("/watchlist", response_model=WatchlistItem)
 def add_to_watchlist(body: WatchlistAddRequest, db: Session = Depends(get_db)):
-    symbol = body.symbol.upper()
+    # normalize_symbol converts "2330" → "2330.TW" and uppercases US tickers
+    symbol = normalize_symbol(body.symbol)
     existing = db.execute(select(Watchlist).where(Watchlist.symbol == symbol)).scalar_one_or_none()
     if existing:
         raise HTTPException(status_code=409, detail=f"{symbol} already in watchlist")
@@ -88,9 +90,11 @@ def add_to_watchlist(body: WatchlistAddRequest, db: Session = Depends(get_db)):
 
 @router.delete("/watchlist/{symbol}")
 def remove_from_watchlist(symbol: str, db: Session = Depends(get_db)):
-    wl = db.execute(select(Watchlist).where(Watchlist.symbol == symbol.upper())).scalar_one_or_none()
+    # normalize_symbol so "2330" matches the stored "2330.TW"
+    normalized = normalize_symbol(symbol)
+    wl = db.execute(select(Watchlist).where(Watchlist.symbol == normalized)).scalar_one_or_none()
     if not wl:
-        raise HTTPException(status_code=404, detail=f"{symbol} not in watchlist")
+        raise HTTPException(status_code=404, detail=f"{normalized} not in watchlist")
     db.delete(wl)
     db.commit()
     return {"status": "removed"}

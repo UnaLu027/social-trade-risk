@@ -193,20 +193,25 @@ def generate(output_path: str = OUTPUT_PATH, target_rows: int = 8000) -> pd.Data
         else:  # 1 → flip to 0 or 2 with equal probability
             df.at[i, "label"] = int(RNG.choice([0, 2]))
 
-    # ── Synthetic timestamps (for time-based split support) ─────────────────────
-    # Simulate ~3 years of daily observations so experiments can use time-based split.
-    base_ts = datetime(2021, 1, 1)
-    timestamps = [base_ts + timedelta(hours=int(i * 3)) for i in range(len(df))]
-    df["synthetic_ts"] = timestamps
-
     # ── Derived features (16-feature set) ───────────────────────────────────────
     df = _add_derived_features(df)
 
     # ── Text signal features (21-feature set, Phase 3) ──────────────────────────
     df = _add_text_features(df)
 
+    # ── Shuffle BEFORE assigning timestamps ──────────────────────────────────────
+    # Base scenarios are created in class order (low → medium → high). Shuffling
+    # first ensures the synthetic timeline mixes all three classes throughout, so
+    # time-based train/val/test split produces balanced class distributions in
+    # each fold rather than grouping all low-risk rows into the training set.
     df = df.sample(frac=1, random_state=42).reset_index(drop=True)
     df = df.iloc[:target_rows]
+
+    # ── Synthetic timestamps (for time-based split support) ─────────────────────
+    # Assigned AFTER shuffling so the temporal ordering is class-balanced.
+    base_ts = datetime(2021, 1, 1)
+    timestamps = [base_ts + timedelta(hours=int(i * 3)) for i in range(len(df))]
+    df["synthetic_ts"] = timestamps
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df.to_csv(output_path, index=False)
