@@ -1,36 +1,36 @@
 {
-  "experiment_id": "20260526T021418Z",
+  "experiment_id": "20260526T032916Z",
   "feature_set": "textfeatures",
   "split_method": "time-based",
   "best_model_name": "GradientBoosting",
   "selection_metric": "val_macro_f1",
-  "trained_at": "2026-05-26T02:14:18.893185+00:00",
+  "trained_at": "2026-05-26T03:29:16.472702+00:00",
   "candidates": [
     {
       "name": "LogisticRegression",
-      "val_accuracy": 0.65,
-      "val_macro_f1": 0.4635,
-      "val_weighted_f1": 0.7018,
-      "val_high_risk_recall": 0.3236,
-      "cv_best_score": 0.5744,
+      "val_accuracy": 0.9008,
+      "val_macro_f1": 0.8884,
+      "val_weighted_f1": 0.9008,
+      "val_high_risk_recall": 0.9096,
+      "cv_best_score": 0.8802,
       "val_per_class": {
         "low": {
-          "precision": 0.0,
-          "recall": 0.0,
-          "f1": 0.0,
-          "support": 15
+          "precision": 0.8357,
+          "recall": 0.8122,
+          "f1": 0.8238,
+          "support": 213
         },
         "medium": {
-          "precision": 0.8763,
-          "recall": 0.948,
-          "f1": 0.9107,
-          "support": 635
+          "precision": 0.8949,
+          "recall": 0.9255,
+          "f1": 0.9099,
+          "support": 644
         },
         "high": {
-          "precision": 0.9271,
-          "recall": 0.3236,
-          "f1": 0.4798,
-          "support": 550
+          "precision": 0.9541,
+          "recall": 0.9096,
+          "f1": 0.9313,
+          "support": 343
         }
       },
       "best_params": {
@@ -41,69 +41,69 @@
     },
     {
       "name": "RandomForest",
-      "val_accuracy": 0.9008,
-      "val_macro_f1": 0.6039,
-      "val_weighted_f1": 0.8949,
-      "val_high_risk_recall": 0.8564,
-      "cv_best_score": 0.6846,
+      "val_accuracy": 0.9442,
+      "val_macro_f1": 0.9418,
+      "val_weighted_f1": 0.9441,
+      "val_high_risk_recall": 0.9271,
+      "cv_best_score": 0.9391,
       "val_per_class": {
         "low": {
-          "precision": 0.0,
-          "recall": 0.0,
-          "f1": 0.0,
-          "support": 15
+          "precision": 0.9471,
+          "recall": 0.9249,
+          "f1": 0.9359,
+          "support": 213
         },
         "medium": {
-          "precision": 0.8665,
-          "recall": 0.9606,
-          "f1": 0.9111,
-          "support": 635
+          "precision": 0.9378,
+          "recall": 0.9596,
+          "f1": 0.9486,
+          "support": 644
         },
         "high": {
-          "precision": 0.9496,
-          "recall": 0.8564,
-          "f1": 0.9006,
-          "support": 550
+          "precision": 0.955,
+          "recall": 0.9271,
+          "f1": 0.9408,
+          "support": 343
         }
       },
       "best_params": {
-        "model__n_estimators": 200,
+        "model__n_estimators": 100,
         "model__min_samples_split": 10,
         "model__min_samples_leaf": 1,
         "model__max_depth": 10,
-        "model__class_weight": null
+        "model__class_weight": "balanced"
       }
     },
     {
       "name": "GradientBoosting",
-      "val_accuracy": 0.905,
-      "val_macro_f1": 0.6068,
-      "val_weighted_f1": 0.8991,
-      "val_high_risk_recall": 0.8691,
-      "cv_best_score": 0.6889,
+      "val_accuracy": 0.95,
+      "val_macro_f1": 0.947,
+      "val_weighted_f1": 0.95,
+      "val_high_risk_recall": 0.9417,
+      "cv_best_score": 0.9413,
       "val_per_class": {
         "low": {
-          "precision": 0.0,
-          "recall": 0.0,
-          "f1": 0.0,
-          "support": 15
+          "precision": 0.9471,
+          "recall": 0.9249,
+          "f1": 0.9359,
+          "support": 213
         },
         "medium": {
-          "precision": 0.8748,
-          "recall": 0.9575,
-          "f1": 0.9143,
-          "support": 635
+          "precision": 0.9451,
+          "recall": 0.9627,
+          "f1": 0.9538,
+          "support": 644
         },
         "high": {
-          "precision": 0.9465,
-          "recall": 0.8691,
-          "f1": 0.9062,
-          "support": 550
+          "precision": 0.9613,
+          "recall": 0.9417,
+          "f1": 0.9514,
+          "support": 343
         }
       },
       "best_params": {
         "model__subsample": 0.7,
-        "model__n_estimators": 150,
+        "model__n_estimators": 100,
         "model__min_samples_leaf": 5,
         "model__max_depth": 5,
         "model__learning_rate": 0.05
@@ -111,66 +111,66 @@
     },
     {
       "name": "MLP",
-      "val_accuracy": 0.78,
-      "val_macro_f1": 0.5149,
-      "val_weighted_f1": 0.7663,
-      "val_high_risk_recall": 0.5836,
-      "cv_best_score": 0.5773,
+      "val_accuracy": 0.9058,
+      "val_macro_f1": 0.8923,
+      "val_weighted_f1": 0.9052,
+      "val_high_risk_recall": 0.9271,
+      "cv_best_score": 0.8592,
       "val_per_class": {
         "low": {
-          "precision": 0.0,
-          "recall": 0.0,
-          "f1": 0.0,
-          "support": 15
+          "precision": 0.8615,
+          "recall": 0.7887,
+          "f1": 0.8235,
+          "support": 213
         },
         "medium": {
-          "precision": 0.7159,
-          "recall": 0.9685,
-          "f1": 0.8233,
-          "support": 635
+          "precision": 0.8957,
+          "recall": 0.9332,
+          "f1": 0.9141,
+          "support": 644
         },
         "high": {
-          "precision": 0.9441,
-          "recall": 0.5836,
-          "f1": 0.7213,
-          "support": 550
+          "precision": 0.9521,
+          "recall": 0.9271,
+          "f1": 0.9394,
+          "support": 343
         }
       },
       "best_params": {
         "model__learning_rate_init": 0.001,
         "model__hidden_layer_sizes": [
-          64,
-          32
+          128,
+          64
         ],
         "model__alpha": 0.01,
-        "model__activation": "tanh"
+        "model__activation": "relu"
       }
     },
     {
       "name": "StackingClassifier",
-      "val_accuracy": 0.8533,
-      "val_macro_f1": 0.5724,
-      "val_weighted_f1": 0.8493,
-      "val_high_risk_recall": 0.7564,
-      "cv_best_score": 0.4876,
+      "val_accuracy": 0.9483,
+      "val_macro_f1": 0.9453,
+      "val_weighted_f1": 0.9483,
+      "val_high_risk_recall": 0.9446,
+      "cv_best_score": 0.9388,
       "val_per_class": {
         "low": {
-          "precision": 0.0,
-          "recall": 0.0,
-          "f1": 0.0,
-          "support": 15
+          "precision": 0.9426,
+          "recall": 0.9249,
+          "f1": 0.9336,
+          "support": 213
         },
         "medium": {
-          "precision": 0.8128,
-          "recall": 0.9575,
-          "f1": 0.8792,
-          "support": 635
+          "precision": 0.9463,
+          "recall": 0.9581,
+          "f1": 0.9522,
+          "support": 644
         },
         "high": {
-          "precision": 0.9391,
-          "recall": 0.7564,
-          "f1": 0.8379,
-          "support": 550
+          "precision": 0.9558,
+          "recall": 0.9446,
+          "f1": 0.9501,
+          "support": 343
         }
       },
       "best_params": {

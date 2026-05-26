@@ -1,38 +1,38 @@
 [
   {
-    "experiment_id": "20260525T190927Z",
-    "feature_set": "extended",
-    "n_features": 16,
-    "best_model_name": "RandomForest",
-    "test_accuracy": 0.9244,
-    "test_macro_f1": 0.6134,
-    "test_weighted_f1": 0.9211,
-    "test_high_risk_recall": 0.9649,
-    "trained_at": "2026-05-25T19:09:27.949886+00:00",
-    "note": "16 extended features including hype_score_raw and 3 derived features"
-  },
-  {
-    "experiment_id": "20260526T020713Z",
+    "experiment_id": "20260526T031731Z",
     "feature_set": "noleakage",
     "n_features": 15,
-    "best_model_name": "GradientBoosting",
-    "test_accuracy": 0.9237,
-    "test_macro_f1": 0.608,
-    "test_weighted_f1": 0.9202,
-    "test_high_risk_recall": 0.9649,
-    "trained_at": "2026-05-26T02:07:13.152008+00:00",
+    "best_model_name": "StackingClassifier",
+    "test_accuracy": 0.9244,
+    "test_macro_f1": 0.9184,
+    "test_weighted_f1": 0.9246,
+    "test_high_risk_recall": 0.9453,
+    "trained_at": "2026-05-26T03:17:31.396809+00:00",
     "note": "15 extended features, hype_score_raw EXCLUDED to measure leakage"
   },
   {
-    "experiment_id": "20260526T021418Z",
+    "experiment_id": "20260526T032220Z",
+    "feature_set": "extended",
+    "n_features": 16,
+    "best_model_name": "StackingClassifier",
+    "test_accuracy": 0.9444,
+    "test_macro_f1": 0.9414,
+    "test_weighted_f1": 0.9443,
+    "test_high_risk_recall": 0.9408,
+    "trained_at": "2026-05-26T03:22:20.077964+00:00",
+    "note": "16 extended features including hype_score_raw and 3 derived features"
+  },
+  {
+    "experiment_id": "20260526T032916Z",
     "feature_set": "textfeatures",
     "n_features": 21,
     "best_model_name": "GradientBoosting",
-    "test_accuracy": 0.9237,
-    "test_macro_f1": 0.608,
-    "test_weighted_f1": 0.9202,
-    "test_high_risk_recall": 0.9649,
-    "trained_at": "2026-05-26T02:14:18.893185+00:00",
+    "test_accuracy": 0.9463,
+    "test_macro_f1": 0.9431,
+    "test_weighted_f1": 0.9462,
+    "test_high_risk_recall": 0.9476,
+    "trained_at": "2026-05-26T03:29:16.472702+00:00",
     "note": "21 text-extended features: 16 extended + 5 text signal features (text_sentiment_compound, text_exclamation_density, text_manipulation_score, text_urgency_score, text_credibility_score). Text features simulated from numeric signals in training; computed from real post body_snippet in production via VADER + heuristics."
   }
 ]
