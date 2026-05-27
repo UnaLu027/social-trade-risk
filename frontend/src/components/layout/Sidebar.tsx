@@ -1,28 +1,15 @@
 import { NavLink } from 'react-router-dom'
-import { ShieldAlert, MessageSquare, FileText, FlaskConical, Brain, TrendingUp, Activity, LayoutDashboard, Clock, Bell, ChevronDown, ChevronRight } from 'lucide-react'
-import { useState } from 'react'
+import { ShieldAlert, MessageSquare, FileText, FlaskConical, Brain, TrendingUp } from 'lucide-react'
 
 const coreNavItems = [
-  { to: '/risk-monitor',    icon: ShieldAlert,    label: '風險監控中心' },
-  { to: '/post-analyzer',   icon: MessageSquare,  label: '貼文風險分析' },
-  { to: '/risk-report/GME', icon: FileText,       label: '風險報告' },
-  { to: '/stress-test',     icon: FlaskConical,   label: '情境壓力測試' },
-  { to: '/model-lab',       icon: Brain,          label: '模型實驗室' },
-]
-
-const legacyNavItems = [
-  { to: '/market-pulse',    icon: Activity,       label: '市場脈動' },
-  { to: '/overview',        icon: LayoutDashboard,label: '市場總覽' },
-  { to: '/event-replay',    icon: Clock,          label: '事件回放' },
-  { to: '/alerts',          icon: Bell,           label: '警報中心' },
-  { to: '/scenario',        icon: FlaskConical,   label: '情境模擬' },
-  { to: '/fake-news',       icon: ShieldAlert,    label: '假新聞偵測' },
-  { to: '/model-insights',  icon: Brain,          label: '模型洞察' },
+  { to: '/risk-monitor',    icon: ShieldAlert,   label: '風險監控中心' },
+  { to: '/post-analyzer',   icon: MessageSquare, label: '貼文風險分析' },
+  { to: '/risk-report/GME', icon: FileText,      label: '風險報告' },
+  { to: '/stress-test',     icon: FlaskConical,  label: '情境壓力測試' },
+  { to: '/model-lab',       icon: Brain,         label: '模型實驗室' },
 ]
 
 export function Sidebar() {
-  const [legacyOpen, setLegacyOpen] = useState(false)
-
   return (
     <aside
       style={{ background: '#0d0f1a', borderRight: '1px solid #1f2235' }}
@@ -30,8 +17,10 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="flex items-center gap-2 px-3 mb-8">
-        <div className="w-7 h-7 rounded flex items-center justify-center"
-             style={{ background: 'linear-gradient(135deg, #10b981, #0ea5e9)' }}>
+        <div
+          className="w-7 h-7 rounded flex items-center justify-center"
+          style={{ background: 'linear-gradient(135deg, #10b981, #0ea5e9)' }}
+        >
           <TrendingUp size={14} color="white" />
         </div>
         <div>
@@ -42,8 +31,12 @@ export function Sidebar() {
 
       {/* Core nav */}
       <nav className="flex flex-col gap-1 flex-1">
-        <div className="text-[10px] font-semibold uppercase tracking-widest px-3 mb-2"
-             style={{ color: '#3d4163' }}>核心功能</div>
+        <div
+          className="text-[10px] font-semibold uppercase tracking-widest px-3 mb-2"
+          style={{ color: '#3d4163' }}
+        >
+          核心功能
+        </div>
 
         {coreNavItems.map(({ to, icon: Icon, label }) => (
           <NavLink
@@ -51,7 +44,9 @@ export function Sidebar() {
             to={to}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                isActive ? 'text-white bg-[#1e2235]' : 'text-[#64748b] hover:text-[#94a3b8] hover:bg-[#151828]'
+                isActive
+                  ? 'text-white bg-[#1e2235]'
+                  : 'text-[#64748b] hover:text-[#94a3b8] hover:bg-[#151828]'
               }`
             }
           >
@@ -59,35 +54,6 @@ export function Sidebar() {
               <>
                 <Icon size={15} color={isActive ? '#10b981' : undefined} />
                 {label}
-              </>
-            )}
-          </NavLink>
-        ))}
-
-        {/* Legacy section (collapsible) */}
-        <button
-          onClick={() => setLegacyOpen(v => !v)}
-          className="flex items-center gap-2 px-3 py-2 mt-4 rounded-md text-xs font-semibold uppercase tracking-widest transition-colors hover:bg-[#151828]"
-          style={{ color: '#3d4163' }}
-        >
-          {legacyOpen ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-          Legacy Dashboard
-        </button>
-
-        {legacyOpen && legacyNavItems.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                isActive ? 'text-white bg-[#1e2235]' : 'text-[#64748b] hover:text-[#94a3b8] hover:bg-[#151828]'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <Icon size={14} color={isActive ? '#64748b' : undefined} />
-                <span className="text-xs">{label}</span>
               </>
             )}
           </NavLink>
