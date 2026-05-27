@@ -10,7 +10,7 @@ from app.database import engine, SessionLocal
 from app.models import Base, Ticker, Watchlist
 from app.ml import inference
 from app.ml.fakenews import inference_fakenews
-from app.routers import market_pulse, event_replay, alerts, scenario, screener, fake_news, model_insights
+from app.routers import market_pulse, event_replay, alerts, scenario, screener, fake_news, model_insights, copilot
 
 settings = get_settings()
 _scheduler = BackgroundScheduler()
@@ -134,6 +134,7 @@ app.include_router(scenario.router)
 app.include_router(screener.router)
 app.include_router(fake_news.router)
 app.include_router(model_insights.router)
+app.include_router(copilot.router)
 
 
 @app.get("/health")

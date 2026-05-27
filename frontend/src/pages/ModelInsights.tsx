@@ -481,7 +481,10 @@ export function ModelInsights() {
                     <Tooltip
                       contentStyle={{ background: '#1a1d27', border: '1px solid #2d3148', borderRadius: 6 }}
                       labelStyle={{ color: '#94a3b8', fontSize: 11 }}
-                      formatter={(v: number) => [`${(v * 100).toFixed(2)}%`, '重要性']}
+                      formatter={(value) => {
+  				const n = Number(value ?? 0);
+  				return [`${(n * 100).toFixed(2)}%`, '重要性'];
+			}}
                     />
                     <Bar dataKey="importance" radius={[0, 3, 3, 0]}>
                       {topFeatures.map((entry, index) => (

@@ -5,7 +5,7 @@ import { Bell, Search, RefreshCw } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { normalizeTicker } from '../../utils/ticker'
 
-const TICKERS = ['GME', 'AMC', 'TSLA', '2330.TW']
+const TICKERS = ['GME', 'AMC', 'BB', 'KOSS', 'TSLA', 'NVDA']
 
 export function TopBar({ title }: { title: string }) {
   const { activeTicker, setActiveTicker } = useAppStore()
