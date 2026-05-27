@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { FlaskConical, Save, AlertTriangle } from 'lucide-react'
-import { api } from '../api/client'
 import { phpPost } from '../api/phpClient'
 import { TopBar } from '../components/layout/TopBar'
 import {
@@ -134,17 +133,13 @@ export function StressTest() {
   const set = (key: keyof SimInput) => (v: number | boolean) =>
     setInputs(prev => ({ ...prev, [key]: v }))
 
-  const runMutation = useMutation({
-    mutationFn: async (inp: SimInput): Promise<SimOutput> => {
-      try {
-        const res = await api.post<SimOutput>('/api/v1/stress-test', inp)
-        setFromApi(true)
-        return res.data
-      } catch {
-        setFromApi(false)
-        return localSimulate(inp)
-      }
-    },
+const runMutation = useMutation({
+  mutationFn: async (inp: SimInput): Promise<SimOutput> => {
+    // Public InfinityFree version:
+    // Do not call localhost FastAPI. Use browser-side simulation.
+    setFromApi(false)
+    return localSimulate(inp)
+  },
     onSuccess: async (data) => {
       setResult(data)
       try {

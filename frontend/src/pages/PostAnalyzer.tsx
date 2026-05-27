@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { ShieldAlert, Send, Zap, AlertTriangle, CheckCircle } from 'lucide-react'
-import { api } from '../api/client'
 import { phpPost } from '../api/phpClient'
 import { TopBar } from '../components/layout/TopBar'
 
@@ -135,16 +134,12 @@ export function PostAnalyzer() {
   const [savedId, setSavedId]       = useState<number | null>(null)
   const [apiSource, setApiSource]   = useState<'fastapi' | 'heuristic' | null>(null)
 
-  const analyzeMutation = useMutation({
-    mutationFn: async (req: AnalyzeRequest): Promise<AnalyzeResult> => {
-      try {
-        const res = await api.post<AnalyzeResult>('/api/v1/post-analyze', req)
-        return res.data
-      } catch {
-        // FastAPI unavailable — fall back to local heuristic
-        return heuristicAnalyze(req.text)
-      }
-    },
+const analyzeMutation = useMutation({
+  mutationFn: async (req: AnalyzeRequest): Promise<AnalyzeResult> => {
+    // Public InfinityFree version:
+    // Do not call localhost FastAPI. Use browser-side heuristic inference.
+    return heuristicAnalyze(req.text)
+  },
     onSuccess: async (data, vars) => {
       setResult(data)
       setApiSource(data.model_source.includes('heuristic') ? 'heuristic' : 'fastapi')
