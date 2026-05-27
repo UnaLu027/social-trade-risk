@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Sidebar } from './components/layout/Sidebar'
 import { MarketPulse } from './pages/MarketPulse'
 import { EventReplay } from './pages/EventReplay'
@@ -11,7 +11,7 @@ import { ModelInsights } from './pages/ModelInsights'
 
 export default function App() {
   return (
-    <BrowserRouter basename="/social-trade-risk">
+    <HashRouter>
       <div className="flex w-full min-h-screen" style={{ background: '#0f1117' }}>
         <Sidebar />
         <main className="flex-1 flex flex-col min-h-screen overflow-hidden">
@@ -28,6 +28,6 @@ export default function App() {
           </Routes>
         </main>
       </div>
-    </BrowserRouter>
+    </HashRouter>
   )
 }

@@ -92,11 +92,10 @@ export function MarketOverview() {
       <TopBar title="市場總覽" />
 
       {screenerError && (
-        <div className="mx-6 mt-4 px-4 py-3 rounded-lg" style={{ background: '#450a0a', border: '1px solid #7f1d1d' }}>
-          <p className="text-sm font-semibold" style={{ color: '#ef4444' }}>無法連線到後端伺服器</p>
-          <p className="text-xs mt-1" style={{ color: '#fca5a5' }}>
-            API 位址：<code className="font-mono">{BASE_URL}</code>
-            &nbsp;·&nbsp;
+        <div className="mx-6 mt-4 px-4 py-3 rounded-lg" style={{ background: '#1c1a05', border: '1px solid #78350f' }}>
+          <p className="text-sm font-semibold" style={{ color: '#f59e0b' }}>市場篩選器資料載入逾時或暫時不可用</p>
+          <p className="text-xs mt-1" style={{ color: '#fcd34d' }}>
+            後端服務運作中，請稍後重試。&nbsp;·&nbsp;
             <a href={`${BASE_URL}/health`} target="_blank" rel="noopener noreferrer" className="underline">檢查後端狀態</a>
           </p>
         </div>

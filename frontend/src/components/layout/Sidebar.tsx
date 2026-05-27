@@ -58,10 +58,10 @@ export function Sidebar() {
       {/* Footer */}
       <div className="px-3 pt-4" style={{ borderTop: '1px solid #1f2235' }}>
         <div className="text-[10px]" style={{ color: '#3d4163' }}>
-          RandomForest · 5 模型比較優選
+          5 模型比較優選
         </div>
         <div className="text-[10px] mt-0.5" style={{ color: '#3d4163' }}>
-          高風險召回率：96.5%
+          詳見「模型洞察」
         </div>
       </div>
     </aside>

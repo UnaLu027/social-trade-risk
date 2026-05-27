@@ -185,6 +185,48 @@ def model_info():
     return get_metadata()
 
 
+@app.get("/api/v1/debug/watchlist")
+def debug_watchlist():
+    """
+    Diagnostic: check Watchlist size and DB row counts.
+    Use this to confirm whether Watchlist has too many entries causing Screener timeout.
+    """
+    from sqlalchemy import text as sa_text
+    from app.database import SessionLocal
+    from app.models import Watchlist as WL
+
+    out: dict = {
+        "watchlist_count": 0,
+        "symbols": [],
+        "ticker_count": 0,
+        "price_snapshot_count": 0,
+        "hype_score_count": 0,
+        "errors": [],
+    }
+
+    db2 = SessionLocal()
+    try:
+        rows = db2.execute(select(WL)).scalars().all()
+        out["watchlist_count"] = len(rows)
+        out["symbols"] = [r.symbol for r in rows]
+    except Exception as e:
+        out["errors"].append(f"watchlist: {e}")
+
+    for table, key in [
+        ("tickers", "ticker_count"),
+        ("price_snapshots", "price_snapshot_count"),
+        ("hype_scores", "hype_score_count"),
+    ]:
+        try:
+            cnt = db2.execute(sa_text(f"SELECT COUNT(*) FROM {table}")).scalar()
+            out[key] = cnt or 0
+        except Exception as e:
+            out["errors"].append(f"{table}: {e}")
+
+    db2.close()
+    return out
+
+
 @app.get("/api/v1/debug/data-sources")
 def debug_data_sources():
     """
