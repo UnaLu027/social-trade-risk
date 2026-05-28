@@ -202,19 +202,18 @@ const analyzeMutation = useMutation({
             ))}
           </div>
 
-          {/* Symbol selector */}
+          {/* Symbol input */}
           <div className="flex items-center gap-2 mb-3">
             <label className="text-xs font-semibold" style={{ color: '#64748b' }}>標的</label>
-            <select
+            <input
+              type="text"
               value={symbol}
-              onChange={e => setSymbol(e.target.value)}
-              className="text-xs px-2 py-1.5 rounded outline-none"
+              onChange={e => setSymbol(e.target.value.toUpperCase().replace(/[^A-Z0-9.\-]/g, ''))}
+              placeholder="GME, TSLA, AAPL..."
+              maxLength={10}
+              className="text-xs px-2 py-1.5 rounded outline-none w-28 font-mono"
               style={{ background: '#0d0f1a', border: '1px solid #2d3148', color: '#f1f5f9' }}
-            >
-              {['GME','AMC','BB','KOSS','NOK','TSLA','PLTR','NVDA'].map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+            />
           </div>
 
           <textarea

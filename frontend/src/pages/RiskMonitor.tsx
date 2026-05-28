@@ -133,6 +133,26 @@ function RiskCard({ snap, onView }: { snap: RiskSnapshot; onView: () => void }) 
 export function RiskMonitor() {
   const navigate = useNavigate()
   const [filter, setFilter] = useState<'All' | 'Critical' | 'High' | 'Medium' | 'Low'>('All')
+  const [searchTicker, setSearchTicker] = useState('')
+  const [searchError,  setSearchError]  = useState('')
+
+  function handleSearch() {
+    const val = searchTicker.trim().toUpperCase()
+    if (!val) {
+      setSearchError('Please enter a ticker symbol.')
+      return
+    }
+    if (!/^[A-Z0-9.\-]+$/.test(val)) {
+      setSearchError('Invalid ticker. Only A–Z, 0–9, "." and "-" are allowed.')
+      return
+    }
+    if (val.includes('.TW')) {
+      setSearchError('Only US stocks are supported in this MVP.')
+      return
+    }
+    setSearchError('')
+    navigate(`/risk-report/${val}`)
+  }
 
   // FastAPI market snapshots (primary source)
   const {
@@ -219,6 +239,36 @@ export function RiskMonitor() {
       />
 
       <div className="p-6 flex flex-col gap-6">
+
+        {/* Ticker search */}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={searchTicker}
+              onChange={e => {
+                const v = e.target.value.toUpperCase().replace(/[^A-Z0-9.\-]/g, '')
+                setSearchTicker(v)
+                if (searchError) setSearchError('')
+              }}
+              onKeyDown={e => { if (e.key === 'Enter') handleSearch() }}
+              placeholder="Search any US ticker…"
+              maxLength={10}
+              className="px-3 py-2 rounded-md text-sm outline-none w-48 font-mono"
+              style={{ background: '#0d0f1a', border: '1px solid #2d3148', color: '#f1f5f9' }}
+            />
+            <button
+              onClick={handleSearch}
+              className="px-3 py-2 rounded-md text-sm font-semibold transition-opacity hover:opacity-80"
+              style={{ background: '#1e3a5f', color: '#38bdf8', border: '1px solid #2d4a6f' }}
+            >
+              Search
+            </button>
+          </div>
+          {searchError && (
+            <p className="text-xs" style={{ color: '#f59e0b' }}>{searchError}</p>
+          )}
+        </div>
 
         {/* Both sources failed → demo fallback */}
         {usingDemo && (
