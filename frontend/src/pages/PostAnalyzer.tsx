@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { ShieldAlert, Send, Zap, AlertTriangle, CheckCircle } from 'lucide-react'
 import { phpPost } from '../api/phpClient'
+import { api } from '../api/client'
 import { TopBar } from '../components/layout/TopBar'
 
 // ── types ────────────────────────────────────────────────────────────────────
@@ -136,9 +137,13 @@ export function PostAnalyzer() {
 
 const analyzeMutation = useMutation({
   mutationFn: async (req: AnalyzeRequest): Promise<AnalyzeResult> => {
-    // Public InfinityFree version:
-    // Do not call localhost FastAPI. Use browser-side heuristic inference.
-    return heuristicAnalyze(req.text)
+    try {
+      const res = await api.post<AnalyzeResult>('/api/v1/post-analyze', req)
+      return res.data
+    } catch (err) {
+      console.error('[Real AI API failed, fallback to heuristic]', err)
+      return heuristicAnalyze(req.text)
+    }
   },
     onSuccess: async (data, vars) => {
       setResult(data)
