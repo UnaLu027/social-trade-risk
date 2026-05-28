@@ -3,7 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { ShieldAlert, TrendingUp, AlertTriangle, RefreshCw, Zap, Eye } from 'lucide-react'
 import { phpGet } from '../api/phpClient'
+import { api } from '../api/client'
 import { TopBar } from '../components/layout/TopBar'
+
+const DEFAULT_SYMBOLS = 'GME,AMC,TSLA,NVDA,AAPL,MSFT,AMD,NFLX'
 
 // ── types ────────────────────────────────────────────────────────────────────
 
@@ -93,6 +96,9 @@ function RiskCard({ snap, onView }: { snap: RiskSnapshot; onView: () => void }) 
           {snap.data_quality === 'demo' && (
             <span className="ml-2 text-[10px] font-normal" style={{ color: '#64748b' }}>demo</span>
           )}
+          {snap.data_quality === 'market_snapshot_rule_based' && (
+            <span className="ml-2 text-[10px] font-normal" style={{ color: '#10b981' }}>market</span>
+          )}
         </div>
       )}
 
@@ -128,7 +134,39 @@ export function RiskMonitor() {
   const navigate = useNavigate()
   const [filter, setFilter] = useState<'All' | 'Critical' | 'High' | 'Medium' | 'Low'>('All')
 
-  const { data, isLoading, isFetching, error, refetch, dataUpdatedAt } = useQuery({
+  // FastAPI market snapshots (primary source)
+  const {
+    data: fastapiData,
+    isLoading: fastapiIsLoading,
+    isFetching: fastapiIsFetching,
+    error: fastapiError,
+    refetch: fastapiRefetch,
+    dataUpdatedAt: fastapiUpdatedAt,
+  } = useQuery({
+    queryKey: ['fastapi-market-snapshots'],
+    queryFn: async () => {
+      const res = await api.get<{
+        success: boolean
+        count: number
+        fetched_at: string
+        data: { count: number; snapshots: RiskSnapshot[] }
+        errors: { symbol: string; error: string }[]
+      }>(`/api/v1/market-snapshots?symbols=${DEFAULT_SYMBOLS}`)
+      return res.data
+    },
+    retry: 1,
+    staleTime: 5 * 60_000,
+    refetchInterval: 10 * 60_000,
+  })
+
+  // PHP/MySQL snapshots (fallback)
+  const {
+    data: phpData,
+    isLoading: phpIsLoading,
+    isFetching: phpIsFetching,
+    refetch: phpRefetch,
+    dataUpdatedAt: phpUpdatedAt,
+  } = useQuery({
     queryKey: ['php-risk-snapshots'],
     queryFn: async () => {
       const res = await phpGet<{ count: number; snapshots: RiskSnapshot[] }>('/risk_snapshots.php')
@@ -139,9 +177,26 @@ export function RiskMonitor() {
     refetchInterval: 10 * 60_000,
   })
 
-  const snapshots = data ?? DEMO_SNAPSHOTS
-  const usingDemo = !data
-  const hasDemoQuality = !!data && data.some(s => s.data_quality === 'demo')
+  // Data priority: FastAPI (non-empty) > PHP > DEMO
+  // Empty array from FastAPI (all tickers rate-limited) must NOT block PHP fallback
+  const fastapiSnapshots  = fastapiData?.data?.snapshots ?? []
+  const hasFastapiData    = fastapiSnapshots.length > 0
+  const hasPhpData        = !!phpData && phpData.length > 0
+
+  const snapshots = hasFastapiData
+    ? fastapiSnapshots
+    : hasPhpData
+      ? phpData!
+      : DEMO_SNAPSHOTS
+
+  const usingDemo        = !hasFastapiData && !hasPhpData
+  const usingPhpFallback = !hasFastapiData && hasPhpData
+  const hasPartialErrors = !!fastapiData && (fastapiData.errors?.length ?? 0) > 0
+  const hasDemoQuality   = usingPhpFallback && phpData!.some(s => s.data_quality === 'demo')
+
+  const isLoading     = fastapiIsLoading && phpIsLoading
+  const isFetching    = fastapiIsFetching || phpIsFetching
+  const dataUpdatedAt = hasFastapiData ? fastapiUpdatedAt : phpUpdatedAt
 
   const filtered = filter === 'All'
     ? snapshots
@@ -165,27 +220,35 @@ export function RiskMonitor() {
 
       <div className="p-6 flex flex-col gap-6">
 
-        {/* API connection failed banner */}
-        {(usingDemo || error) && (
+        {/* Both sources failed → demo fallback */}
+        {usingDemo && (
           <div className="px-4 py-3 rounded-lg" style={{ background: '#1c1a05', border: '1px solid #78350f' }}>
-            <p className="text-sm font-semibold" style={{ color: '#f59e0b' }}>
-              目前無法連接 InfinityFree PHP/MySQL API
-            </p>
-            <p className="text-xs mt-1" style={{ color: '#fcd34d' }}>
-              暫時顯示 historical demo data。
-            </p>
+            <p className="text-sm font-semibold" style={{ color: '#f59e0b' }}>目前無法連接 API</p>
+            <p className="text-xs mt-1" style={{ color: '#fcd34d' }}>暫時顯示 historical demo data。</p>
           </div>
         )}
 
-        {/* Historical demo data quality banner */}
+        {/* FastAPI failed, using PHP fallback */}
+        {usingPhpFallback && (
+          <div className="px-4 py-3 rounded-lg" style={{ background: '#0f1a2e', border: '1px solid #1e3a5f' }}>
+            <p className="text-sm font-semibold" style={{ color: '#38bdf8' }}>使用 PHP/MySQL 備援資料</p>
+            <p className="text-xs mt-1" style={{ color: '#7dd3fc' }}>FastAPI 暫時無回應，已切換至備援資料來源。</p>
+          </div>
+        )}
+
+        {/* FastAPI returned but some tickers failed */}
+        {hasPartialErrors && (
+          <div className="px-4 py-3 rounded-lg" style={{ background: '#1c1205', border: '1px solid #92400e' }}>
+            <p className="text-sm font-semibold" style={{ color: '#fb923c' }}>部分 ticker 暫時無法取得最新市場資料</p>
+            <p className="text-xs mt-1" style={{ color: '#fdba74' }}>其餘標的資料正常顯示。</p>
+          </div>
+        )}
+
+        {/* PHP data contains demo-quality rows */}
         {hasDemoQuality && (
           <div className="px-4 py-3 rounded-lg" style={{ background: '#1a1505', border: '1px solid #92400e' }}>
-            <p className="text-sm font-semibold" style={{ color: '#fb923c' }}>
-              Historical demo data
-            </p>
-            <p className="text-xs mt-1" style={{ color: '#fdba74' }}>
-              目前顯示的是歷史展示資料，尚非即時市場風險監控。
-            </p>
+            <p className="text-sm font-semibold" style={{ color: '#fb923c' }}>Historical demo data</p>
+            <p className="text-xs mt-1" style={{ color: '#fdba74' }}>目前顯示的是歷史展示資料，尚非即時市場風險監控。</p>
           </div>
         )}
 
@@ -225,7 +288,7 @@ export function RiskMonitor() {
               </span>
             )}
             <button
-              onClick={() => refetch()}
+              onClick={() => { fastapiRefetch(); phpRefetch() }}
               className="p-1.5 rounded transition-opacity"
               style={{ color: '#38bdf8' }}
               title="重新整理"
