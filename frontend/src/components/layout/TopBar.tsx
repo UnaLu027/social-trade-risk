@@ -7,7 +7,23 @@ import { normalizeTicker } from '../../utils/ticker'
 
 const TICKERS = ['GME', 'AMC', 'BB', 'KOSS', 'TSLA', 'NVDA']
 
-export function TopBar({ title }: { title: string }) {
+interface TopBarProps {
+  title: string
+  showTickerTabs?: boolean
+  showSearch?: boolean
+  showRefresh?: boolean
+  showBell?: boolean
+  showAvatar?: boolean
+}
+
+export function TopBar({
+  title,
+  showTickerTabs = true,
+  showSearch = true,
+  showRefresh = true,
+  showBell = true,
+  showAvatar = true,
+}: TopBarProps) {
   const { activeTicker, setActiveTicker } = useAppStore()
   const qc = useQueryClient()
   const navigate = useNavigate()
@@ -28,66 +44,76 @@ export function TopBar({ title }: { title: string }) {
     >
       <div className="flex items-center gap-4">
         <span className="text-sm font-semibold text-white">{title}</span>
-        <div className="flex items-center gap-1">
-          {TICKERS.map((t) => (
-            <button
-              key={t}
-              onClick={() => setActiveTicker(t)}
-              className="px-3 py-1 text-xs font-semibold rounded transition-colors"
-              style={{
-                background: activeTicker === t ? '#1e2235' : 'transparent',
-                color: activeTicker === t ? '#10b981' : '#64748b',
-                border: `1px solid ${activeTicker === t ? '#2d3148' : 'transparent'}`,
-              }}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+        {showTickerTabs && (
+          <div className="flex items-center gap-1">
+            {TICKERS.map((t) => (
+              <button
+                key={t}
+                onClick={() => setActiveTicker(t)}
+                className="px-3 py-1 text-xs font-semibold rounded transition-colors"
+                style={{
+                  background: activeTicker === t ? '#1e2235' : 'transparent',
+                  color: activeTicker === t ? '#10b981' : '#64748b',
+                  border: `1px solid ${activeTicker === t ? '#2d3148' : 'transparent'}`,
+                }}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3">
-        <div
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs"
-          style={{ background: '#1a1d27', border: '1px solid #2d3148', color: '#64748b' }}
-        >
-          <Search size={12} />
-          <input
-            type="text"
-            value={searchValue}
-            onChange={e => setSearchValue(e.target.value.toUpperCase())}
-            onKeyDown={handleSearch}
-            placeholder="代號 (如 GME、2330)…"
-            maxLength={10}
-            className="bg-transparent text-xs outline-none w-24"
-            style={{ color: '#f1f5f9' }}
-          />
-        </div>
-        <button
-          onClick={() => qc.invalidateQueries()}
-          className="p-1.5 rounded-md transition-colors"
-          style={{ color: '#64748b' }}
-          title="重新整理"
-        >
-          <RefreshCw size={14} />
-        </button>
-        <button
-          className="p-1.5 rounded-md relative transition-colors"
-          style={{ color: '#64748b' }}
-          title="警報"
-        >
-          <Bell size={14} />
-          <span
-            className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
-            style={{ background: '#ef4444' }}
-          />
-        </button>
-        <div
-          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
-          style={{ background: '#2d3148', color: '#10b981' }}
-        >
-          A
-        </div>
+        {showSearch && (
+          <div
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs"
+            style={{ background: '#1a1d27', border: '1px solid #2d3148', color: '#64748b' }}
+          >
+            <Search size={12} />
+            <input
+              type="text"
+              value={searchValue}
+              onChange={e => setSearchValue(e.target.value.toUpperCase())}
+              onKeyDown={handleSearch}
+              placeholder="代號 (如 GME、2330)…"
+              maxLength={10}
+              className="bg-transparent text-xs outline-none w-24"
+              style={{ color: '#f1f5f9' }}
+            />
+          </div>
+        )}
+        {showRefresh && (
+          <button
+            onClick={() => qc.invalidateQueries()}
+            className="p-1.5 rounded-md transition-colors"
+            style={{ color: '#64748b' }}
+            title="重新整理"
+          >
+            <RefreshCw size={14} />
+          </button>
+        )}
+        {showBell && (
+          <button
+            className="p-1.5 rounded-md relative transition-colors"
+            style={{ color: '#64748b' }}
+            title="警報"
+          >
+            <Bell size={14} />
+            <span
+              className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
+              style={{ background: '#ef4444' }}
+            />
+          </button>
+        )}
+        {showAvatar && (
+          <div
+            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
+            style={{ background: '#2d3148', color: '#10b981' }}
+          >
+            A
+          </div>
+        )}
       </div>
     </header>
   )

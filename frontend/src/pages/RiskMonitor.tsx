@@ -141,6 +141,7 @@ export function RiskMonitor() {
 
   const snapshots = data ?? DEMO_SNAPSHOTS
   const usingDemo = !data
+  const hasDemoQuality = !!data && data.some(s => s.data_quality === 'demo')
 
   const filtered = filter === 'All'
     ? snapshots
@@ -155,18 +156,35 @@ export function RiskMonitor() {
 
   return (
     <div className="flex flex-col flex-1 overflow-auto">
-      <TopBar title="風險監控中心" />
+      <TopBar
+        title="風險監控中心"
+        showTickerTabs={false}
+        showBell={false}
+        showAvatar={false}
+      />
 
       <div className="p-6 flex flex-col gap-6">
 
-        {/* Demo / error banner */}
+        {/* API connection failed banner */}
         {(usingDemo || error) && (
           <div className="px-4 py-3 rounded-lg" style={{ background: '#1c1a05', border: '1px solid #78350f' }}>
             <p className="text-sm font-semibold" style={{ color: '#f59e0b' }}>
-              {error ? 'PHP API 暫時無法連線' : '顯示 Demo 資料'}
+              目前無法連接 InfinityFree PHP/MySQL API
             </p>
             <p className="text-xs mt-1" style={{ color: '#fcd34d' }}>
-              請確認 Apache + SQL Server 已啟動，並將 php-api 複製到 htdocs。目前顯示 2021-01-27 GME 軋空事件示範資料。
+              暫時顯示 historical demo data。
+            </p>
+          </div>
+        )}
+
+        {/* Historical demo data quality banner */}
+        {hasDemoQuality && (
+          <div className="px-4 py-3 rounded-lg" style={{ background: '#1a1505', border: '1px solid #92400e' }}>
+            <p className="text-sm font-semibold" style={{ color: '#fb923c' }}>
+              Historical demo data
+            </p>
+            <p className="text-xs mt-1" style={{ color: '#fdba74' }}>
+              目前顯示的是歷史展示資料，尚非即時市場風險監控。
             </p>
           </div>
         )}
