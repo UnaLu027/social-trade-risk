@@ -18,11 +18,11 @@ interface TopBarProps {
 
 export function TopBar({
   title,
-  showTickerTabs = true,
-  showSearch = true,
+  showTickerTabs = false,
+  showSearch = false,
   showRefresh = true,
-  showBell = true,
-  showAvatar = true,
+  showBell = false,
+  showAvatar = false,
 }: TopBarProps) {
   const { activeTicker, setActiveTicker } = useAppStore()
   const qc = useQueryClient()
