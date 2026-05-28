@@ -41,6 +41,16 @@ interface SocialSignalItem {
   ai_highlighted_terms: string[] | null
 }
 
+interface MarketHistoryItem {
+  date: string
+  close: number
+  market_heat_score: number
+  volatility_anomaly_score: number
+  fomo_score: number
+  short_squeeze_pressure: number
+  market_risk_label: string
+}
+
 // ── GME narrative (static) ────────────────────────────────────────────────────
 
 const GME_NARRATIVE = `
@@ -132,18 +142,51 @@ export function RiskReport() {
     staleTime: 7 * 60_000,
   })
 
+  const { data: histData, isLoading: histLoading } = useQuery({
+    queryKey: ['fastapi-market-history', upper],
+    queryFn: async () => {
+      const res = await api.get<{
+        success: boolean
+        symbol: string
+        period: string
+        data_quality: string
+        items: MarketHistoryItem[]
+        errors: { symbol: string; error: string }[]
+      }>(`/api/v1/market-history?symbol=${upper}&period=1mo`)
+      return res.data
+    },
+    retry: 1,
+    staleTime: 30 * 60_000,
+  })
+
   const signalItems = signalsData?.items ?? []
 
   const snapshots = snapData?.snapshots ?? []
   const events    = evtData?.events    ?? []
 
-  const chartData = [...snapshots].reverse().map((s) => ({
-    date:   s.snapshot_date,
-    hype:   s.social_hype_score,
-    manip:  s.manipulation_signal_score,
-    fomo:   s.fomo_score,
-    sq:     s.short_squeeze_pressure,
-  }))
+  const histItems = (histData?.success === true && (histData.items?.length ?? 0) > 0)
+    ? histData.items
+    : []
+  const useHistData = histItems.length > 0
+
+  const chartData = useHistData
+    ? histItems.map((item) => ({
+        date:  item.date,
+        hype:  item.market_heat_score,
+        manip: item.volatility_anomaly_score,
+        fomo:  item.fomo_score,
+        sq:    item.short_squeeze_pressure,
+      }))
+    : [...snapshots].reverse().map((s) => ({
+        date:  s.snapshot_date,
+        hype:  s.social_hype_score,
+        manip: s.manipulation_signal_score,
+        fomo:  s.fomo_score,
+        sq:    s.short_squeeze_pressure,
+      }))
+
+  const chartLoading       = histLoading || (!useHistData && snapLoading)
+  const chartIsPhpFallback = !histLoading && !useHistData && snapshots.length > 0
 
   // FastAPI provides today's snapshot; PHP provides historical archive
   const fastapiSnapshot  = fastapiData?.data?.snapshots?.[0] ?? null
@@ -209,9 +252,22 @@ export function RiskReport() {
         <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp size={14} color="#38bdf8" />
-            <span className="text-sm font-semibold text-white">Historical risk indicator archive</span>
+            <span className="text-sm font-semibold text-white">Recent market risk trend</span>
+            {!chartLoading && useHistData && (
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                style={{ background: '#052e16', color: '#10b981', border: '1px solid #065f46' }}
+              >
+                market_history_rule_based
+              </span>
+            )}
           </div>
-          {snapLoading ? (
+          {!chartLoading && chartIsPhpFallback && (
+            <p className="text-xs mb-3" style={{ color: '#f59e0b' }}>
+              Historical archive fallback: recent market-history data is temporarily unavailable.
+            </p>
+          )}
+          {chartLoading ? (
             <div className="h-48 animate-pulse rounded" style={{ background: '#2d3148' }} />
           ) : chartData.length === 0 ? (
             <p className="text-xs text-center py-8" style={{ color: '#64748b' }}>無快照資料</p>
