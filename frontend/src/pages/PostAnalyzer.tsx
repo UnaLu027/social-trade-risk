@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   ShieldAlert, Send, Zap, CheckCircle,
-  Globe, Copy, Check, RefreshCw, Newspaper,
+  Globe, Copy, Check, RefreshCw, Newspaper, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { phpPost } from '../api/phpClient'
 import { api } from '../api/client'
 import { TopBar } from '../components/layout/TopBar'
 import { TickerAutocomplete } from '../components/TickerAutocomplete'
+import { SAMPLE_POSTS } from '../data/samplePosts'
+import type { SamplePost } from '../data/samplePosts'
 
 // ── types ────────────────────────────────────────────────────────────────────
 
@@ -57,7 +59,7 @@ interface SocialSignalItem {
   ai_risk_score: number | null
 }
 
-type Mode = 'text' | 'url' | 'news'
+type Mode = 'text' | 'url' | 'news' | 'samples'
 
 // ── static demo fallback ─────────────────────────────────────────────────────
 
@@ -185,6 +187,102 @@ function generateHtmlBrief(res: AnalyzeResult, sym: string): string {
 </body></html>`
 }
 
+// ── risk label ZH ─────────────────────────────────────────────────────────────
+
+const RISK_LABEL_ZH: Record<string, string> = {
+  Critical: '極高風險', High: '高風險', Medium: '中度風險', Low: '低風險',
+}
+function riskLabelZh(label: string | null | undefined): string {
+  return RISK_LABEL_ZH[label ?? ''] ?? label ?? '—'
+}
+
+// ── report helpers ─────────────────────────────────────────────────────────────
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+function generateChineseSummary(res: AnalyzeResult, sym: string): string {
+  return [
+    '社群交易風險摘要',
+    `標的：${sym}`,
+    `風險等級：${riskLabelZh(res.predicted_risk_label)}`,
+    `FOMO：${res.fomo_score.toFixed(0)}`,
+    `炒作語言：${res.hype_language_score.toFixed(0)}`,
+    `操縱訊號：${res.manipulation_signal_score.toFixed(0)}`,
+    `軋空敘事：${res.short_squeeze_narrative_detected ? '已偵測' : '未偵測'}`,
+    `模型來源：${res.model_source}`,
+    `說明：${res.explanation}`,
+    '提醒：此結果僅偵測社群交易風險訊號，不構成投資建議。',
+  ].join('\n')
+}
+
+function downloadWordReport(res: AnalyzeResult, sym: string) {
+  const now   = new Date().toISOString().slice(0, 19).replace('T', ' ')
+  const color = RISK_COLOR[res.predicted_risk_label] ?? '#10b981'
+  const rows  = [
+    ['標的', escapeHtml(sym)],
+    ['風險等級', `<span style="color:${color};font-weight:bold;">${escapeHtml(riskLabelZh(res.predicted_risk_label))}</span>`],
+    ['FOMO 語言強度', res.fomo_score.toFixed(0)],
+    ['炒作語言強度',  res.hype_language_score.toFixed(0)],
+    ['操縱訊號強度',  res.manipulation_signal_score.toFixed(0)],
+    ['緊迫感強度',    res.urgency_score.toFixed(0)],
+    ['軋空敘事',      res.short_squeeze_narrative_detected ? '已偵測' : '未偵測'],
+    ['模型來源',      escapeHtml(res.model_source)],
+    ['資料品質',      escapeHtml(res.data_quality)],
+    ['關鍵詞彙',      res.highlighted_terms.length > 0 ? escapeHtml(res.highlighted_terms.join(', ')) : '—'],
+    ['模型說明',      escapeHtml(res.explanation)],
+  ]
+  const tableRows = rows.map(([k, v]) =>
+    `<tr><td style="padding:6px 12px 6px 0;color:#555;width:140px;">${k}</td><td style="padding:6px 0;">${v}</td></tr>`
+  ).join('')
+  const html = `<html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;padding:32px;">
+<h2 style="color:#c00;">社群交易風險分析報告</h2>
+<p style="color:#888;font-size:12px;">產生時間：${now} UTC &nbsp;·&nbsp; Social Trading Risk Copilot</p>
+<table style="border-collapse:collapse;font-size:14px;margin-top:16px;">${tableRows}</table>
+<p style="margin-top:20px;font-size:12px;color:#888;">此報告僅偵測社群交易風險訊號，不構成投資建議。</p>
+</body></html>`
+  const blob = new Blob(['﻿' + html], { type: 'application/msword' })
+  const a    = document.createElement('a')
+  a.href     = URL.createObjectURL(blob)
+  a.download = `social-risk-brief-${sym}.doc`
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+
+function printReport(res: AnalyzeResult, sym: string) {
+  const now   = new Date().toISOString().slice(0, 19).replace('T', ' ')
+  const color = RISK_COLOR[res.predicted_risk_label] ?? '#10b981'
+  const rows  = [
+    ['標的', escapeHtml(sym)],
+    ['風險等級', `<span style="color:${color};font-weight:bold;">${escapeHtml(riskLabelZh(res.predicted_risk_label))}</span>`],
+    ['FOMO 語言強度', res.fomo_score.toFixed(0)],
+    ['炒作語言強度',  res.hype_language_score.toFixed(0)],
+    ['操縱訊號強度',  res.manipulation_signal_score.toFixed(0)],
+    ['緊迫感強度',    res.urgency_score.toFixed(0)],
+    ['軋空敘事',      res.short_squeeze_narrative_detected ? '已偵測' : '未偵測'],
+    ['模型來源',      escapeHtml(res.model_source)],
+    ['關鍵詞彙',      res.highlighted_terms.length > 0 ? escapeHtml(res.highlighted_terms.join(', ')) : '—'],
+    ['模型說明',      escapeHtml(res.explanation)],
+  ]
+  const tableRows = rows.map(([k, v]) =>
+    `<tr><td style="padding:6px 12px 6px 0;color:#555;width:160px;vertical-align:top;">${k}</td><td>${v}</td></tr>`
+  ).join('')
+  const win = window.open('', '_blank')
+  if (!win) return
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>風險報告 ${escapeHtml(sym)}</title>
+<style>body{font-family:Arial,sans-serif;padding:32px;color:#111;}h2{color:#c00;}table{border-collapse:collapse;font-size:14px;}@media print{.no-print{display:none}}</style>
+</head><body>
+<h2>社群交易風險分析報告</h2>
+<p style="color:#888;font-size:12px;">產生時間：${now} UTC · Social Trading Risk Copilot</p>
+<table>${tableRows}</table>
+<p style="margin-top:20px;font-size:12px;color:#888;">此報告僅偵測社群交易風險訊號，不構成投資建議。</p>
+<div class="no-print" style="margin-top:24px;"><button onclick="window.print()" style="padding:8px 20px;font-size:14px;cursor:pointer;">列印 / 另存 PDF</button></div>
+</body></html>`)
+  win.document.close()
+  setTimeout(() => win.print(), 400)
+}
+
 function ScoreMeter({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div className="flex flex-col gap-1">
@@ -250,6 +348,13 @@ export function PostAnalyzer() {
   // Brief
   const [copiedBrief, setCopiedBrief]     = useState(false)
   const [copiedSummary, setCopiedSummary] = useState(false)
+
+  // Samples
+  const [sampleFilter,   setSampleFilter]   = useState<'All' | 'Critical' | 'High' | 'Medium' | 'Low'>('All')
+  const [currentSample,  setCurrentSample]  = useState<SamplePost | null>(null)
+
+  // Indicators panel
+  const [showIndicators, setShowIndicators] = useState(false)
 
   // ── analyzeMutation (UNCHANGED) ────────────────────────────────────────────
   const analyzeMutation = useMutation({
@@ -359,7 +464,7 @@ export function PostAnalyzer() {
 
   function handleCopySummary() {
     if (!result) return
-    const text = generateTextSummary(result, symbol)
+    const text = generateChineseSummary(result, symbol)
     navigator.clipboard.writeText(text).then(() => {
       setCopiedSummary(true)
       setTimeout(() => setCopiedSummary(false), 2000)
@@ -389,17 +494,23 @@ export function PostAnalyzer() {
 
         {/* ── Input card ── */}
         <div className="rounded-lg p-5" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
-          <div className="flex items-center gap-2 mb-4">
-            <ShieldAlert size={16} color="#ef4444" />
-            <span className="text-sm font-semibold text-white">Social Trading Risk Analyzer</span>
+          <div className="flex flex-col gap-0.5 mb-4">
+            <div className="flex items-center gap-2">
+              <ShieldAlert size={16} color="#ef4444" />
+              <span className="text-sm font-semibold text-white">社群交易風險分析器</span>
+            </div>
+            <p className="text-xs ml-6" style={{ color: '#64748b' }}>
+              偵測貼文、新聞或連結中的 FOMO、炒作語言、操縱訊號與軋空敘事。
+            </p>
           </div>
 
           {/* Mode tabs */}
           <div className="flex gap-1 mb-5 p-1 rounded-lg" style={{ background: '#0d0f1a' }}>
             {([
-              { id: 'text' as Mode, label: 'Text' },
-              { id: 'url'  as Mode, label: 'URL' },
-              { id: 'news' as Mode, label: 'Latest News' },
+              { id: 'text'    as Mode, label: '文字分析' },
+              { id: 'url'     as Mode, label: '連結分析' },
+              { id: 'news'    as Mode, label: '最新新聞' },
+              { id: 'samples' as Mode, label: '範例資料庫' },
             ]).map(({ id, label }) => (
               <button
                 key={id}
@@ -481,7 +592,7 @@ export function PostAnalyzer() {
 
               {urlInput && isHomepageUrl(urlInput) && (
                 <p className="text-[11px] mb-2 px-2 py-1 rounded" style={{ background: '#451a03', color: '#fb923c', border: '1px solid #92400e' }}>
-                  This appears to be a homepage. For better results, paste a direct article URL.
+                  這看起來像首頁。為了提高準確度，建議貼上單篇新聞或文章連結。
                 </p>
               )}
 
@@ -500,7 +611,7 @@ export function PostAnalyzer() {
                   )}
                   {urlResult.extracted_text && !articleMatchesTicker(urlResult.extracted_text, symbol) && (
                     <p className="mt-1.5 text-[11px]" style={{ color: '#f59e0b' }}>
-                      The extracted article may not match the selected ticker.
+                      擷取到的文章內容可能與目前選擇的標的不完全相符，請確認連結是否正確。
                     </p>
                   )}
                   {!urlResult.success && urlResult.errors.length > 0 && (
@@ -523,6 +634,72 @@ export function PostAnalyzer() {
                     : <><Globe size={14} /> Analyze URL</>
                   }
                 </button>
+              </div>
+            </>
+          )}
+
+          {/* ── SAMPLES MODE ── */}
+          {activeMode === 'samples' && (
+            <>
+              <p className="text-[10px] mb-2" style={{ color: '#475569' }}>
+                範例資料為展示模型行為的合成／整理資料，非即時社群資料。
+              </p>
+              <div className="flex gap-1 mb-3 flex-wrap">
+                {(['All','Critical','High','Medium','Low'] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setSampleFilter(f)}
+                    className="text-xs px-2 py-0.5 rounded font-semibold transition-colors"
+                    style={{
+                      background: sampleFilter === f ? '#2d3148' : 'transparent',
+                      color:      sampleFilter === f ? '#f1f5f9' : '#64748b',
+                      border:     `1px solid ${sampleFilter === f ? '#3d4163' : 'transparent'}`,
+                    }}
+                  >
+                    {f === 'All' ? '全部' : riskLabelZh(f)}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-col gap-2 max-h-72 overflow-y-auto">
+                {SAMPLE_POSTS
+                  .filter(s => sampleFilter === 'All' || s.expectedRisk === sampleFilter)
+                  .map(s => (
+                    <div key={s.id} className="rounded p-3" style={{ background: '#0d0f1a', border: '1px solid #2d3148' }}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-white font-mono">{s.symbol}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: '#2d3148', color: '#94a3b8' }}>
+                            {s.source}
+                          </span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold"
+                            style={{
+                              background: (RISK_COLOR[s.expectedRisk] ?? '#64748b') + '22',
+                              color:      RISK_COLOR[s.expectedRisk] ?? '#64748b',
+                              border:     `1px solid ${(RISK_COLOR[s.expectedRisk] ?? '#64748b')}55`,
+                            }}>
+                            {riskLabelZh(s.expectedRisk)}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setCurrentSample(s)
+                            setSymbol(s.symbol)
+                            setInputText(s.text)
+                            setResult(null)
+                            setActiveMode('text')
+                            analyzeMutation.mutate({ text: s.text, symbol: s.symbol })
+                          }}
+                          className="text-xs px-2 py-0.5 rounded font-semibold"
+                          style={{ background: '#1e3a5f', color: '#38bdf8', border: '1px solid #2d4a6f' }}
+                        >
+                          載入並分析
+                        </button>
+                      </div>
+                      <p className="text-xs font-semibold text-white mb-0.5">{s.title}</p>
+                      <p className="text-[10px]" style={{ color: '#475569' }}>{s.notes}</p>
+                    </div>
+                  ))
+                }
               </div>
             </>
           )}
@@ -636,13 +813,13 @@ export function PostAnalyzer() {
               <div className="flex items-center gap-3">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: '#64748b' }}>
-                    Social Trading Risk
+                    社群交易風險
                   </span>
                   <span
                     className="text-lg font-bold px-4 py-1.5 rounded-full"
                     style={{ background: riskColor + '22', color: riskColor, border: `1px solid ${riskColor}` }}
                   >
-                    {result.predicted_risk_label}
+                    {riskLabelZh(result.predicted_risk_label)}
                   </span>
                 </div>
                 <span className="text-xs" style={{ color: '#64748b' }}>
@@ -667,11 +844,11 @@ export function PostAnalyzer() {
               <ScoreMeter label="炒作語言強度"    value={result.hype_language_score / 100}       color={riskColor} />
               <ScoreMeter label="操縱信號強度"    value={result.manipulation_signal_score / 100} color="#f97316" />
               <ScoreMeter label="緊迫感強度"      value={result.urgency_score / 100}             color="#38bdf8" />
-              <ScoreMeter label="Bullish sentiment (est.)" value={result.bullish_probability} color="#10b981" />
-              <ScoreMeter label="Bearish sentiment (est.)" value={result.bearish_probability} color="#ef4444" />
+              <ScoreMeter label="方向性情緒估計：看多" value={result.bullish_probability} color="#10b981" />
+              <ScoreMeter label="方向性情緒估計：看空" value={result.bearish_probability} color="#ef4444" />
             </div>
             <p className="text-[10px]" style={{ color: '#475569' }}>
-              Directional sentiment is experimental and not a buy/sell signal.
+              方向性情緒僅為文字語氣估計，不代表買賣建議。
             </p>
 
             {/* Short squeeze */}
@@ -682,10 +859,59 @@ export function PostAnalyzer() {
               </div>
             )}
 
+            {/* Indicators explanation collapsible */}
+            <div className="rounded-md" style={{ background: '#0d0f1a', border: '1px solid #2d3148' }}>
+              <button
+                onClick={() => setShowIndicators(v => !v)}
+                className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold"
+                style={{ color: '#64748b' }}
+              >
+                <span>指標說明</span>
+                {showIndicators ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              </button>
+              {showIndicators && (
+                <div className="px-3 pb-3 flex flex-col gap-1.5">
+                  {([
+                    ['FOMO 語言強度',  '是否出現「錯過就來不及」、「現在不買會後悔」等急迫誘導語氣。'],
+                    ['炒作語言強度',   '是否出現 to the moon、diamond hands、暴漲、翻倍等高情緒煽動語。'],
+                    ['操縱訊號強度',   '是否出現保證獲利、集體拉抬、鼓吹立即買入等可疑訊號。'],
+                    ['緊迫感強度',     '是否使用短時間壓力迫使讀者行動。'],
+                    ['軋空敘事',       '是否強調 short squeeze、空頭被迫回補、散戶集結等敘事。'],
+                    ['方向性情緒',     '文字偏看多或看空，但不等於投資建議。'],
+                  ] as [string, string][]).map(([k, v]) => (
+                    <div key={k} className="flex gap-2 text-[10px]">
+                      <span className="font-semibold flex-shrink-0 w-24" style={{ color: '#94a3b8' }}>{k}</span>
+                      <span style={{ color: '#475569' }}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Sample comparison (if from samples tab) */}
+            {currentSample && (
+              <div className="rounded-md px-3 py-2 text-xs" style={{ background: '#0d0f1a', border: '1px solid #2d3148' }}>
+                <span style={{ color: '#64748b' }}>參考標籤：</span>
+                <span className="font-semibold ml-1" style={{ color: RISK_COLOR[currentSample.expectedRisk] ?? '#64748b' }}>
+                  {riskLabelZh(currentSample.expectedRisk)}
+                </span>
+                <span className="mx-2" style={{ color: '#2d3148' }}>|</span>
+                <span style={{ color: '#64748b' }}>模型預測：</span>
+                <span className="font-semibold ml-1" style={{ color: riskColor }}>
+                  {riskLabelZh(result.predicted_risk_label)}
+                </span>
+                <span className="ml-2 text-[10px]" style={{ color: currentSample.expectedRisk === result.predicted_risk_label ? '#10b981' : '#f59e0b' }}>
+                  {currentSample.expectedRisk === result.predicted_risk_label
+                    ? '與參考標籤一致'
+                    : '模型判斷不同，請檢視指標與文字內容'}
+                </span>
+              </div>
+            )}
+
             {/* Explanation */}
             <div className="flex flex-col gap-1">
               <p className="text-[11px]" style={{ color: '#475569' }}>
-                This model detects social-trading risk signals, not investment advice or fundamental valuation.
+                此模型偵測社群交易風險訊號，非投資建議或基本面評估。
               </p>
               <div className="text-sm leading-relaxed" style={{ color: '#94a3b8' }}>
                 {result.explanation}
@@ -695,8 +921,9 @@ export function PostAnalyzer() {
             {/* ── Risk Brief ── */}
             <div className="rounded-lg p-4" style={{ background: '#0d0f1a', border: '1px solid #2d3148' }}>
               <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                <span className="text-xs font-semibold text-white">Social Trading Risk Brief</span>
-                <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-white">社群交易風險報告</span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {/* 複製摘要 */}
                   <button
                     onClick={handleCopySummary}
                     className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold transition-colors"
@@ -706,11 +933,28 @@ export function PostAnalyzer() {
                       border:     `1px solid ${copiedSummary ? '#065f46' : '#3d4163'}`,
                     }}
                   >
-                    {copiedSummary
-                      ? <><Check size={11} /> Copied!</>
-                      : <><Copy size={11} /> Copy Summary</>
-                    }
+                    {copiedSummary ? <><Check size={11} /> 已複製</> : <><Copy size={11} /> 複製摘要</>}
                   </button>
+                  {/* 下載 Word */}
+                  <button
+                    onClick={() => result && downloadWordReport(result, symbol)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold"
+                    style={{ background: '#2d3148', color: '#94a3b8', border: '1px solid #3d4163' }}
+                  >
+                    下載 Word 報告
+                  </button>
+                  {/* 列印 / 另存 PDF */}
+                  <div className="flex flex-col items-end gap-0.5">
+                    <button
+                      onClick={() => result && printReport(result, symbol)}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold"
+                      style={{ background: '#2d3148', color: '#94a3b8', border: '1px solid #3d4163' }}
+                    >
+                      列印 / 另存 PDF
+                    </button>
+                    <span className="text-[9px]" style={{ color: '#475569' }}>可透過瀏覽器列印功能另存為 PDF。</span>
+                  </div>
+                  {/* 複製 HTML */}
                   <div className="flex flex-col items-end gap-0.5">
                     <button
                       onClick={handleCopyBrief}
@@ -721,32 +965,29 @@ export function PostAnalyzer() {
                         border:     `1px solid ${copiedBrief ? '#065f46' : '#2d4a6f'}`,
                       }}
                     >
-                      {copiedBrief
-                        ? <><Check size={11} /> Copied!</>
-                        : <><Copy size={11} /> Copy HTML</>
-                      }
+                      {copiedBrief ? <><Check size={11} /> 已複製</> : <><Copy size={11} /> 複製 HTML</>}
                     </button>
-                    <span className="text-[9px]" style={{ color: '#475569' }}>For embedding in reports or web pages.</span>
+                    <span className="text-[9px]" style={{ color: '#475569' }}>供嵌入網頁或系統報告使用。</span>
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-x-6 text-xs">
                 {([
-                  ['Ticker',       symbol],
-                  ['Risk Label',   result.predicted_risk_label],
-                  ['FOMO Score',   result.fomo_score.toFixed(0)],
-                  ['Hype Score',   result.hype_language_score.toFixed(0)],
-                  ['Manipulation', result.manipulation_signal_score.toFixed(0)],
-                  ['Short Squeeze',result.short_squeeze_narrative_detected ? '⚠ Detected' : 'Not detected'],
-                  ['Model Source', result.model_source],
-                  ['Data Quality', result.data_quality],
+                  ['標的',         symbol],
+                  ['風險等級',     riskLabelZh(result.predicted_risk_label)],
+                  ['FOMO 強度',    result.fomo_score.toFixed(0)],
+                  ['炒作語言',     result.hype_language_score.toFixed(0)],
+                  ['操縱訊號',     result.manipulation_signal_score.toFixed(0)],
+                  ['軋空敘事',     result.short_squeeze_narrative_detected ? '⚠ 已偵測' : '未偵測'],
+                  ['模型來源',     result.model_source],
+                  ['資料品質',     result.data_quality],
                 ] as [string, string][]).map(([label, val]) => (
                   <div key={label} className="flex justify-between py-1" style={{ borderBottom: '1px solid #1a1d27' }}>
                     <span style={{ color: '#64748b' }}>{label}</span>
                     <span
                       className="font-mono text-right ml-2 truncate max-w-[140px]"
-                      style={{ color: label === 'Risk Label' ? riskColor : '#f1f5f9' }}
+                      style={{ color: label === '風險等級' ? riskColor : '#f1f5f9' }}
                     >
                       {val}
                     </span>

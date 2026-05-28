@@ -176,6 +176,25 @@ const runMutation = useMutation({
             <span className="text-sm font-semibold text-white">調整模擬參數</span>
           </div>
 
+          {/* Parameter descriptions */}
+          <div className="rounded-md p-3 flex flex-col gap-1.5" style={{ background: '#0d0f1a', border: '1px solid #2d3148' }}>
+            <p className="text-[10px] font-semibold mb-1" style={{ color: '#64748b' }}>參數說明</p>
+            {([
+              ['社群提及成長率',  '討論量在短時間內上升的程度。'],
+              ['意見領袖影響力',  'KOL、網紅或大型帳號對討論擴散的放大效果。'],
+              ['狂熱散戶比例',    '社群中非理性追價、強烈持有或集體行動者比例。'],
+              ['空頭利息比例',    '被放空部位相對於流通股數的壓力，越高越可能引發軋空敘事。'],
+              ['成交量激增倍數',  '市場成交量突然放大的程度。'],
+              ['理性投資者比例',  '能抵消群體情緒擴散的理性參與者比例。'],
+              ['交易限制事件',    '例如平台限制買入或交易異常中止，可能造成恐慌或反彈敘事。'],
+            ] as [string, string][]).map(([name, desc]) => (
+              <div key={name} className="flex gap-1.5 text-[10px]">
+                <span className="font-semibold flex-shrink-0 w-24" style={{ color: '#94a3b8' }}>{name}</span>
+                <span style={{ color: '#475569' }}>{desc}</span>
+              </div>
+            ))}
+          </div>
+
           <Slider label="社群提及成長率"   hint="mention_growth"         value={inputs.mention_growth}         onChange={set('mention_growth')} />
           <Slider label="意見領袖影響力"   hint="influencer_power"        value={inputs.influencer_power}       onChange={set('influencer_power')} />
           <Slider label="狂熱散戶比例"     hint="fanatic_ratio"           value={inputs.fanatic_ratio}          onChange={set('fanatic_ratio')} />
@@ -240,6 +259,9 @@ const runMutation = useMutation({
                   </div>
                 )}
                 <p className="text-xs mt-3 leading-relaxed" style={{ color: '#94a3b8' }}>{result.explanation}</p>
+                <p className="text-[10px] mt-2 pt-2" style={{ color: '#475569', borderTop: '1px solid #2d3148' }}>
+                  此模擬為情境壓力測試，用於理解風險因子如何互相放大，不代表價格預測。
+                </p>
               </div>
 
               {/* Belief diffusion chart */}

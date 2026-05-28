@@ -7,7 +7,24 @@ import { api } from '../api/client'
 import { TopBar } from '../components/layout/TopBar'
 import { TickerAutocomplete } from '../components/TickerAutocomplete'
 
-const DEFAULT_SYMBOLS = 'GME,AMC,TSLA,NVDA,AAPL,MSFT,AMD,NFLX'
+const DEFAULT_SYMBOLS = ['GME', 'AMC', 'TSLA', 'NVDA', 'AAPL', 'MSFT', 'AMD', 'NFLX']
+const WATCHLIST_KEY   = 'social_risk_watchlist_v1'
+const MAX_WATCHLIST   = 20
+
+function loadWatchlist(): string[] {
+  try {
+    const stored = localStorage.getItem(WATCHLIST_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed as string[]
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_SYMBOLS
+}
+
+function saveWatchlist(list: string[]) {
+  try { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(list)) } catch { /* ignore */ }
+}
 
 // ── types ────────────────────────────────────────────────────────────────────
 
@@ -66,7 +83,7 @@ function ScoreBar({ value, color }: { value: number | null; color: string }) {
   )
 }
 
-function RiskCard({ snap, onView }: { snap: RiskSnapshot; onView: () => void }) {
+function RiskCard({ snap, onView, onRemove }: { snap: RiskSnapshot; onView: () => void; onRemove: () => void }) {
   const cfg = riskCfg(snap.ai_risk_label)
   return (
     <div
@@ -114,16 +131,25 @@ function RiskCard({ snap, onView }: { snap: RiskSnapshot; onView: () => void }) 
         <ScoreBar value={snap.short_squeeze_pressure}     color='#38bdf8'  />
       </div>
 
-      {/* Mentions */}
+      {/* Mentions + actions */}
       <div className="flex items-center justify-between text-xs" style={{ color: '#64748b' }}>
         <span>提及數 {snap.mention_count?.toLocaleString() ?? '—'}</span>
-        <button
-          onClick={(e) => { e.stopPropagation(); onView() }}
-          className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors"
-          style={{ background: '#1e3a5f', color: '#38bdf8', border: '1px solid #2d4a6f' }}
-        >
-          <Eye size={10} /> 詳情
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={(e) => { e.stopPropagation(); onRemove() }}
+            className="px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors"
+            style={{ background: '#2d3148', color: '#64748b', border: '1px solid #3d4163' }}
+          >
+            移除
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onView() }}
+            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors"
+            style={{ background: '#1e3a5f', color: '#38bdf8', border: '1px solid #2d4a6f' }}
+          >
+            <Eye size={10} /> 詳情
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -136,35 +162,53 @@ export function RiskMonitor() {
   const [filter, setFilter] = useState<'All' | 'Critical' | 'High' | 'Medium' | 'Low'>('All')
   const [searchTicker, setSearchTicker] = useState('')
   const [searchError,  setSearchError]  = useState('')
+  const [watchlist, setWatchlist]       = useState<string[]>(loadWatchlist)
 
-  function handleSearch() {
+  function persistWatchlist(list: string[]) {
+    setWatchlist(list)
+    saveWatchlist(list)
+  }
+
+  function handleAddToWatchlist() {
     const val = searchTicker.trim().toUpperCase()
-    if (!val) {
-      setSearchError('Please enter a ticker symbol.')
-      return
-    }
-    if (!/^[A-Z0-9.\-]+$/.test(val)) {
-      setSearchError('Invalid ticker. Only A–Z, 0–9, "." and "-" are allowed.')
-      return
-    }
-    if (val.includes('.TW')) {
-      setSearchError('Only US stocks are supported in this MVP.')
-      return
-    }
+    if (!val) { setSearchError('請輸入股票代號。'); return }
+    if (!/^[A-Z0-9.\-]+$/.test(val)) { setSearchError('代號格式錯誤，僅允許 A–Z、0–9、"."、"-"。'); return }
+    if (val.includes('.TW')) { setSearchError('目前僅支援美股。'); return }
+    if (watchlist.includes(val)) { setSearchError(`${val} 已在觀察清單中。`); return }
+    if (watchlist.length >= MAX_WATCHLIST) { setSearchError(`觀察清單最多 ${MAX_WATCHLIST} 檔。`); return }
+    setSearchError('')
+    persistWatchlist([...watchlist, val])
+    setSearchTicker('')
+  }
+
+  function handleViewReport() {
+    const val = searchTicker.trim().toUpperCase()
+    if (!val) { setSearchError('請輸入股票代號。'); return }
+    if (!/^[A-Z0-9.\-]+$/.test(val)) { setSearchError('代號格式錯誤，僅允許 A–Z、0–9、"."、"-"。'); return }
+    if (val.includes('.TW')) { setSearchError('目前僅支援美股。'); return }
     setSearchError('')
     navigate(`/risk-report/${val}`)
   }
+
+  function handleRemove(sym: string) {
+    persistWatchlist(watchlist.filter(s => s !== sym))
+  }
+
+  function handleReset() {
+    persistWatchlist(DEFAULT_SYMBOLS)
+  }
+
+  const symbolsParam = watchlist.join(',')
 
   // FastAPI market snapshots (primary source)
   const {
     data: fastapiData,
     isLoading: fastapiIsLoading,
     isFetching: fastapiIsFetching,
-    error: fastapiError,
     refetch: fastapiRefetch,
     dataUpdatedAt: fastapiUpdatedAt,
   } = useQuery({
-    queryKey: ['fastapi-market-snapshots'],
+    queryKey: ['fastapi-market-snapshots', symbolsParam],
     queryFn: async () => {
       const res = await api.get<{
         success: boolean
@@ -172,7 +216,7 @@ export function RiskMonitor() {
         fetched_at: string
         data: { count: number; snapshots: RiskSnapshot[] }
         errors: { symbol: string; error: string }[]
-      }>(`/api/v1/market-snapshots?symbols=${DEFAULT_SYMBOLS}`)
+      }>(`/api/v1/market-snapshots?symbols=${symbolsParam}`)
       return res.data
     },
     retry: 1,
@@ -243,20 +287,35 @@ export function RiskMonitor() {
 
         {/* Ticker search */}
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <TickerAutocomplete
               value={searchTicker}
               onChange={(v) => { setSearchTicker(v); if (searchError) setSearchError('') }}
-              onSubmit={() => handleSearch()}
-              placeholder="Search any US ticker…"
-              className="w-56"
+              onSubmit={() => handleViewReport()}
+              placeholder="搜尋美股代號…"
+              className="w-52"
             />
             <button
-              onClick={handleSearch}
+              onClick={handleViewReport}
               className="px-3 py-2 rounded-md text-sm font-semibold transition-opacity hover:opacity-80"
               style={{ background: '#1e3a5f', color: '#38bdf8', border: '1px solid #2d4a6f' }}
             >
-              Search
+              查看報告
+            </button>
+            <button
+              onClick={handleAddToWatchlist}
+              className="px-3 py-2 rounded-md text-sm font-semibold transition-opacity hover:opacity-80"
+              style={{ background: '#2d3148', color: '#94a3b8', border: '1px solid #3d4163' }}
+            >
+              加入觀察清單
+            </button>
+            <button
+              onClick={handleReset}
+              className="px-2.5 py-2 rounded-md text-xs font-semibold transition-opacity hover:opacity-80"
+              style={{ background: '#1a1d27', color: '#475569', border: '1px solid #2d3148' }}
+              title="重設預設清單"
+            >
+              重設預設清單
             </button>
           </div>
           {searchError && (
@@ -343,9 +402,19 @@ export function RiskMonitor() {
         </div>
 
         {/* Risk grid */}
-        {isLoading ? (
+        {watchlist.length === 0 ? (
+          <div className="rounded-lg p-10 flex flex-col items-center gap-3"
+               style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
+            <ShieldAlert size={28} color="#2d3148" />
+            <p className="text-sm" style={{ color: '#64748b' }}>尚未加入觀察清單。請搜尋美股代號並加入。</p>
+            <button onClick={handleReset} className="text-xs px-3 py-1.5 rounded font-semibold"
+                    style={{ background: '#2d3148', color: '#94a3b8', border: '1px solid #3d4163' }}>
+              重設預設清單
+            </button>
+          </div>
+        ) : isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => (
+            {Array.from({ length: watchlist.length }).map((_, i) => (
               <div key={i} className="h-52 rounded-lg animate-pulse" style={{ background: '#2d3148' }} />
             ))}
           </div>
@@ -356,6 +425,7 @@ export function RiskMonitor() {
                 key={snap.symbol}
                 snap={snap}
                 onView={() => navigate(`/risk-report/${snap.symbol}`)}
+                onRemove={() => handleRemove(snap.symbol)}
               />
             ))}
           </div>
