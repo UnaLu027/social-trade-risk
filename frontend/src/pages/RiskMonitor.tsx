@@ -14,9 +14,9 @@ const MAX_WATCHLIST   = 20
 function loadWatchlist(): string[] {
   try {
     const stored = localStorage.getItem(WATCHLIST_KEY)
-    if (stored) {
+    if (stored !== null) {
       const parsed = JSON.parse(stored)
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed as string[]
+      if (Array.isArray(parsed)) return parsed as string[]
     }
   } catch { /* ignore */ }
   return DEFAULT_SYMBOLS
