@@ -4,6 +4,7 @@ import { ShieldAlert, Send, Zap, AlertTriangle, CheckCircle } from 'lucide-react
 import { phpPost } from '../api/phpClient'
 import { api } from '../api/client'
 import { TopBar } from '../components/layout/TopBar'
+import { TickerAutocomplete } from '../components/TickerAutocomplete'
 
 // ── types ────────────────────────────────────────────────────────────────────
 
@@ -204,15 +205,12 @@ const analyzeMutation = useMutation({
 
           {/* Symbol input */}
           <div className="flex items-center gap-2 mb-3">
-            <label className="text-xs font-semibold" style={{ color: '#64748b' }}>標的</label>
-            <input
-              type="text"
+            <label className="text-xs font-semibold flex-shrink-0" style={{ color: '#64748b' }}>標的</label>
+            <TickerAutocomplete
               value={symbol}
-              onChange={e => setSymbol(e.target.value.toUpperCase().replace(/[^A-Z0-9.\-]/g, ''))}
+              onChange={setSymbol}
               placeholder="GME, TSLA, AAPL..."
-              maxLength={10}
-              className="text-xs px-2 py-1.5 rounded outline-none w-28 font-mono"
-              style={{ background: '#0d0f1a', border: '1px solid #2d3148', color: '#f1f5f9' }}
+              className="w-48"
             />
           </div>
 

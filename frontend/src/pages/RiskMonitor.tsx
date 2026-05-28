@@ -5,6 +5,7 @@ import { ShieldAlert, TrendingUp, AlertTriangle, RefreshCw, Zap, Eye } from 'luc
 import { phpGet } from '../api/phpClient'
 import { api } from '../api/client'
 import { TopBar } from '../components/layout/TopBar'
+import { TickerAutocomplete } from '../components/TickerAutocomplete'
 
 const DEFAULT_SYMBOLS = 'GME,AMC,TSLA,NVDA,AAPL,MSFT,AMD,NFLX'
 
@@ -243,19 +244,12 @@ export function RiskMonitor() {
         {/* Ticker search */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
-            <input
-              type="text"
+            <TickerAutocomplete
               value={searchTicker}
-              onChange={e => {
-                const v = e.target.value.toUpperCase().replace(/[^A-Z0-9.\-]/g, '')
-                setSearchTicker(v)
-                if (searchError) setSearchError('')
-              }}
-              onKeyDown={e => { if (e.key === 'Enter') handleSearch() }}
+              onChange={(v) => { setSearchTicker(v); if (searchError) setSearchError('') }}
+              onSubmit={() => handleSearch()}
               placeholder="Search any US ticker…"
-              maxLength={10}
-              className="px-3 py-2 rounded-md text-sm outline-none w-48 font-mono"
-              style={{ background: '#0d0f1a', border: '1px solid #2d3148', color: '#f1f5f9' }}
+              className="w-56"
             />
             <button
               onClick={handleSearch}
