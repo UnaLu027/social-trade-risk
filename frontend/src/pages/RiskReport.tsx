@@ -2,6 +2,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Calendar, TrendingUp, AlertTriangle, FileText } from 'lucide-react'
 import { phpGet } from '../api/phpClient'
+import { api } from '../api/client'
 import { TopBar } from '../components/layout/TopBar'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -17,6 +18,7 @@ interface Snapshot {
   fomo_score: number | null
   short_squeeze_pressure: number | null
   ai_risk_label: string | null
+  data_quality?: string | null
 }
 
 interface EventRow {
@@ -80,6 +82,23 @@ export function RiskReport() {
     retry: 1,
   })
 
+  // FastAPI market snapshot (primary — latest single-point data)
+  const { data: fastapiData, isLoading: fastapiLoading } = useQuery({
+    queryKey: ['fastapi-market-snapshot', upper],
+    queryFn: async () => {
+      const res = await api.get<{
+        success: boolean
+        count: number
+        fetched_at: string
+        data: { count: number; snapshots: Snapshot[] }
+        errors: { symbol: string; error: string }[]
+      }>(`/api/v1/market-snapshots?symbols=${upper}`)
+      return res.data
+    },
+    retry: 1,
+    staleTime: 5 * 60_000,
+  })
+
   const snapshots = snapData?.snapshots ?? []
   const events    = evtData?.events    ?? []
 
@@ -91,7 +110,13 @@ export function RiskReport() {
     sq:     s.short_squeeze_pressure,
   }))
 
-  const latest = snapshots[0]
+  // FastAPI provides today's snapshot; PHP provides historical archive
+  const fastapiSnapshot  = fastapiData?.data?.snapshots?.[0] ?? null
+  const hasFastapi       = !!fastapiSnapshot
+  // Use the most recent PHP snapshot (last item, since PHP returns ASC order)
+  const phpLatest        = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null
+  const latest           = fastapiSnapshot ?? phpLatest ?? null
+  const usingPhpFallback = !hasFastapi && !!phpLatest
 
   return (
     <div className="flex flex-col flex-1 overflow-auto">
@@ -99,14 +124,39 @@ export function RiskReport() {
 
       <div className="p-6 flex flex-col gap-6 max-w-5xl mx-auto w-full">
 
+        {/* PHP fallback warning */}
+        {!fastapiLoading && usingPhpFallback && (
+          <div className="px-4 py-3 rounded-lg" style={{ background: '#1c1a05', border: '1px solid #78350f' }}>
+            <p className="text-sm font-semibold" style={{ color: '#f59e0b' }}>最新市場資料暫時無法取得</p>
+            <p className="text-xs mt-1" style={{ color: '#fcd34d' }}>以下快照來自 PHP/MySQL 歷史資料庫，非即時市場資料。</p>
+          </div>
+        )}
+
         {/* Title + latest risk */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-white">{upper}</h1>
             {latest && (
-              <div className="text-xs mt-0.5" style={{ color: '#64748b' }}>
-                最新快照 {latest.snapshot_date}
-                {latest.price != null && <> · ${latest.price.toLocaleString()}</>}
+              <div className="flex items-center gap-2 flex-wrap mt-1">
+                {hasFastapi ? (
+                  <span
+                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                    style={{ background: '#052e16', color: '#10b981', border: '1px solid #065f46' }}
+                  >
+                    Latest market snapshot · Rule-based market data
+                  </span>
+                ) : (
+                  <span
+                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                    style={{ background: '#1c1a05', color: '#f59e0b', border: '1px solid #78350f' }}
+                  >
+                    Historical archive
+                  </span>
+                )}
+                <span className="text-xs" style={{ color: '#64748b' }}>
+                  {latest.snapshot_date}
+                  {latest.price != null && <> · ${latest.price.toLocaleString()}</>}
+                </span>
               </div>
             )}
           </div>
@@ -124,7 +174,7 @@ export function RiskReport() {
         <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp size={14} color="#38bdf8" />
-            <span className="text-sm font-semibold text-white">風險指標走勢</span>
+            <span className="text-sm font-semibold text-white">Historical risk indicator archive</span>
           </div>
           {snapLoading ? (
             <div className="h-48 animate-pulse rounded" style={{ background: '#2d3148' }} />
@@ -154,7 +204,7 @@ export function RiskReport() {
         <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
           <div className="flex items-center gap-2 mb-4">
             <Calendar size={14} color="#10b981" />
-            <span className="text-sm font-semibold text-white">事件時間軸</span>
+            <span className="text-sm font-semibold text-white">Historical event archive</span>
           </div>
           {evtLoading ? (
             <div className="h-24 animate-pulse rounded" style={{ background: '#2d3148' }} />
