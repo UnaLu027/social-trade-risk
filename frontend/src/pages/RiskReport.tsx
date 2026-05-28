@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Calendar, TrendingUp, AlertTriangle, FileText } from 'lucide-react'
+import { Calendar, TrendingUp, AlertTriangle, FileText, Newspaper, ExternalLink } from 'lucide-react'
 import { phpGet } from '../api/phpClient'
 import { api } from '../api/client'
 import { TopBar } from '../components/layout/TopBar'
@@ -27,6 +27,18 @@ interface EventRow {
   title: string
   description: string
   risk_impact: string
+}
+
+interface SocialSignalItem {
+  id: string
+  source: string
+  published_at: string
+  headline: string | null
+  summary: string | null
+  url: string | null
+  ai_risk_label: string | null
+  ai_risk_score: number | null
+  ai_highlighted_terms: string[] | null
 }
 
 // ── GME narrative (static) ────────────────────────────────────────────────────
@@ -64,6 +76,12 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   normal_news:       '一般新聞',
 }
 
+function formatUtc(iso: string) {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return iso
+  return d.toISOString().replace('T', ' ').slice(0, 16)
+}
+
 // ── main page ─────────────────────────────────────────────────────────────────
 
 export function RiskReport() {
@@ -98,6 +116,23 @@ export function RiskReport() {
     retry: 1,
     staleTime: 5 * 60_000,
   })
+
+  const { data: signalsData, isLoading: signalsLoading } = useQuery({
+    queryKey: ['fastapi-social-signals', upper],
+    queryFn: async () => {
+      const res = await api.get<{
+        success: boolean
+        items: SocialSignalItem[]
+        data_quality: string
+        errors: { source: string; error: string }[]
+      }>(`/api/v1/social-signals?symbol=${upper}&sources=finnhub&limit=5`)
+      return res.data
+    },
+    retry: 1,
+    staleTime: 7 * 60_000,
+  })
+
+  const signalItems = signalsData?.items ?? []
 
   const snapshots = snapData?.snapshots ?? []
   const events    = evtData?.events    ?? []
@@ -238,6 +273,98 @@ export function RiskReport() {
                       {evt.description}
                     </div>
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Latest external signals */}
+        <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Newspaper size={14} color="#f59e0b" />
+              <span className="text-sm font-semibold text-white">Latest external signals</span>
+            </div>
+            <span
+              className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+              style={{ background: '#052e16', color: '#10b981', border: '1px solid #065f46' }}
+            >
+              live_social_signals
+            </span>
+          </div>
+          {signalsLoading ? (
+            <div className="h-24 animate-pulse rounded" style={{ background: '#2d3148' }} />
+          ) : signalItems.length === 0 ? (
+            <p className="text-xs text-center py-6" style={{ color: '#64748b' }}>
+              Latest external signals temporarily unavailable
+            </p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {signalItems.map((item) => (
+                <div key={item.id} className="rounded p-3" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      {item.ai_risk_label && (
+                        <span
+                          className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                          style={{
+                            background: riskColor(item.ai_risk_label) + '22',
+                            color: riskColor(item.ai_risk_label),
+                            border: `1px solid ${riskColor(item.ai_risk_label)}55`,
+                          }}
+                        >
+                          {item.ai_risk_label}
+                        </span>
+                      )}
+                      {item.ai_risk_score != null && (
+                        <span className="text-[11px]" style={{ color: '#94a3b8' }}>{item.ai_risk_score}</span>
+                      )}
+                    </div>
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded"
+                      style={{ background: '#2d3148', color: '#94a3b8' }}
+                    >
+                      {item.source}
+                    </span>
+                  </div>
+                  {item.headline && (
+                    <div className="text-sm font-semibold text-white leading-snug mb-1">{item.headline}</div>
+                  )}
+                  {item.summary && (
+                    <div className="text-xs leading-relaxed mb-1.5" style={{ color: '#64748b' }}>
+                      {item.summary.length > 120 ? item.summary.slice(0, 120) + '…' : item.summary}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-mono" style={{ color: '#475569' }}>
+                      {formatUtc(item.published_at)}
+                    </span>
+                    {item.url && (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center"
+                        style={{ color: '#38bdf8' }}
+                      >
+                        <ExternalLink size={11} />
+                      </a>
+                    )}
+                  </div>
+                  {item.ai_highlighted_terms && item.ai_highlighted_terms.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {item.ai_highlighted_terms.map((t) => (
+                        <span
+                          key={t}
+                          className="text-[10px] px-1.5 py-0.5 rounded"
+                          style={{ background: '#1e1b38', color: '#a78bfa' }}
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
