@@ -117,6 +117,47 @@ function formatUtc(iso: string) {
   return d.toISOString().replace('T', ' ').slice(0, 16)
 }
 
+const TICKER_ALIASES: Record<string, string[]> = {
+  GME:   ['GameStop', 'GME'],
+  TSLA:  ['Tesla', 'TSLA'],
+  AAPL:  ['Apple', 'AAPL'],
+  NVDA:  ['NVIDIA', 'NVDA'],
+  AMC:   ['AMC'],
+  META:  ['Meta', 'META', 'Facebook'],
+  MSFT:  ['Microsoft', 'MSFT'],
+  AMZN:  ['Amazon', 'AMZN'],
+  GOOG:  ['Alphabet', 'Google', 'GOOG', 'GOOGL'],
+  GOOGL: ['Alphabet', 'Google', 'GOOG', 'GOOGL'],
+}
+
+function isHomepageUrl(url: string): boolean {
+  try {
+    const { pathname } = new URL(url)
+    return pathname === '/' || pathname === ''
+  } catch {
+    return false
+  }
+}
+
+function articleMatchesTicker(text: string, sym: string): boolean {
+  const lower = text.toLowerCase()
+  const aliases = TICKER_ALIASES[sym.toUpperCase()] ?? [sym]
+  return aliases.some(a => lower.includes(a.toLowerCase()))
+}
+
+function generateTextSummary(res: AnalyzeResult, sym: string): string {
+  return [
+    'Social Trading Risk Brief',
+    `Ticker: ${sym}`,
+    `Risk: ${res.predicted_risk_label}`,
+    `FOMO: ${res.fomo_score.toFixed(0)}`,
+    `Hype: ${res.hype_language_score.toFixed(0)}`,
+    `Manipulation: ${res.manipulation_signal_score.toFixed(0)}`,
+    `Short squeeze: ${res.short_squeeze_narrative_detected ? 'Detected' : 'Not detected'}`,
+    `Interpretation: ${res.predicted_risk_label} social-trading manipulation risk. Not investment advice.`,
+  ].join('\n')
+}
+
 function generateHtmlBrief(res: AnalyzeResult, sym: string): string {
   const color  = RISK_COLOR[res.predicted_risk_label] ?? '#64748b'
   const action = MONITORING_ACTIONS[res.predicted_risk_label] ?? ''
@@ -207,7 +248,8 @@ export function PostAnalyzer() {
   const [urlResult, setUrlResult] = useState<UrlAnalysisResult | null>(null)
 
   // Brief
-  const [copiedBrief, setCopiedBrief] = useState(false)
+  const [copiedBrief, setCopiedBrief]     = useState(false)
+  const [copiedSummary, setCopiedSummary] = useState(false)
 
   // ── analyzeMutation (UNCHANGED) ────────────────────────────────────────────
   const analyzeMutation = useMutation({
@@ -315,6 +357,24 @@ export function PostAnalyzer() {
     })
   }
 
+  function handleCopySummary() {
+    if (!result) return
+    const text = generateTextSummary(result, symbol)
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedSummary(true)
+      setTimeout(() => setCopiedSummary(false), 2000)
+    }).catch(() => {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      setCopiedSummary(true)
+      setTimeout(() => setCopiedSummary(false), 2000)
+    })
+  }
+
   const riskColor = result ? (RISK_COLOR[result.predicted_risk_label] ?? '#10b981') : '#64748b'
   const riskBg    = result ? (RISK_BG[result.predicted_risk_label]    ?? '#052e16') : '#1a1d27'
   const textForHighlight = (inputText || urlResult?.extracted_text || '').slice(0, 600)
@@ -415,9 +475,15 @@ export function PostAnalyzer() {
                 value={urlInput}
                 onChange={e => setUrlInput(e.target.value)}
                 placeholder="https://finance.yahoo.com/news/…"
-                className="w-full text-sm px-3 py-2.5 rounded-md outline-none mb-3"
+                className="w-full text-sm px-3 py-2.5 rounded-md outline-none mb-2"
                 style={{ background: '#0d0f1a', border: '1px solid #2d3148', color: '#f1f5f9' }}
               />
+
+              {urlInput && isHomepageUrl(urlInput) && (
+                <p className="text-[11px] mb-2 px-2 py-1 rounded" style={{ background: '#451a03', color: '#fb923c', border: '1px solid #92400e' }}>
+                  This appears to be a homepage. For better results, paste a direct article URL.
+                </p>
+              )}
 
               {urlResult && (
                 <div className="rounded p-3 mb-3 text-xs" style={{ background: '#0d0f1a', border: '1px solid #2d3148' }}>
@@ -430,6 +496,11 @@ export function PostAnalyzer() {
                   {urlResult.description && (
                     <p style={{ color: '#94a3b8' }}>
                       {urlResult.description.slice(0, 200)}{urlResult.description.length > 200 ? '…' : ''}
+                    </p>
+                  )}
+                  {urlResult.extracted_text && !articleMatchesTicker(urlResult.extracted_text, symbol) && (
+                    <p className="mt-1.5 text-[11px]" style={{ color: '#f59e0b' }}>
+                      The extracted article may not match the selected ticker.
                     </p>
                   )}
                   {!urlResult.success && urlResult.errors.length > 0 && (
@@ -563,12 +634,17 @@ export function PostAnalyzer() {
             {/* Risk label row */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span
-                  className="text-lg font-bold px-4 py-1.5 rounded-full"
-                  style={{ background: riskColor + '22', color: riskColor, border: `1px solid ${riskColor}` }}
-                >
-                  {result.predicted_risk_label} Risk
-                </span>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: '#64748b' }}>
+                    Social Trading Risk
+                  </span>
+                  <span
+                    className="text-lg font-bold px-4 py-1.5 rounded-full"
+                    style={{ background: riskColor + '22', color: riskColor, border: `1px solid ${riskColor}` }}
+                  >
+                    {result.predicted_risk_label}
+                  </span>
+                </div>
                 <span className="text-xs" style={{ color: '#64748b' }}>
                   {result.model_source} {apiSource === 'heuristic' && '(本地推論)'}
                 </span>
@@ -591,9 +667,12 @@ export function PostAnalyzer() {
               <ScoreMeter label="炒作語言強度"    value={result.hype_language_score / 100}       color={riskColor} />
               <ScoreMeter label="操縱信號強度"    value={result.manipulation_signal_score / 100} color="#f97316" />
               <ScoreMeter label="緊迫感強度"      value={result.urgency_score / 100}             color="#38bdf8" />
-              <ScoreMeter label="看多概率"        value={result.bullish_probability}             color="#10b981" />
-              <ScoreMeter label="看空概率"        value={result.bearish_probability}             color="#ef4444" />
+              <ScoreMeter label="Bullish sentiment (est.)" value={result.bullish_probability} color="#10b981" />
+              <ScoreMeter label="Bearish sentiment (est.)" value={result.bearish_probability} color="#ef4444" />
             </div>
+            <p className="text-[10px]" style={{ color: '#475569' }}>
+              Directional sentiment is experimental and not a buy/sell signal.
+            </p>
 
             {/* Short squeeze */}
             {result.short_squeeze_narrative_detected && (
@@ -604,28 +683,52 @@ export function PostAnalyzer() {
             )}
 
             {/* Explanation */}
-            <div className="text-sm leading-relaxed" style={{ color: '#94a3b8' }}>
-              {result.explanation}
+            <div className="flex flex-col gap-1">
+              <p className="text-[11px]" style={{ color: '#475569' }}>
+                This model detects social-trading risk signals, not investment advice or fundamental valuation.
+              </p>
+              <div className="text-sm leading-relaxed" style={{ color: '#94a3b8' }}>
+                {result.explanation}
+              </div>
             </div>
 
             {/* ── Risk Brief ── */}
             <div className="rounded-lg p-4" style={{ background: '#0d0f1a', border: '1px solid #2d3148' }}>
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                 <span className="text-xs font-semibold text-white">Social Trading Risk Brief</span>
-                <button
-                  onClick={handleCopyBrief}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold transition-colors"
-                  style={{
-                    background: copiedBrief ? '#052e16' : '#1e3a5f',
-                    color:      copiedBrief ? '#10b981' : '#38bdf8',
-                    border:     `1px solid ${copiedBrief ? '#065f46' : '#2d4a6f'}`,
-                  }}
-                >
-                  {copiedBrief
-                    ? <><Check size={11} /> Copied!</>
-                    : <><Copy size={11} /> Copy HTML Brief</>
-                  }
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCopySummary}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold transition-colors"
+                    style={{
+                      background: copiedSummary ? '#052e16' : '#2d3148',
+                      color:      copiedSummary ? '#10b981' : '#94a3b8',
+                      border:     `1px solid ${copiedSummary ? '#065f46' : '#3d4163'}`,
+                    }}
+                  >
+                    {copiedSummary
+                      ? <><Check size={11} /> Copied!</>
+                      : <><Copy size={11} /> Copy Summary</>
+                    }
+                  </button>
+                  <div className="flex flex-col items-end gap-0.5">
+                    <button
+                      onClick={handleCopyBrief}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold transition-colors"
+                      style={{
+                        background: copiedBrief ? '#052e16' : '#1e3a5f',
+                        color:      copiedBrief ? '#10b981' : '#38bdf8',
+                        border:     `1px solid ${copiedBrief ? '#065f46' : '#2d4a6f'}`,
+                      }}
+                    >
+                      {copiedBrief
+                        ? <><Check size={11} /> Copied!</>
+                        : <><Copy size={11} /> Copy HTML</>
+                      }
+                    </button>
+                    <span className="text-[9px]" style={{ color: '#475569' }}>For embedding in reports or web pages.</span>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-x-6 text-xs">
