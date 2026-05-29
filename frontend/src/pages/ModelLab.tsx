@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { Brain, BarChart2, Award } from 'lucide-react'
+import { Brain, BarChart2, Award, Server, AlertCircle } from 'lucide-react'
 import { phpGet } from '../api/phpClient'
+import { api } from '../api/client'
 import { TopBar } from '../components/layout/TopBar'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts'
 
@@ -19,6 +20,13 @@ interface Experiment {
   feature_importance?: Record<string, number>
   model_path: string | null
   trained_at: string | null
+}
+
+interface RealAiHealth {
+  status?: string
+  model_file?: string
+  accuracy?: number
+  [key: string]: unknown
 }
 
 // ── demo fallback ─────────────────────────────────────────────────────────────
@@ -77,6 +85,78 @@ function ConfusionMatrix({ matrix }: { matrix: number[][] }) {
   )
 }
 
+// ── deployed model status card ────────────────────────────────────────────────
+
+function DeployedModelCard({ health, isLoading, isError }: { health: RealAiHealth | null; isLoading: boolean; isError: boolean }) {
+  return (
+    <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #1e3a5f' }}>
+      <div className="flex items-center gap-2 mb-3">
+        <Server size={16} color="#38bdf8" />
+        <span className="text-sm font-semibold text-white">正式部署中的文本風險模型</span>
+        <span className="text-xs px-2 py-0.5 rounded" style={{ background: '#0f2a3f', color: '#7dd3fc' }}>
+          PostAnalyzer 目前實際使用的模型
+        </span>
+      </div>
+
+      {isLoading && (
+        <div className="h-8 animate-pulse rounded" style={{ background: '#2d3148' }} />
+      )}
+
+      {!isLoading && (isError || !health) && (
+        <div className="flex items-center gap-2 text-xs" style={{ color: '#f59e0b' }}>
+          <AlertCircle size={13} />
+          <span>正式模型狀態暫時無法取得</span>
+        </div>
+      )}
+
+      {!isLoading && !isError && health && (
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap gap-4 text-xs">
+            <div className="flex flex-col gap-0.5">
+              <span style={{ color: '#64748b' }}>模型狀態</span>
+              <span className="font-semibold" style={{ color: health.status === 'ok' ? '#10b981' : '#f59e0b' }}>
+                {health.status === 'ok' ? '已載入' : '暫時無法取得'}
+              </span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span style={{ color: '#64748b' }}>模型用途</span>
+              <span style={{ color: '#f1f5f9' }}>單篇文本社群交易風險分析</span>
+            </div>
+            {health.model_file && (
+              <div className="flex flex-col gap-0.5">
+                <span style={{ color: '#64748b' }}>模型檔案</span>
+                <span className="font-mono" style={{ color: '#a78bfa' }}>{health.model_file}</span>
+              </div>
+            )}
+            <div className="flex flex-col gap-0.5">
+              <span style={{ color: '#64748b' }}>模型版本</span>
+              <span style={{ color: '#f1f5f9' }}>Real AI v2 貼文風險模型</span>
+            </div>
+            {typeof health.accuracy === 'number' && (
+              <div className="flex flex-col gap-0.5">
+                <span style={{ color: '#64748b' }}>整體 Accuracy</span>
+                <span className="font-mono font-semibold" style={{ color: '#10b981' }}>
+                  {(health.accuracy * 100).toFixed(1)}%
+                </span>
+              </div>
+            )}
+          </div>
+
+          {typeof health.accuracy === 'number' && (
+            <div className="text-[11px] mt-1 px-3 py-2 rounded" style={{ background: '#0f1a14', color: '#6b7280', border: '1px solid #1f3a2a' }}>
+              整體 Accuracy 不代表每一風險類別或單一案例皆能正確判斷，仍需搭配 precision、recall 與案例檢核。
+            </div>
+          )}
+
+          <div className="text-[11px] px-3 py-2 rounded mt-1" style={{ background: '#111827', color: '#6b7280', border: '1px solid #2d3148' }}>
+            模型狀態與整體指標僅表示系統可正常執行及整體驗證結果；對於個別文本，仍可能出現局部風險訊號與整體分級不一致的情況，應透過案例檢核持續改善模型。
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── main page ─────────────────────────────────────────────────────────────────
 
 export function ModelLab() {
@@ -86,19 +166,31 @@ export function ModelLab() {
     retry: 1,
   })
 
+  const { data: healthData, isLoading: healthLoading, isError: healthError } = useQuery({
+    queryKey: ['real-ai-health'],
+    queryFn: async () => {
+      const res = await api.get<RealAiHealth>('/api/v1/health/real-ai')
+      return res.data
+    },
+    retry: 1,
+  })
+
   const experiments = data?.experiments ?? DEMO_EXPERIMENTS
   const usingDemo   = !data
 
+  // find best model by weighted_f1 — never assume array is pre-sorted
+  const best = experiments.reduce<Experiment | null>((acc, cur) =>
+    acc === null || cur.weighted_f1 > acc.weighted_f1 ? cur : acc,
+  null)
+
   // chart data
   const chartData = experiments.map(e => ({
-    name:           e.model_name.replace('Logistic Regression', 'LR').replace('Gradient Boosting', 'GB').replace('MLP Neural Network', 'MLP').replace('Random Forest', 'RF').replace('TF-IDF + ', ''),
-    accuracy:       +(e.accuracy     * 100).toFixed(1),
-    macro_f1:       +(e.macro_f1     * 100).toFixed(1),
-    hr_recall:      +(e.high_risk_recall * 100).toFixed(1),
-    weighted_f1:    +(e.weighted_f1  * 100).toFixed(1),
+    name:        e.model_name.replace('Logistic Regression', 'LR').replace('Gradient Boosting', 'GB').replace('MLP Neural Network', 'MLP').replace('Random Forest', 'RF').replace('TF-IDF + ', ''),
+    accuracy:    +(e.accuracy         * 100).toFixed(1),
+    macro_f1:    +(e.macro_f1         * 100).toFixed(1),
+    hr_recall:   +(e.high_risk_recall * 100).toFixed(1),
+    weighted_f1: +(e.weighted_f1      * 100).toFixed(1),
   }))
-
-  const best = experiments[0]  // sorted by weighted_f1 desc from PHP
 
   return (
     <div className="flex flex-col flex-1 overflow-auto">
@@ -106,9 +198,16 @@ export function ModelLab() {
 
       <div className="p-6 flex flex-col gap-6 max-w-6xl mx-auto w-full">
 
+        {/* Deployed model status card — always shown at the top */}
+        <DeployedModelCard
+          health={healthData ?? null}
+          isLoading={healthLoading}
+          isError={healthError}
+        />
+
         {usingDemo && (
           <div className="px-4 py-2 rounded-lg text-xs" style={{ background: '#1c1a05', border: '1px solid #78350f', color: '#fcd34d' }}>
-            PHP API 未連線，顯示 Demo 模型資料
+            尚未取得資料庫中的真實實驗紀錄，目前顯示示範用模型比較資料；此區不代表正式部署模型表現。
           </div>
         )}
 
@@ -117,16 +216,18 @@ export function ModelLab() {
           <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #065f46' }}>
             <div className="flex items-center gap-2 mb-3">
               <Award size={16} color="#10b981" />
-              <span className="text-sm font-semibold text-white">最佳模型：{best.model_name}</span>
+              <span className="text-sm font-semibold text-white">
+                {usingDemo ? `Demo 比較資料中的最佳模型：${best.model_name}` : `實驗紀錄中的最佳模型：${best.model_name}`}
+              </span>
               <span className="text-xs px-2 py-0.5 rounded" style={{ background: '#2d3148', color: '#94a3b8' }}>
                 {best.feature_set}
               </span>
             </div>
             <div className="flex flex-wrap gap-3">
-              <MetricBadge label="Accuracy"        value={best.accuracy}          highlight />
+              <MetricBadge label="Accuracy"        value={best.accuracy}         highlight />
               <MetricBadge label="Macro F1"         value={best.macro_f1} />
-              <MetricBadge label="Weighted F1"      value={best.weighted_f1}       highlight />
-              <MetricBadge label="High-Risk Recall" value={best.high_risk_recall}  highlight />
+              <MetricBadge label="Weighted F1"      value={best.weighted_f1}      highlight />
+              <MetricBadge label="High-Risk Recall" value={best.high_risk_recall} highlight />
             </div>
           </div>
         )}
@@ -135,7 +236,11 @@ export function ModelLab() {
         <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
           <div className="flex items-center gap-2 mb-4">
             <BarChart2 size={14} color="#38bdf8" />
-            <span className="text-sm font-semibold text-white">模型比較（Weighted F1 / High-Risk Recall）</span>
+            <span className="text-sm font-semibold text-white">
+              {usingDemo
+                ? '示範模型比較資料（Weighted F1 / High-Risk Recall）'
+                : '實驗模型比較（Weighted F1 / High-Risk Recall）'}
+            </span>
           </div>
           {isLoading ? (
             <div className="h-48 animate-pulse rounded" style={{ background: '#2d3148' }} />
@@ -156,12 +261,19 @@ export function ModelLab() {
               </BarChart>
             </ResponsiveContainer>
           )}
+          {usingDemo && (
+            <div className="mt-3 text-[11px] px-3 py-2 rounded" style={{ background: '#111218', color: '#6b7280', border: '1px solid #2d3148' }}>
+              此處資料僅供介面與模型比較流程展示，不代表正式部署模型的訓練或驗證成果。
+            </div>
+          )}
         </div>
 
         {/* Detail table */}
         <div className="rounded-lg overflow-hidden" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
           <div className="px-4 py-3" style={{ borderBottom: '1px solid #2d3148' }}>
-            <span className="text-sm font-semibold text-white">所有實驗紀錄</span>
+            <span className="text-sm font-semibold text-white">
+              {usingDemo ? '示範實驗紀錄' : '所有實驗紀錄'}
+            </span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
@@ -173,24 +285,32 @@ export function ModelLab() {
                 </tr>
               </thead>
               <tbody>
-                {experiments.map((exp, i) => (
-                  <tr key={exp.id} style={{ borderBottom: '1px solid #1f2235', background: i === 0 ? '#0f1a14' : 'transparent' }}>
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-white">{exp.model_name}</div>
-                      <div className="text-xs mt-0.5" style={{ color: '#64748b' }}>{exp.experiment_id}</div>
-                    </td>
-                    <td className="px-4 py-3 text-xs" style={{ color: '#94a3b8' }}>{exp.feature_set}</td>
-                    <td className="px-4 py-3 font-mono text-xs" style={{ color: '#f1f5f9' }}>{(exp.accuracy * 100).toFixed(1)}%</td>
-                    <td className="px-4 py-3 font-mono text-xs" style={{ color: '#f1f5f9' }}>{(exp.macro_f1 * 100).toFixed(1)}%</td>
-                    <td className="px-4 py-3 font-mono text-xs font-semibold" style={{ color: '#10b981' }}>{(exp.weighted_f1 * 100).toFixed(1)}%</td>
-                    <td className="px-4 py-3 font-mono text-xs font-semibold" style={{ color: exp.high_risk_recall >= 0.9 ? '#10b981' : exp.high_risk_recall >= 0.8 ? '#f59e0b' : '#ef4444' }}>
-                      {(exp.high_risk_recall * 100).toFixed(1)}%
-                    </td>
-                  </tr>
-                ))}
+                {experiments.map((exp, i) => {
+                  const isBest = best?.id === exp.id
+                  return (
+                    <tr key={exp.id} style={{ borderBottom: '1px solid #1f2235', background: isBest ? '#0f1a14' : 'transparent' }}>
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-white">{exp.model_name}</div>
+                        <div className="text-xs mt-0.5" style={{ color: '#64748b' }}>{exp.experiment_id}</div>
+                      </td>
+                      <td className="px-4 py-3 text-xs" style={{ color: '#94a3b8' }}>{exp.feature_set}</td>
+                      <td className="px-4 py-3 font-mono text-xs" style={{ color: '#f1f5f9' }}>{(exp.accuracy * 100).toFixed(1)}%</td>
+                      <td className="px-4 py-3 font-mono text-xs" style={{ color: '#f1f5f9' }}>{(exp.macro_f1 * 100).toFixed(1)}%</td>
+                      <td className="px-4 py-3 font-mono text-xs font-semibold" style={{ color: '#10b981' }}>{(exp.weighted_f1 * 100).toFixed(1)}%</td>
+                      <td className="px-4 py-3 font-mono text-xs font-semibold" style={{ color: exp.high_risk_recall >= 0.9 ? '#10b981' : exp.high_risk_recall >= 0.8 ? '#f59e0b' : '#ef4444' }}>
+                        {(exp.high_risk_recall * 100).toFixed(1)}%
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
+          {usingDemo && (
+            <div className="px-4 py-3 text-[11px]" style={{ borderTop: '1px solid #2d3148', color: '#6b7280' }}>
+              此處資料僅供介面與模型比較流程展示，不代表正式部署模型的訓練或驗證成果。
+            </div>
+          )}
         </div>
 
         {/* Confusion matrix for best model */}
@@ -198,7 +318,9 @@ export function ModelLab() {
           <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
             <div className="flex items-center gap-2 mb-4">
               <Brain size={14} color="#a78bfa" />
-              <span className="text-sm font-semibold text-white">最佳模型混淆矩陣：{best.model_name}</span>
+              <span className="text-sm font-semibold text-white">
+                {usingDemo ? `Demo 最佳模型混淆矩陣：${best.model_name}` : `最佳模型混淆矩陣：${best.model_name}`}
+              </span>
             </div>
             <ConfusionMatrix matrix={best.confusion_matrix} />
           </div>
