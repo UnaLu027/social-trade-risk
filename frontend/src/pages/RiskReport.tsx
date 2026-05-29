@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -10,7 +9,13 @@ import { TopBar } from '../components/layout/TopBar'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
-import { computeInvestorCaution, type SignalLevel, type DataCoverageLevel, type InterpretationStatus } from '../lib/investorCaution'
+import {
+  computeInvestorCaution,
+  RISK_LABEL_ZH,
+  type SignalLevel,
+  type DataCoverageLevel,
+  type InterpretationStatus,
+} from '../lib/investorCaution'
 
 // ── types ────────────────────────────────────────────────────────────────────
 
@@ -163,7 +168,7 @@ export function RiskReport() {
     retry: 1,
   })
 
-  const { data: fastapiData, isLoading: fastapiLoading } = useQuery({
+  const { data: fastapiData, isLoading: fastapiLoading, isError: fastapiSnapshotError } = useQuery({
     queryKey: ['fastapi-market-snapshot', upper],
     queryFn: async () => {
       const res = await api.get<{
@@ -179,7 +184,7 @@ export function RiskReport() {
     staleTime: 5 * 60_000,
   })
 
-  const { data: signalsData, isLoading: signalsLoading } = useQuery({
+  const { data: signalsData, isLoading: signalsLoading, isError: signalsError } = useQuery({
     queryKey: ['fastapi-social-signals', upper],
     queryFn: async () => {
       const res = await api.get<{
@@ -194,7 +199,7 @@ export function RiskReport() {
     staleTime: 7 * 60_000,
   })
 
-  const { data: histData, isLoading: histLoading } = useQuery({
+  const { data: histData, isLoading: histLoading, isError: histError } = useQuery({
     queryKey: ['fastapi-market-history', upper],
     queryFn: async () => {
       const res = await api.get<{
@@ -245,20 +250,43 @@ export function RiskReport() {
   const latest           = fastapiSnapshot ?? phpLatest ?? null
   const usingPhpFallback = !hasFastapi && !!phpLatest
 
-  const cautionLoading = fastapiLoading || signalsLoading || histLoading
-
-  const caution = useMemo(
-    () => computeInvestorCaution(
-      signalItems,
-      fastapiSnapshot,
-      histItems,
-      phpLatest,
-    ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [signalItems.length, fastapiSnapshot, histItems.length, phpLatest],
+  // Computed fresh on every render — no useMemo to avoid stale results when
+  // content changes but array length stays the same
+  const caution = computeInvestorCaution(
+    signalItems,
+    fastapiSnapshot,
+    histItems,
+    phpLatest,
+    {
+      externalNewsError:  signalsError,
+      latestSnapshotError: fastapiSnapshotError,
+      marketHistoryError: histError,
+    },
   )
 
-  const cautionColor = SIGNAL_LEVEL_COLOR[caution.signalLevel]
+  const cautionColor   = SIGNAL_LEVEL_COLOR[caution.signalLevel]
+  const cautionLoading = fastapiLoading || signalsLoading || histLoading
+
+  // ── snapshot market status label (Chinese) ────────────────────────────────
+  const snapshotZhLabel = latest?.ai_risk_label
+    ? (RISK_LABEL_ZH[latest.ai_risk_label] ?? latest.ai_risk_label)
+    : null
+
+  // ── news coverage display string ──────────────────────────────────────────
+  const newsCoverageText = (() => {
+    if (signalsLoading) return '載入中…'
+    if (signalsError)   return '取得失敗'
+    if (caution.newsCoverage.scoredCount > 0) {
+      return `可分析 ${caution.newsCoverage.scoredCount} 篇 / 原始 ${caution.newsCoverage.rawCount} 篇 · Finnhub`
+    }
+    return '無可分析新聞 · Finnhub'
+  })()
+
+  const newsCoverageColor = (() => {
+    if (signalsError) return '#ef4444'
+    if (caution.newsCoverage.scoredCount > 0) return '#10b981'
+    return '#64748b'
+  })()
 
   return (
     <div className="flex flex-col flex-1 overflow-auto">
@@ -302,16 +330,16 @@ export function RiskReport() {
               </div>
             )}
           </div>
-          {latest?.ai_risk_label && (
+          {snapshotZhLabel && (
             <span
               className="text-sm font-bold px-3 py-1 rounded-full"
               style={{
-                background: riskColor(latest.ai_risk_label) + '22',
-                color: riskColor(latest.ai_risk_label),
-                border: `1px solid ${riskColor(latest.ai_risk_label)}`,
+                background: riskColor(latest?.ai_risk_label ?? null) + '22',
+                color:      riskColor(latest?.ai_risk_label ?? null),
+                border:     `1px solid ${riskColor(latest?.ai_risk_label ?? null)}`,
               }}
             >
-              {latest.ai_risk_label} Risk
+              市場快照警戒：{snapshotZhLabel}
             </span>
           )}
         </div>
@@ -323,26 +351,49 @@ export function RiskReport() {
             <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>資料涵蓋狀態</span>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {/* 外部新聞文本訊號 */}
             <div className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
               <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>外部新聞文本訊號</div>
-              <div className="text-xs font-semibold text-white">
-                {signalsLoading ? '載入中…' : `${signalItems.length} 篇 · Finnhub`}
+              <div className="text-xs font-semibold" style={{ color: newsCoverageColor }}>
+                {newsCoverageText}
               </div>
             </div>
+
+            {/* 最新市場快照 */}
             <div className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
               <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>最新市場快照</div>
               <div className="text-xs font-semibold" style={{
-                color: fastapiLoading ? '#64748b' : hasFastapi ? '#10b981' : phpLatest ? '#f59e0b' : '#64748b',
+                color: fastapiLoading          ? '#64748b'
+                     : hasFastapi             ? '#10b981'
+                     : phpLatest              ? '#f59e0b'
+                     : fastapiSnapshotError   ? '#ef4444'
+                     : '#64748b',
               }}>
-                {fastapiLoading ? '載入中…' : hasFastapi ? '可用' : phpLatest ? '歷史 fallback' : '無資料'}
+                {fastapiLoading        ? '載入中…'
+                 : hasFastapi         ? '可用'
+                 : phpLatest          ? '歷史 fallback'
+                 : fastapiSnapshotError ? '取得失敗'
+                 : '無資料'}
               </div>
             </div>
+
+            {/* 近期市場趨勢 */}
             <div className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
               <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>近期市場趨勢</div>
-              <div className="text-xs font-semibold text-white">
-                {histLoading ? '載入中…' : histItems.length > 0 ? `${histItems.length} 個交易日` : '無資料'}
+              <div className="text-xs font-semibold" style={{
+                color: histLoading  ? '#64748b'
+                     : histError    ? '#ef4444'
+                     : histItems.length > 0 ? '#10b981'
+                     : '#64748b',
+              }}>
+                {histLoading      ? '載入中…'
+                 : histError      ? '取得失敗'
+                 : histItems.length > 0 ? `${histItems.length} 個交易日`
+                 : '無資料'}
               </div>
             </div>
+
+            {/* 社群論壇資料 */}
             <div className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
               <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>社群論壇資料</div>
               <div className="text-xs font-semibold" style={{ color: '#475569' }}>尚未接入</div>
@@ -367,10 +418,7 @@ export function RiskReport() {
               <div className="grid grid-cols-3 gap-3">
                 <div className="rounded p-2.5 text-center" style={{ background: '#0f1117', border: `1px solid ${cautionColor}44` }}>
                   <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>訊號等級</div>
-                  <div
-                    className="text-sm font-bold"
-                    style={{ color: cautionColor }}
-                  >
+                  <div className="text-sm font-bold" style={{ color: cautionColor }}>
                     {SIGNAL_LEVEL_LABEL[caution.signalLevel]}
                   </div>
                   <div className="text-[10px] mt-0.5 font-mono" style={{ color: '#64748b' }}>
@@ -395,8 +443,8 @@ export function RiskReport() {
               <div className="rounded p-3 flex flex-col gap-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
                 <div className="text-[11px] font-semibold mb-1" style={{ color: '#64748b' }}>計分明細</div>
                 <ScoreBar label="外部新聞文本訊號 (Finnhub)" score={caution.scoreBreakdown.externalNews} />
-                <ScoreBar label="最新市場快照" score={caution.scoreBreakdown.latestMarketSnapshot} />
-                <ScoreBar label="近期市場趨勢" score={caution.scoreBreakdown.marketHistory} />
+                <ScoreBar label="最新市場快照"               score={caution.scoreBreakdown.latestMarketSnapshot} />
+                <ScoreBar label="近期市場趨勢"               score={caution.scoreBreakdown.marketHistory} />
               </div>
 
               {/* Key factors */}
@@ -586,8 +634,8 @@ export function RiskReport() {
                           className="text-[10px] font-bold px-1.5 py-0.5 rounded"
                           style={{
                             background: riskColor(item.ai_risk_label) + '22',
-                            color: riskColor(item.ai_risk_label),
-                            border: `1px solid ${riskColor(item.ai_risk_label)}55`,
+                            color:      riskColor(item.ai_risk_label),
+                            border:     `1px solid ${riskColor(item.ai_risk_label)}55`,
                           }}
                         >
                           {item.ai_risk_label}

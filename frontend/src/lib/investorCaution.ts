@@ -6,10 +6,24 @@ export type SignalLevel = 'low' | 'medium' | 'high' | 'extreme' | 'insufficient_
 export type DataCoverageLevel = 'FULL' | 'PARTIAL' | 'MINIMAL' | 'NONE'
 export type InterpretationStatus = 'comprehensive' | 'preliminary' | 'insufficient_data'
 
+// Risk label → Chinese mapping (exported for use in UI)
+export const RISK_LABEL_ZH: Record<string, string> = {
+  Low:      '低警戒',
+  Medium:   '中警戒',
+  High:     '高警戒',
+  Critical: '極高警戒',
+}
+
 export interface CautionFactor {
   description: string
   source: string
   sourceDate?: string
+}
+
+export interface CautionOptions {
+  externalNewsError?: boolean
+  latestSnapshotError?: boolean
+  marketHistoryError?: boolean
 }
 
 export interface InvestorCautionResult {
@@ -24,10 +38,16 @@ export interface InvestorCautionResult {
   interpretationStatus: InterpretationStatus
   coverageNote: string
   keyFactors: CautionFactor[]
+  newsCoverage: {
+    rawCount: number
+    uniqueCount: number
+    scoredCount: number
+  }
   generatedAt: string
 }
 
-// Input shape contracts (structural, compatible with RiskReport local types)
+// ── Input shape contracts (structural, compatible with RiskReport local types) ─
+
 interface NewsSignalInput {
   id: string
   url: string | null
@@ -67,6 +87,16 @@ function labelScore(label: string | null): number {
   }
 }
 
+// ai_risk_score from backend: risk_score_from_probs() returns 0–95 scale.
+// Valid classifications produce ~15 (Low) to ~95 (Critical); failures return 0.0.
+// Defensive normalizer: treats 0<value≤1 as 0–1 probability scale (future-proofing),
+// treats value>1 as already 0–100 scale (current backend behaviour).
+export function normalizeRiskScore(value: number | null, label: string | null): number {
+  if (value == null || !Number.isFinite(value)) return labelScore(label)
+  const normalized = value > 0 && value <= 1 ? value * 100 : value
+  return Math.max(0, Math.min(100, normalized))
+}
+
 function avg(values: number[]): number {
   if (values.length === 0) return 0
   return values.reduce((a, b) => a + b, 0) / values.length
@@ -76,13 +106,41 @@ function isHighOrCritical(label: string | null): boolean {
   return label === 'Critical' || label === 'High'
 }
 
+function toZhLabel(label: string | null): string {
+  return (label != null && RISK_LABEL_ZH[label]) ? RISK_LABEL_ZH[label] : (label ?? '未知')
+}
+
+// An item is "scored" if it has a valid risk score (>0) or a recognised label.
+function isScoredItem(item: NewsSignalInput): boolean {
+  const hasValidScore = (
+    item.ai_risk_score != null &&
+    Number.isFinite(item.ai_risk_score) &&
+    item.ai_risk_score > 0
+  )
+  const hasValidLabel = (
+    item.ai_risk_label === 'Low'  || item.ai_risk_label === 'Medium' ||
+    item.ai_risk_label === 'High' || item.ai_risk_label === 'Critical'
+  )
+  return hasValidScore || hasValidLabel
+}
+
 // ── sub-scorers ───────────────────────────────────────────────────────────────
 
-function scoreNews(items: NewsSignalInput[]): { score: number; factors: CautionFactor[] } {
-  if (items.length === 0) return { score: 0, factors: [] }
+function scoreNews(items: NewsSignalInput[]): {
+  score: number
+  factors: CautionFactor[]
+  rawCount: number
+  uniqueCount: number
+  scoredCount: number
+} {
+  const rawCount = items.length
 
-  // Deduplicate by URL then by headline
-  const seenUrls = new Set<string>()
+  if (rawCount === 0) {
+    return { score: 0, factors: [], rawCount: 0, uniqueCount: 0, scoredCount: 0 }
+  }
+
+  // Deduplicate by URL then by normalised headline
+  const seenUrls      = new Set<string>()
   const seenHeadlines = new Set<string>()
   const unique: NewsSignalInput[] = []
 
@@ -97,14 +155,19 @@ function scoreNews(items: NewsSignalInput[]): { score: number; factors: CautionF
     unique.push(item)
   }
 
-  const scores = unique.map(item =>
-    item.ai_risk_score != null ? item.ai_risk_score : labelScore(item.ai_risk_label)
-  )
+  const uniqueCount = unique.length
+  const scored      = unique.filter(isScoredItem)
+  const scoredCount = scored.length
 
-  const score = Math.min(100, avg(scores))
+  if (scoredCount === 0) {
+    return { score: 0, factors: [], rawCount, uniqueCount, scoredCount: 0 }
+  }
+
+  const scores  = scored.map(item => normalizeRiskScore(item.ai_risk_score, item.ai_risk_label))
+  const score   = Math.min(100, avg(scores))
 
   const factors: CautionFactor[] = []
-  for (const item of unique) {
+  for (const item of scored) {
     if (isHighOrCritical(item.ai_risk_label) && factors.length < 2) {
       factors.push({
         description: item.headline ?? '外部新聞高風險文本訊號',
@@ -114,14 +177,14 @@ function scoreNews(items: NewsSignalInput[]): { score: number; factors: CautionF
     }
   }
 
-  return { score, factors }
+  return { score, factors, rawCount, uniqueCount, scoredCount }
 }
 
 function scoreSnapshot(
   fastapiSnapshot: SnapshotInput | null,
   phpSnapshot: SnapshotInput | null,
 ): { score: number; usingPhpFallback: boolean; factors: CautionFactor[]; date: string | null } {
-  const snapshot = fastapiSnapshot ?? phpSnapshot
+  const snapshot       = fastapiSnapshot ?? phpSnapshot
   const usingPhpFallback = !fastapiSnapshot && !!phpSnapshot
 
   if (!snapshot) return { score: 0, usingPhpFallback: false, factors: [], date: null }
@@ -136,16 +199,15 @@ function scoreSnapshot(
   ].filter((v): v is number => v != null)
 
   const numericAvg = numericFields.length > 0 ? avg(numericFields) : ls
-  const score = Math.min(100, Math.round(ls * 0.5 + numericAvg * 0.5))
+  const score      = Math.min(100, Math.round(ls * 0.5 + numericAvg * 0.5))
 
   const factors: CautionFactor[] = []
   if (isHighOrCritical(snapshot.ai_risk_label)) {
+    const desc = usingPhpFallback
+      ? `歷史資料庫快照呈現${toZhLabel(snapshot.ai_risk_label)}訊號`
+      : `最新市場快照呈現${toZhLabel(snapshot.ai_risk_label)}訊號`
     const src = usingPhpFallback ? '歷史資料庫快照 (PHP fallback)' : '最新市場快照'
-    factors.push({
-      description: `市場快照顯示 ${snapshot.ai_risk_label} 風險等級`,
-      source:      src,
-      sourceDate:  snapshot.snapshot_date,
-    })
+    factors.push({ description: desc, source: src, sourceDate: snapshot.snapshot_date })
   }
 
   return { score, usingPhpFallback, factors, date: snapshot.snapshot_date }
@@ -170,7 +232,7 @@ function scoreHistory(items: HistoryInput[]): { score: number; factors: CautionF
   for (const item of [...recent].reverse()) {
     if (isHighOrCritical(item.market_risk_label) && factors.length < 1) {
       factors.push({
-        description: `近期市場出現 ${item.market_risk_label} 風險等級`,
+        description: `近期市場趨勢出現${toZhLabel(item.market_risk_label)}訊號`,
         source:      '近期市場風險趨勢',
         sourceDate:  item.date,
       })
@@ -187,12 +249,14 @@ export function computeInvestorCaution(
   fastapiSnapshot: SnapshotInput | null,
   histItems: HistoryInput[],
   phpSnapshot: SnapshotInput | null,
+  options: CautionOptions = {},
 ): InvestorCautionResult {
-  const newsR     = scoreNews(newsItems)
-  const snapR     = scoreSnapshot(fastapiSnapshot, phpSnapshot)
-  const histR     = scoreHistory(histItems)
+  const newsR = scoreNews(newsItems)
+  const snapR = scoreSnapshot(fastapiSnapshot, phpSnapshot)
+  const histR = scoreHistory(histItems)
 
-  const hasNews     = newsItems.length > 0
+  // hasNews uses scoredCount to exclude items with no valid model output
+  const hasNews     = newsR.scoredCount > 0
   const hasSnapshot = !!(fastapiSnapshot ?? phpSnapshot)
   const hasHistory  = histItems.length > 0
   const sourceCount = [hasNews, hasSnapshot, hasHistory].filter(Boolean).length
@@ -203,21 +267,32 @@ export function computeInvestorCaution(
   else if (sourceCount === 1) dataCoverage = 'MINIMAL'
   else                        dataCoverage = 'NONE'
 
+  const hasAnyError = !!(
+    options.externalNewsError || options.latestSnapshotError || options.marketHistoryError
+  )
+
   let interpretationStatus: InterpretationStatus
-  if (dataCoverage === 'FULL')  interpretationStatus = 'comprehensive'
-  else if (dataCoverage === 'NONE') interpretationStatus = 'insufficient_data'
-  else                          interpretationStatus = 'preliminary'
+  if (dataCoverage === 'FULL' && !hasAnyError) interpretationStatus = 'comprehensive'
+  else if (dataCoverage === 'NONE')            interpretationStatus = 'insufficient_data'
+  else                                          interpretationStatus = 'preliminary'
+
+  const newsCoverage = {
+    rawCount:    newsR.rawCount,
+    uniqueCount: newsR.uniqueCount,
+    scoredCount: newsR.scoredCount,
+  }
 
   if (dataCoverage === 'NONE') {
     return {
-      signalLevel:       'insufficient_data',
-      score:             0,
-      scoreBreakdown:    { externalNews: 0, latestMarketSnapshot: 0, marketHistory: 0 },
-      dataCoverage:      'NONE',
+      signalLevel:          'insufficient_data',
+      score:                0,
+      scoreBreakdown:       { externalNews: 0, latestMarketSnapshot: 0, marketHistory: 0 },
+      dataCoverage:         'NONE',
       interpretationStatus: 'insufficient_data',
-      coverageNote:      '資料不足，無法產生警戒摘要。',
-      keyFactors:        [],
-      generatedAt:       new Date().toISOString(),
+      coverageNote:         '資料不足，無法產生警戒摘要。',
+      keyFactors:           [],
+      newsCoverage,
+      generatedAt:          new Date().toISOString(),
     }
   }
 
@@ -229,9 +304,9 @@ export function computeInvestorCaution(
   wNews /= totalW; wSnap /= totalW; wHist /= totalW
 
   const combinedScore = Math.round(
-    newsR.score  * wNews +
-    snapR.score  * wSnap +
-    histR.score  * wHist,
+    newsR.score * wNews +
+    snapR.score * wSnap +
+    histR.score * wHist,
   )
 
   let signalLevel: SignalLevel
@@ -249,36 +324,39 @@ export function computeInvestorCaution(
     noteParts.push('最新市場快照無法取得，目前使用歷史資料庫快照作為參考。')
   }
 
-  if (!hasNews && hasSnapshot) {
+  if (options.externalNewsError && (hasSnapshot || hasHistory)) {
+    noteParts.push('外部新聞資料目前取得失敗；本摘要主要依市場訊號形成，僅能視為初步觀察。')
+  } else if (!hasNews && !options.externalNewsError && (hasSnapshot || hasHistory)) {
     const isHigh = signalLevel === 'high' || signalLevel === 'extreme'
+    const src = hasHistory ? '市場歷史異常訊號' : '市場訊號'
     noteParts.push(
-      `目前${isHigh ? '高' : ''}警戒主要來自市場訊號；外部新聞資料不足，僅能視為初步觀察。`,
+      `目前${isHigh ? '高' : ''}警戒主要來自${src}；外部新聞無可分析資料，僅能視為初步觀察。`
     )
-  } else if (!hasNews && hasHistory && !hasSnapshot) {
-    const isHigh = signalLevel === 'high' || signalLevel === 'extreme'
-    noteParts.push(
-      `目前${isHigh ? '高' : ''}警戒主要來自市場歷史異常訊號；外部新聞資料不足，僅能視為初步觀察。`,
-    )
-  } else if (hasNews && !hasHistory && !hasSnapshot) {
+  } else if (hasNews && !hasHistory && !hasSnapshot && !options.marketHistoryError) {
     noteParts.push('目前訊號主要來自外部新聞；市場資料不足，僅能視為初步觀察。')
-  } else if (dataCoverage === 'PARTIAL' || dataCoverage === 'MINIMAL') {
-    noteParts.push('部分資料來源無法取得，摘要為初步觀察。')
   }
 
-  const coverageNote = noteParts.join(' ')
+  if (options.marketHistoryError && (hasNews || hasSnapshot)) {
+    noteParts.push('近期市場趨勢目前取得失敗；本摘要僅能視為初步觀察。')
+  }
+
+  if (noteParts.length === 0 && (dataCoverage === 'PARTIAL' || dataCoverage === 'MINIMAL')) {
+    noteParts.push('部分資料來源無法取得，摘要為初步觀察。')
+  }
 
   return {
     signalLevel,
     score: combinedScore,
     scoreBreakdown: {
-      externalNews:        Math.round(newsR.score),
+      externalNews:         Math.round(newsR.score),
       latestMarketSnapshot: Math.round(snapR.score),
-      marketHistory:       Math.round(histR.score),
+      marketHistory:        Math.round(histR.score),
     },
     dataCoverage,
     interpretationStatus,
-    coverageNote,
+    coverageNote:  noteParts.join(' '),
     keyFactors,
-    generatedAt: new Date().toISOString(),
+    newsCoverage,
+    generatedAt:   new Date().toISOString(),
   }
 }
