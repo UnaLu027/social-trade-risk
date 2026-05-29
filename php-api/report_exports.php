@@ -29,11 +29,12 @@ if ($method === 'GET') {
 
     try {
         $pdo  = getDbPdo();
-        $sql  = "SELECT TOP $limit id, symbol, export_type, signal_level,
+        $sql  = "SELECT id, symbol, export_type, signal_level,
                         combined_score, exported_at, created_at
                  FROM report_export_logs
                  WHERE symbol = ?
-                 ORDER BY exported_at DESC, id DESC";
+                 ORDER BY exported_at DESC, id DESC
+                 LIMIT $limit";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$symbol]);
         $rows = $stmt->fetchAll();
