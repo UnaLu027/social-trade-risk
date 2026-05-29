@@ -1,12 +1,16 @@
+import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Calendar, TrendingUp, AlertTriangle, FileText, Newspaper, ExternalLink } from 'lucide-react'
+import {
+  Calendar, TrendingUp, AlertTriangle, FileText, Newspaper, ExternalLink, ShieldAlert, Info,
+} from 'lucide-react'
 import { phpGet } from '../api/phpClient'
 import { api } from '../api/client'
 import { TopBar } from '../components/layout/TopBar'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
+import { computeInvestorCaution, type SignalLevel, type DataCoverageLevel, type InterpretationStatus } from '../lib/investorCaution'
 
 // ── types ────────────────────────────────────────────────────────────────────
 
@@ -92,6 +96,55 @@ function formatUtc(iso: string) {
   return d.toISOString().replace('T', ' ').slice(0, 16)
 }
 
+const SIGNAL_LEVEL_LABEL: Record<SignalLevel, string> = {
+  low:               '低警戒',
+  medium:            '中警戒',
+  high:              '高警戒',
+  extreme:           '極高警戒',
+  insufficient_data: '資料不足',
+}
+
+const SIGNAL_LEVEL_COLOR: Record<SignalLevel, string> = {
+  low:               '#10b981',
+  medium:            '#f59e0b',
+  high:              '#f97316',
+  extreme:           '#ef4444',
+  insufficient_data: '#64748b',
+}
+
+const COVERAGE_LABEL: Record<DataCoverageLevel, string> = {
+  FULL:    '完整',
+  PARTIAL: '部分',
+  MINIMAL: '最少',
+  NONE:    '無資料',
+}
+
+const INTERPRETATION_LABEL: Record<InterpretationStatus, string> = {
+  comprehensive:     '綜合觀察',
+  preliminary:       '初步觀察',
+  insufficient_data: '資料不足',
+}
+
+// ── ScoreBar ──────────────────────────────────────────────────────────────────
+
+function ScoreBar({ label, score }: { label: string; score: number }) {
+  const color = score >= 75 ? '#ef4444' : score >= 55 ? '#f97316' : score >= 35 ? '#f59e0b' : '#10b981'
+  return (
+    <div>
+      <div className="flex justify-between mb-1">
+        <span className="text-[11px]" style={{ color: '#94a3b8' }}>{label}</span>
+        <span className="text-[11px] font-mono font-semibold" style={{ color }}>{score}</span>
+      </div>
+      <div className="rounded-full h-1.5" style={{ background: '#2d3148' }}>
+        <div
+          className="rounded-full h-1.5 transition-all"
+          style={{ width: `${score}%`, background: color }}
+        />
+      </div>
+    </div>
+  )
+}
+
 // ── main page ─────────────────────────────────────────────────────────────────
 
 export function RiskReport() {
@@ -110,7 +163,6 @@ export function RiskReport() {
     retry: 1,
   })
 
-  // FastAPI market snapshot (primary — latest single-point data)
   const { data: fastapiData, isLoading: fastapiLoading } = useQuery({
     queryKey: ['fastapi-market-snapshot', upper],
     queryFn: async () => {
@@ -160,9 +212,8 @@ export function RiskReport() {
   })
 
   const signalItems = signalsData?.items ?? []
-
-  const snapshots = snapData?.snapshots ?? []
-  const events    = evtData?.events    ?? []
+  const snapshots   = snapData?.snapshots ?? []
+  const events      = evtData?.events    ?? []
 
   const histItems = (histData?.success === true && (histData.items?.length ?? 0) > 0)
     ? histData.items
@@ -188,17 +239,30 @@ export function RiskReport() {
   const chartLoading       = histLoading || (!useHistData && snapLoading)
   const chartIsPhpFallback = !histLoading && !useHistData && snapshots.length > 0
 
-  // FastAPI provides today's snapshot; PHP provides historical archive
   const fastapiSnapshot  = fastapiData?.data?.snapshots?.[0] ?? null
   const hasFastapi       = !!fastapiSnapshot
-  // Use the most recent PHP snapshot (last item, since PHP returns ASC order)
   const phpLatest        = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null
   const latest           = fastapiSnapshot ?? phpLatest ?? null
   const usingPhpFallback = !hasFastapi && !!phpLatest
 
+  const cautionLoading = fastapiLoading || signalsLoading || histLoading
+
+  const caution = useMemo(
+    () => computeInvestorCaution(
+      signalItems,
+      fastapiSnapshot,
+      histItems,
+      phpLatest,
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [signalItems.length, fastapiSnapshot, histItems.length, phpLatest],
+  )
+
+  const cautionColor = SIGNAL_LEVEL_COLOR[caution.signalLevel]
+
   return (
     <div className="flex flex-col flex-1 overflow-auto">
-      <TopBar title={`風險報告 · ${upper}`} />
+      <TopBar title={`綜合警戒摘要 · ${upper}`} />
 
       <div className="p-6 flex flex-col gap-6 max-w-5xl mx-auto w-full">
 
@@ -221,14 +285,14 @@ export function RiskReport() {
                     className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
                     style={{ background: '#052e16', color: '#10b981', border: '1px solid #065f46' }}
                   >
-                    Latest market snapshot · Rule-based market data
+                    最新市場快照 · 規則式市場資料
                   </span>
                 ) : (
                   <span
                     className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
                     style={{ background: '#1c1a05', color: '#f59e0b', border: '1px solid #78350f' }}
                   >
-                    Historical archive
+                    歷史資料庫快照
                   </span>
                 )}
                 <span className="text-xs" style={{ color: '#64748b' }}>
@@ -241,18 +305,171 @@ export function RiskReport() {
           {latest?.ai_risk_label && (
             <span
               className="text-sm font-bold px-3 py-1 rounded-full"
-              style={{ background: riskColor(latest.ai_risk_label) + '22', color: riskColor(latest.ai_risk_label), border: `1px solid ${riskColor(latest.ai_risk_label)}` }}
+              style={{
+                background: riskColor(latest.ai_risk_label) + '22',
+                color: riskColor(latest.ai_risk_label),
+                border: `1px solid ${riskColor(latest.ai_risk_label)}`,
+              }}
             >
               {latest.ai_risk_label} Risk
             </span>
           )}
         </div>
 
-        {/* Risk trend chart */}
+        {/* ── 資料涵蓋狀態列 ─────────────────────────────────────────────────── */}
+        <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
+          <div className="flex items-center gap-2 mb-3">
+            <Info size={13} color="#64748b" />
+            <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>資料涵蓋狀態</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+              <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>外部新聞文本訊號</div>
+              <div className="text-xs font-semibold text-white">
+                {signalsLoading ? '載入中…' : `${signalItems.length} 篇 · Finnhub`}
+              </div>
+            </div>
+            <div className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+              <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>最新市場快照</div>
+              <div className="text-xs font-semibold" style={{
+                color: fastapiLoading ? '#64748b' : hasFastapi ? '#10b981' : phpLatest ? '#f59e0b' : '#64748b',
+              }}>
+                {fastapiLoading ? '載入中…' : hasFastapi ? '可用' : phpLatest ? '歷史 fallback' : '無資料'}
+              </div>
+            </div>
+            <div className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+              <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>近期市場趨勢</div>
+              <div className="text-xs font-semibold text-white">
+                {histLoading ? '載入中…' : histItems.length > 0 ? `${histItems.length} 個交易日` : '無資料'}
+              </div>
+            </div>
+            <div className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+              <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>社群論壇資料</div>
+              <div className="text-xs font-semibold" style={{ color: '#475569' }}>尚未接入</div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 綜合警戒摘要卡 ────────────────────────────────────────────────── */}
+        <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: `1px solid ${cautionColor}44` }}>
+          <div className="flex items-center gap-2 mb-4">
+            <ShieldAlert size={14} color={cautionColor} />
+            <span className="text-sm font-semibold text-white">外部新聞與市場訊號綜合警戒摘要</span>
+          </div>
+
+          {cautionLoading ? (
+            <div className="h-32 animate-pulse rounded" style={{ background: '#2d3148' }} />
+          ) : caution.signalLevel === 'insufficient_data' ? (
+            <p className="text-xs py-4 text-center" style={{ color: '#64748b' }}>資料不足，無法產生警戒摘要。</p>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {/* Status row */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded p-2.5 text-center" style={{ background: '#0f1117', border: `1px solid ${cautionColor}44` }}>
+                  <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>訊號等級</div>
+                  <div
+                    className="text-sm font-bold"
+                    style={{ color: cautionColor }}
+                  >
+                    {SIGNAL_LEVEL_LABEL[caution.signalLevel]}
+                  </div>
+                  <div className="text-[10px] mt-0.5 font-mono" style={{ color: '#64748b' }}>
+                    {caution.score} / 100
+                  </div>
+                </div>
+                <div className="rounded p-2.5 text-center" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                  <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>資料涵蓋</div>
+                  <div className="text-sm font-bold text-white">{COVERAGE_LABEL[caution.dataCoverage]}</div>
+                  <div className="text-[10px] mt-0.5" style={{ color: '#64748b' }}>{caution.dataCoverage}</div>
+                </div>
+                <div className="rounded p-2.5 text-center" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                  <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>分析狀態</div>
+                  <div className="text-sm font-bold text-white">{INTERPRETATION_LABEL[caution.interpretationStatus]}</div>
+                  <div className="text-[10px] mt-0.5" style={{ color: '#64748b' }}>
+                    {caution.interpretationStatus}
+                  </div>
+                </div>
+              </div>
+
+              {/* Score breakdown */}
+              <div className="rounded p-3 flex flex-col gap-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                <div className="text-[11px] font-semibold mb-1" style={{ color: '#64748b' }}>計分明細</div>
+                <ScoreBar label="外部新聞文本訊號 (Finnhub)" score={caution.scoreBreakdown.externalNews} />
+                <ScoreBar label="最新市場快照" score={caution.scoreBreakdown.latestMarketSnapshot} />
+                <ScoreBar label="近期市場趨勢" score={caution.scoreBreakdown.marketHistory} />
+              </div>
+
+              {/* Key factors */}
+              {caution.keyFactors.length > 0 && (
+                <div className="rounded p-3" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                  <div className="text-[11px] font-semibold mb-2" style={{ color: '#64748b' }}>主要警戒因子</div>
+                  <div className="flex flex-col gap-2">
+                    {caution.keyFactors.map((f, i) => (
+                      <div key={i} className="flex gap-2">
+                        <AlertTriangle size={11} color={cautionColor} className="mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="text-xs text-white leading-snug">{f.description}</div>
+                          <div className="text-[10px] mt-0.5" style={{ color: '#64748b' }}>
+                            {f.source}
+                            {f.sourceDate && <> · {formatUtc(f.sourceDate)}</>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Coverage note */}
+              {caution.coverageNote && (
+                <p className="text-[11px] leading-relaxed" style={{ color: '#94a3b8' }}>
+                  {caution.coverageNote}
+                </p>
+              )}
+
+              <div className="text-[10px] font-mono" style={{ color: '#475569' }}>
+                生成時間：{formatUtc(caution.generatedAt)} UTC
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── 固定聲明卡片 ─────────────────────────────────────────────────── */}
+        <div className="rounded-lg p-4" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+          <p className="text-xs leading-relaxed" style={{ color: '#64748b' }}>
+            本摘要整合目前可取得之外部新聞文本訊號與市場資料，用於觀察風險訊號強度，
+            不構成投資建議，也不代表價格走勢。投資判斷仍應結合公司公告、財報、估值、
+            風險承受能力與專業意見。
+          </p>
+        </div>
+
+        {/* ── 交叉查證建議 ──────────────────────────────────────────────────── */}
+        <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
+          <div className="flex items-center gap-2 mb-3">
+            <Info size={13} color="#38bdf8" />
+            <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>交叉查證建議</span>
+          </div>
+          <ul className="flex flex-col gap-1.5">
+            {[
+              '查閱公司官方公告與 IR 資訊',
+              '核對財報、重大訊息與交易所公告',
+              '比較多個獨立新聞來源',
+              '觀察市場波動與外部新聞訊號是否同步升高',
+              '社群論壇資料尚未接入，勿將目前摘要視為完整社群熱度分析',
+            ].map((tip, i) => (
+              <li key={i} className="flex gap-2 text-xs" style={{ color: '#94a3b8' }}>
+                <span style={{ color: '#38bdf8', flexShrink: 0 }}>·</span>
+                {tip}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* ── 近期市場風險趨勢 chart ────────────────────────────────────────── */}
         <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp size={14} color="#38bdf8" />
-            <span className="text-sm font-semibold text-white">Recent market risk trend</span>
+            <span className="text-sm font-semibold text-white">近期市場風險趨勢</span>
             {!chartLoading && useHistData && (
               <span
                 className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
@@ -264,7 +481,7 @@ export function RiskReport() {
           </div>
           {!chartLoading && chartIsPhpFallback && (
             <p className="text-xs mb-3" style={{ color: '#f59e0b' }}>
-              Historical archive fallback: recent market-history data is temporarily unavailable.
+              歷史資料庫 fallback：近期市場歷史資料暫時無法取得。
             </p>
           )}
           {chartLoading ? (
@@ -291,11 +508,11 @@ export function RiskReport() {
           )}
         </div>
 
-        {/* Event timeline */}
+        {/* ── 歷史事件紀錄 ──────────────────────────────────────────────────── */}
         <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
           <div className="flex items-center gap-2 mb-4">
             <Calendar size={14} color="#10b981" />
-            <span className="text-sm font-semibold text-white">Historical event archive</span>
+            <span className="text-sm font-semibold text-white">歷史事件紀錄</span>
           </div>
           {evtLoading ? (
             <div className="h-24 animate-pulse rounded" style={{ background: '#2d3148' }} />
@@ -305,15 +522,15 @@ export function RiskReport() {
             <div className="flex flex-col gap-0">
               {events.map((evt, i) => (
                 <div key={i} className="flex gap-3">
-                  {/* Timeline line */}
                   <div className="flex flex-col items-center">
-                    <div className="w-3 h-3 rounded-full mt-1.5 flex-shrink-0"
-                         style={{ background: riskColor(evt.risk_impact), border: `2px solid ${riskColor(evt.risk_impact)}` }} />
+                    <div
+                      className="w-3 h-3 rounded-full mt-1.5 flex-shrink-0"
+                      style={{ background: riskColor(evt.risk_impact), border: `2px solid ${riskColor(evt.risk_impact)}` }}
+                    />
                     {i < events.length - 1 && (
                       <div className="w-px flex-1 mt-0.5" style={{ background: '#2d3148', minHeight: 20 }} />
                     )}
                   </div>
-                  {/* Content */}
                   <div className="pb-4">
                     <div className="flex items-center gap-2 mb-0.5">
                       <span className="text-[11px] font-mono" style={{ color: '#64748b' }}>{evt.event_date}</span>
@@ -335,12 +552,12 @@ export function RiskReport() {
           )}
         </div>
 
-        {/* Latest external signals */}
+        {/* ── 最新外部新聞文本訊號 ──────────────────────────────────────────── */}
         <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <Newspaper size={14} color="#f59e0b" />
-              <span className="text-sm font-semibold text-white">Latest external signals</span>
+              <span className="text-sm font-semibold text-white">最新外部新聞文本訊號</span>
             </div>
             <span
               className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
@@ -349,11 +566,14 @@ export function RiskReport() {
               live_social_signals
             </span>
           </div>
+          <p className="text-[10px] mb-4 leading-relaxed" style={{ color: '#475569' }}>
+            目前資料來源為 Finnhub 新聞；系統分析新聞文本中是否含有社群交易風險語言，尚未代表論壇社群討論熱度。
+          </p>
           {signalsLoading ? (
             <div className="h-24 animate-pulse rounded" style={{ background: '#2d3148' }} />
           ) : signalItems.length === 0 ? (
             <p className="text-xs text-center py-6" style={{ color: '#64748b' }}>
-              Latest external signals temporarily unavailable
+              最新外部新聞訊號暫時無法取得
             </p>
           ) : (
             <div className="flex flex-col gap-3">
@@ -427,7 +647,7 @@ export function RiskReport() {
           )}
         </div>
 
-        {/* GME narrative (shown for GME; generic note for others) */}
+        {/* ── GME 事件背景 ──────────────────────────────────────────────────── */}
         {upper === 'GME' && (
           <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
             <div className="flex items-center gap-2 mb-3">
