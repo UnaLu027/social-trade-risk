@@ -116,6 +116,48 @@ const MONITORING_ACTIONS: Record<string, string> = {
   Low:      '✓ 低度警戒：此文本目前未偵測到顯著社群風險語言。建議仍持續查證資訊來源，關注後續多來源訊號變化。',
 }
 
+// ── localization helpers ──────────────────────────────────────────────────────
+
+function getLocalizedModelExplanation(res: AnalyzeResult): string {
+  const sq = res.short_squeeze_narrative_detected ? '本文本中亦偵測到軋空敘事。' : ''
+  const map: Record<string, string> = {
+    Low:      `系統判定此文本目前未呈現顯著的社群交易風險語言。${sq}此判斷基於文本特徵與模型輸出，仍應配合來源查證與多來源資訊觀察。`,
+    Medium:   `系統判定此文本出現部分社群風險語言訊號，建議留意 FOMO、炒作或急迫語氣是否持續升高。${sq}`,
+    High:     `系統判定此文本具有明顯社群風險語言訊號，建議優先查證來源並避免僅依單篇內容形成判斷。${sq}`,
+    Critical: `系統判定此文本具有高度社群炒作或操縱風險語言訊號，建議進行多來源交叉查證。${sq}`,
+  }
+  return map[res.predicted_risk_label] ?? res.explanation
+}
+
+const MODEL_SOURCE_ZH: Record<string, string> = {
+  'real_ai_v2_post_risk_model': 'Real AI v2 貼文風險模型',
+  'keyword_heuristic_v0.1':    '關鍵字啟發式分析 v0.1',
+}
+function getFriendlyModelSource(s: string): string {
+  return MODEL_SOURCE_ZH[s] ?? s
+}
+
+const DATA_QUALITY_ZH: Record<string, string> = {
+  'real_reddit_yfinance_weak_label': 'Reddit 與市場資料弱標籤訓練資料',
+  'heuristic':                       '啟發式分析（本地推論）',
+  'demo':                            '展示模式',
+  'url_extracted_text_model1':       'URL 擷取文本（Model 1）',
+}
+function getFriendlyDataQuality(s: string): string {
+  return DATA_QUALITY_ZH[s] ?? s
+}
+
+function getConsistencyWarnings(res: AnalyzeResult, sample: SamplePost | null): string[] {
+  const ws: string[] = []
+  if (sample && sample.expectedRisk !== res.predicted_risk_label) {
+    ws.push('模型一致性提醒：此範例的參考標籤與模型預測不同。此案例應列入模型檢核，不宜直接作為模型成效展示依據。')
+  }
+  if (res.predicted_risk_label === 'Low' && res.short_squeeze_narrative_detected) {
+    ws.push('局部訊號提醒：此文本偵測到軋空敘事，但整體模型分級仍為低風險。建議人工檢視文本內容與各項指標。')
+  }
+  return ws
+}
+
 function formatUtc(iso: string) {
   const d = new Date(iso)
   if (isNaN(d.getTime())) return iso
@@ -172,17 +214,20 @@ function generateTextSummary(res: AnalyzeResult, sym: string): string {
   ].join('\n')
 }
 
-function generateHtmlBrief(res: AnalyzeResult, sym: string, sourceText: string): string {
-  const now         = new Date().toISOString().slice(0, 19).replace('T', ' ')
-  const color       = RISK_COLOR[res.predicted_risk_label] ?? '#64748b'
-  const eSym        = escapeHtml(sym)
-  const eLabel      = escapeHtml(riskLabelZh(res.predicted_risk_label))
-  const eModel      = escapeHtml(res.model_source)
-  const eQuality    = escapeHtml(res.data_quality)
+function generateHtmlBrief(res: AnalyzeResult, sym: string, sourceText: string, warnings: string[]): string {
+  const now          = new Date().toISOString().slice(0, 19).replace('T', ' ')
+  const color        = RISK_COLOR[res.predicted_risk_label] ?? '#64748b'
+  const eSym         = escapeHtml(sym)
+  const eLabel       = escapeHtml(riskLabelZh(res.predicted_risk_label))
+  const eModel       = escapeHtml(res.model_source)
+  const eModelZh     = escapeHtml(getFriendlyModelSource(res.model_source))
+  const eQuality     = escapeHtml(res.data_quality)
+  const eQualityZh   = escapeHtml(getFriendlyDataQuality(res.data_quality))
   const eExplanation = escapeHtml(res.explanation)
-  const eAction     = escapeHtml(MONITORING_ACTIONS[res.predicted_risk_label] ?? '')
-  const eSourceText = sourceText.trim() ? escapeHtml(sourceText.slice(0, 1200)) : '（無可用原始文本）'
-  const eNow        = escapeHtml(now)
+  const eLocalExpl   = escapeHtml(getLocalizedModelExplanation(res))
+  const eAction      = escapeHtml(MONITORING_ACTIONS[res.predicted_risk_label] ?? '')
+  const eSourceText  = sourceText.trim() ? escapeHtml(sourceText.slice(0, 1200)) : '（無可用原始文本）'
+  const eNow         = escapeHtml(now)
   const clamp       = (v: number) => Math.min(100, Math.max(0, v)).toFixed(0)
   const fomoW       = clamp(res.fomo_score)
   const hypeW       = clamp(res.hype_language_score)
@@ -214,6 +259,9 @@ function generateHtmlBrief(res: AnalyzeResult, sym: string, sourceText: string):
   const termsHtml = res.highlighted_terms.length > 0
     ? res.highlighted_terms.map(t => `<mark style="background:#451a03;color:#fb923c;padding:1px 4px;border-radius:3px;margin:2px;">${escapeHtml(t)}</mark>`).join(' ')
     : '<span style="color:#475569;">（無）</span>'
+  const warningsHtml = warnings.length > 0
+    ? warnings.map(w => `<div style="margin:6px 0;padding:8px 12px;background:#451a03;border:1px solid #78350f;border-radius:6px;font-size:0.75rem;color:#fbbf24;line-height:1.5;">⚠ ${escapeHtml(w)}</div>`).join('\n')
+    : ''
 
   return `<!DOCTYPE html>
 <html lang="zh-TW">
@@ -272,11 +320,12 @@ body{background:#0d0f1a;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFo
       <div class="kv-row"><span class="k">炒作語言強度</span><span class="v">${hypeW}</span></div>
       <div class="kv-row"><span class="k">操縱訊號強度</span><span class="v">${manipW}</span></div>
       <div class="kv-row"><span class="k">軋空敘事</span><span class="v">${squeezeHtml}</span></div>
-      <div class="kv-row"><span class="k">模型來源</span><span class="v">${eModel}</span></div>
-      <div class="kv-row"><span class="k">資料品質</span><span class="v">${eQuality}</span></div>
+      <div class="kv-row"><span class="k">模型來源</span><span class="v">${eModelZh}</span></div>
+      <div class="kv-row"><span class="k">資料品質</span><span class="v">${eQualityZh}</span></div>
     </div>
     ${res.highlighted_terms.length > 0 ? `<div style="margin-top:12px;font-size:0.78rem;"><span style="color:#64748b;">關鍵詞彙：</span><span style="margin-left:6px;">${termsHtml}</span></div>` : ''}
     <div class="action-box">${eAction}</div>
+    ${warningsHtml}
   </div>
 
   <div id="tab-indicators" class="tab-content" style="display:none;">
@@ -290,12 +339,18 @@ body{background:#0d0f1a;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFo
   </div>
 
   <div id="tab-explain" class="tab-content" style="display:none;">
-    <p style="font-size:0.8rem;color:#94a3b8;line-height:1.6;">${eExplanation}</p>
+    <p style="font-size:0.8rem;color:#94a3b8;line-height:1.6;margin-bottom:10px;">${eLocalExpl}</p>
+    ${warningsHtml}
+    <div style="margin-top:12px;padding:10px;background:#0a0c14;border-radius:6px;border:1px solid #1a1d27;">
+      <p style="font-size:0.65rem;color:#475569;margin-bottom:4px;">模型原始輸出（英文）：</p>
+      <p style="font-size:0.72rem;color:#334155;line-height:1.5;">${eExplanation}</p>
+    </div>
   </div>
 
   <div id="tab-method" class="tab-content" style="display:none;">
     <p class="disclaimer"><strong>方法與限制：</strong>本分析基於 FOMO、炒作語言、操縱訊號、軋空敘事等文本特徵進行演算法評估。無法覆蓋基本面、財報、總體經濟或機構研究資訊。分析結果因輸入文本品質而有所差異，不應作為投資決策的唯一依據。</p>
     <p class="disclaimer" style="margin-top:10px;"><strong>非投資建議聲明：</strong>本報告由 Social Trading Risk Copilot 自動生成，僅用於分析單篇文本中的社群交易風險訊號，例如 FOMO、炒作語言、操縱訊號與軋空敘事。本報告不構成投資建議、買賣建議、持倉建議或財務顧問服務。使用者不應僅依據單篇文章或本分析結果做出投資決策。</p>
+    <p class="disclaimer" style="margin-top:10px;"><strong>技術資訊：</strong>模型來源代碼：${eModel}；資料品質代碼：${eQuality}</p>
   </div>
 
   <div class="footer">Social Trading Risk Copilot · ${eNow} UTC · 僅供社群風險語言分析，非投資建議</div>
@@ -327,7 +382,9 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-function generateChineseSummary(res: AnalyzeResult, sym: string): string {
+function generateChineseSummary(res: AnalyzeResult, sym: string, warnings: string[]): string {
+  const localExpl = getLocalizedModelExplanation(res)
+  const warnLines = warnings.length > 0 ? ['', '【模型提醒】', ...warnings] : []
   return [
     '社群交易風險文本分析摘要',
     `標的：${sym}`,
@@ -336,9 +393,10 @@ function generateChineseSummary(res: AnalyzeResult, sym: string): string {
     `炒作語言強度：${res.hype_language_score.toFixed(0)}`,
     `操縱訊號強度：${res.manipulation_signal_score.toFixed(0)}`,
     `軋空敘事：${res.short_squeeze_narrative_detected ? '已偵測' : '未偵測'}`,
-    `模型來源：${res.model_source}`,
-    `資料品質：${res.data_quality}`,
-    `說明：${res.explanation}`,
+    `模型來源：${getFriendlyModelSource(res.model_source)}`,
+    `資料品質：${getFriendlyDataQuality(res.data_quality)}`,
+    `中文解釋：${localExpl}`,
+    ...warnLines,
     '',
     '【單篇文本分析聲明】',
     '本結果僅代表該文本中的社群交易風險訊號，不代表該股票本身的投資價值或價格走勢。',
@@ -351,30 +409,35 @@ function generateChineseSummary(res: AnalyzeResult, sym: string): string {
   ].join('\n')
 }
 
-function downloadWordReport(res: AnalyzeResult, sym: string) {
-  const now   = new Date().toISOString().slice(0, 19).replace('T', ' ')
-  const color = RISK_COLOR[res.predicted_risk_label] ?? '#10b981'
+function downloadWordReport(res: AnalyzeResult, sym: string, warnings: string[]) {
+  const now       = new Date().toISOString().slice(0, 19).replace('T', ' ')
+  const color     = RISK_COLOR[res.predicted_risk_label] ?? '#10b981'
+  const localExpl = getLocalizedModelExplanation(res)
   const rows  = [
-    ['標的', escapeHtml(sym)],
-    ['文本社群風險語言強度', `<span style="color:${color};font-weight:bold;">${escapeHtml(riskLabelZh(res.predicted_risk_label))}</span>`],
-    ['FOMO 語言強度', res.fomo_score.toFixed(0)],
-    ['炒作語言強度',  res.hype_language_score.toFixed(0)],
-    ['操縱訊號強度',  res.manipulation_signal_score.toFixed(0)],
-    ['緊迫感強度',    res.urgency_score.toFixed(0)],
-    ['軋空敘事',      res.short_squeeze_narrative_detected ? '已偵測' : '未偵測'],
-    ['模型來源',      escapeHtml(res.model_source)],
-    ['資料品質',      escapeHtml(res.data_quality)],
-    ['關鍵詞彙',      res.highlighted_terms.length > 0 ? escapeHtml(res.highlighted_terms.join(', ')) : '—'],
-    ['模型說明',      escapeHtml(res.explanation)],
+    ['標的',                 escapeHtml(sym)],
+    ['文本社群風險語言強度',  `<span style="color:${color};font-weight:bold;">${escapeHtml(riskLabelZh(res.predicted_risk_label))}</span>`],
+    ['FOMO 語言強度',         res.fomo_score.toFixed(0)],
+    ['炒作語言強度',          res.hype_language_score.toFixed(0)],
+    ['操縱訊號強度',          res.manipulation_signal_score.toFixed(0)],
+    ['緊迫感強度',            res.urgency_score.toFixed(0)],
+    ['軋空敘事',              res.short_squeeze_narrative_detected ? '已偵測' : '未偵測'],
+    ['模型來源',              escapeHtml(getFriendlyModelSource(res.model_source))],
+    ['資料品質',              escapeHtml(getFriendlyDataQuality(res.data_quality))],
+    ['關鍵詞彙',              res.highlighted_terms.length > 0 ? escapeHtml(res.highlighted_terms.join(', ')) : '—'],
+    ['中文解釋',              escapeHtml(localExpl)],
   ]
   const tableRows = rows.map(([k, v]) =>
     `<tr><td style="padding:6px 12px 6px 0;color:#555;width:160px;">${k}</td><td style="padding:6px 0;">${v}</td></tr>`
   ).join('')
+  const warningsHtml = warnings.length > 0
+    ? `<div style="margin-top:14px;"><h3 style="font-size:13px;color:#92400e;margin-bottom:6px;">模型提醒</h3>${warnings.map(w => `<p style="font-size:12px;color:#92400e;margin:4px 0;padding:6px 10px;background:#fffbeb;border-left:3px solid #f59e0b;">${escapeHtml(w)}</p>`).join('')}</div>`
+    : ''
   const html = `<html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;padding:32px;">
 <h2 style="color:#c00;">社群交易風險文本分析報告</h2>
 <p style="color:#888;font-size:12px;">產生時間：${now} UTC &nbsp;·&nbsp; Social Trading Risk Copilot</p>
 <p style="font-size:12px;color:#555;margin-bottom:4px;"><strong>本結果僅代表該文本中的社群交易風險訊號，不代表該股票本身的投資價值或價格走勢。</strong></p>
 <table style="border-collapse:collapse;font-size:14px;margin-top:16px;">${tableRows}</table>
+${warningsHtml}
 <hr style="margin-top:20px;border:none;border-top:1px solid #ddd;" />
 <h3 style="font-size:13px;color:#555;margin-top:16px;">方法與限制</h3>
 <p style="font-size:12px;color:#777;">本分析基於 FOMO、炒作語言、操縱訊號、軋空敘事等文本特徵進行演算法評估。無法覆蓋基本面、財報、總體經濟或機構研究資訊。分析結果因輸入文本品質而有所差異，不應作為投資決策的唯一依據。</p>
@@ -389,24 +452,28 @@ function downloadWordReport(res: AnalyzeResult, sym: string) {
   URL.revokeObjectURL(a.href)
 }
 
-function printReport(res: AnalyzeResult, sym: string) {
-  const now   = new Date().toISOString().slice(0, 19).replace('T', ' ')
-  const color = RISK_COLOR[res.predicted_risk_label] ?? '#10b981'
+function printReport(res: AnalyzeResult, sym: string, warnings: string[]) {
+  const now       = new Date().toISOString().slice(0, 19).replace('T', ' ')
+  const color     = RISK_COLOR[res.predicted_risk_label] ?? '#10b981'
+  const localExpl = getLocalizedModelExplanation(res)
   const rows  = [
-    ['標的', escapeHtml(sym)],
-    ['文本社群風險語言強度', `<span style="color:${color};font-weight:bold;">${escapeHtml(riskLabelZh(res.predicted_risk_label))}</span>`],
-    ['FOMO 語言強度', res.fomo_score.toFixed(0)],
-    ['炒作語言強度',  res.hype_language_score.toFixed(0)],
-    ['操縱訊號強度',  res.manipulation_signal_score.toFixed(0)],
-    ['緊迫感強度',    res.urgency_score.toFixed(0)],
-    ['軋空敘事',      res.short_squeeze_narrative_detected ? '已偵測' : '未偵測'],
-    ['模型來源',      escapeHtml(res.model_source)],
-    ['關鍵詞彙',      res.highlighted_terms.length > 0 ? escapeHtml(res.highlighted_terms.join(', ')) : '—'],
-    ['模型說明',      escapeHtml(res.explanation)],
+    ['標的',                 escapeHtml(sym)],
+    ['文本社群風險語言強度',  `<span style="color:${color};font-weight:bold;">${escapeHtml(riskLabelZh(res.predicted_risk_label))}</span>`],
+    ['FOMO 語言強度',         res.fomo_score.toFixed(0)],
+    ['炒作語言強度',          res.hype_language_score.toFixed(0)],
+    ['操縱訊號強度',          res.manipulation_signal_score.toFixed(0)],
+    ['緊迫感強度',            res.urgency_score.toFixed(0)],
+    ['軋空敘事',              res.short_squeeze_narrative_detected ? '已偵測' : '未偵測'],
+    ['模型來源',              escapeHtml(getFriendlyModelSource(res.model_source))],
+    ['關鍵詞彙',              res.highlighted_terms.length > 0 ? escapeHtml(res.highlighted_terms.join(', ')) : '—'],
+    ['中文解釋',              escapeHtml(localExpl)],
   ]
   const tableRows = rows.map(([k, v]) =>
     `<tr><td style="padding:6px 12px 6px 0;color:#555;width:180px;vertical-align:top;">${k}</td><td>${v}</td></tr>`
   ).join('')
+  const warningsHtml = warnings.length > 0
+    ? `<div style="margin-top:14px;"><h3 style="font-size:13px;color:#92400e;margin-bottom:6px;">模型提醒</h3>${warnings.map(w => `<p style="font-size:12px;color:#92400e;margin:4px 0;padding:6px 10px;background:#fffbeb;border-left:3px solid #f59e0b;">${escapeHtml(w)}</p>`).join('')}</div>`
+    : ''
   const win = window.open('', '_blank')
   if (!win) return
   win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>風險報告 ${escapeHtml(sym)}</title>
@@ -416,6 +483,7 @@ function printReport(res: AnalyzeResult, sym: string) {
 <p style="color:#888;font-size:12px;">產生時間：${now} UTC · Social Trading Risk Copilot</p>
 <p style="font-size:12px;color:#555;"><strong>本結果僅代表該文本中的社群交易風險訊號，不代表該股票本身的投資價值或價格走勢。</strong></p>
 <table>${tableRows}</table>
+${warningsHtml}
 <hr/>
 <h3>方法與限制</h3>
 <p class="disclaimer">本分析基於 FOMO、炒作語言、操縱訊號、軋空敘事等文本特徵進行演算法評估。無法覆蓋基本面、財報、總體經濟或機構研究資訊。分析結果因輸入文本品質而有所差異，不應作為投資決策的唯一依據。</p>
@@ -498,6 +566,7 @@ export function PostAnalyzer() {
 
   // Indicators panel
   const [showIndicators, setShowIndicators] = useState(false)
+  const [showTechInfo,   setShowTechInfo]   = useState(false)
 
   // ── analyzeMutation (UNCHANGED) ────────────────────────────────────────────
   const analyzeMutation = useMutation({
@@ -590,7 +659,7 @@ export function PostAnalyzer() {
   function handleDownloadHtml() {
     if (!result) return
     const sourceText = inputText || urlResult?.extracted_text || ''
-    const html = generateHtmlBrief(result, symbol, sourceText)
+    const html = generateHtmlBrief(result, symbol, sourceText, getConsistencyWarnings(result, currentSample))
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
@@ -601,7 +670,7 @@ export function PostAnalyzer() {
 
   function handleCopySummary() {
     if (!result) return
-    const text = generateChineseSummary(result, symbol)
+    const text = generateChineseSummary(result, symbol, getConsistencyWarnings(result, currentSample))
     navigator.clipboard.writeText(text).then(() => {
       setCopiedSummary(true)
       setTimeout(() => setCopiedSummary(false), 2000)
@@ -1048,99 +1117,144 @@ export function PostAnalyzer() {
               </div>
             )}
 
+            {/* Consistency warnings (D) */}
+            {currentSample && currentSample.expectedRisk !== result.predicted_risk_label && (
+              <div className="flex items-start gap-2 px-3 py-2.5 rounded-md text-xs"
+                   style={{ background: '#451a03', color: '#fbbf24', border: '1px solid #78350f' }}>
+                <span className="flex-shrink-0">⚠</span>
+                <span>模型一致性提醒：此範例的參考標籤與模型預測不同。此案例應列入模型檢核，不宜直接作為模型成效展示依據。</span>
+              </div>
+            )}
+            {result.predicted_risk_label === 'Low' && result.short_squeeze_narrative_detected && (
+              <div className="flex items-start gap-2 px-3 py-2.5 rounded-md text-xs"
+                   style={{ background: '#451a03', color: '#fbbf24', border: '1px solid #78350f' }}>
+                <span className="flex-shrink-0">⚠</span>
+                <span>局部訊號提醒：此文本偵測到軋空敘事，但整體模型分級仍為低風險。建議人工檢視文本內容與各項指標。</span>
+              </div>
+            )}
+
             {/* Explanation */}
             <div className="flex flex-col gap-1">
               <p className="text-[11px]" style={{ color: '#475569' }}>
                 本結果僅代表該文本中的社群交易風險訊號，不代表股票價值或價格走勢。
               </p>
               <div className="text-sm leading-relaxed" style={{ color: '#94a3b8' }}>
-                {result.explanation}
+                {getLocalizedModelExplanation(result)}
               </div>
             </div>
 
             {/* ── Risk Brief ── */}
             <div className="rounded-lg p-4" style={{ background: '#0d0f1a', border: '1px solid #2d3148' }}>
-              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                <span className="text-xs font-semibold text-white">單篇文本分析報告</span>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {/* 複製摘要 */}
-                  <button
-                    onClick={handleCopySummary}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold transition-colors"
-                    style={{
-                      background: copiedSummary ? '#052e16' : '#2d3148',
-                      color:      copiedSummary ? '#10b981' : '#94a3b8',
-                      border:     `1px solid ${copiedSummary ? '#065f46' : '#3d4163'}`,
-                    }}
-                  >
-                    {copiedSummary ? <><Check size={11} /> 已複製</> : <><Copy size={11} /> 複製摘要</>}
-                  </button>
-                  {/* 下載 Word */}
-                  <button
-                    onClick={() => result && downloadWordReport(result, symbol)}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold"
-                    style={{ background: '#2d3148', color: '#94a3b8', border: '1px solid #3d4163' }}
-                  >
-                    下載 Word 報告
-                  </button>
-                  {/* 列印 / 另存 PDF */}
-                  <div className="flex flex-col items-end gap-0.5">
-                    <button
-                      onClick={() => result && printReport(result, symbol)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold"
-                      style={{ background: '#2d3148', color: '#94a3b8', border: '1px solid #3d4163' }}
-                    >
-                      列印 / 另存 PDF
-                    </button>
-                    <span className="text-[9px]" style={{ color: '#475569' }}>可透過瀏覽器列印功能另存為 PDF。</span>
-                  </div>
-                  {/* 下載 HTML 報告 */}
-                  <div className="flex flex-col items-end gap-0.5">
-                    <button
-                      onClick={handleDownloadHtml}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold"
-                      style={{ background: '#1e3a5f', color: '#38bdf8', border: '1px solid #2d4a6f' }}
-                    >
-                      <Globe size={11} /> 下載 HTML 報告
-                    </button>
-                    <span className="text-[9px]" style={{ color: '#475569' }}>可離線開啟，適合展示完整的單篇文本分析結果。</span>
-                  </div>
-                </div>
+
+              {/* Header */}
+              <div className="mb-3">
+                <span className="block text-xs font-semibold text-white">單篇文本分析報告</span>
+                <p className="text-[10px] mt-0.5" style={{ color: '#64748b' }}>
+                  可匯出此篇文本之分析結果；本結果不代表標的投資價值或價格走勢。
+                </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-x-6 text-xs">
+              {/* Actions — responsive 2-col / 4-col grid */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-1">
+                <button
+                  onClick={handleCopySummary}
+                  className="flex items-center justify-center gap-1 h-10 w-full rounded text-xs font-semibold transition-colors"
+                  style={{
+                    background: copiedSummary ? '#052e16' : '#2d3148',
+                    color:      copiedSummary ? '#10b981' : '#94a3b8',
+                    border:     `1px solid ${copiedSummary ? '#065f46' : '#3d4163'}`,
+                  }}
+                >
+                  {copiedSummary ? <><Check size={11} /> 已複製</> : <><Copy size={11} /> 複製摘要</>}
+                </button>
+                <button
+                  onClick={() => result && downloadWordReport(result, symbol, getConsistencyWarnings(result, currentSample))}
+                  className="flex items-center justify-center gap-1 h-10 w-full rounded text-xs font-semibold"
+                  style={{ background: '#2d3148', color: '#94a3b8', border: '1px solid #3d4163' }}
+                >
+                  下載 Word
+                </button>
+                <button
+                  onClick={() => result && printReport(result, symbol, getConsistencyWarnings(result, currentSample))}
+                  className="flex items-center justify-center gap-1 h-10 w-full rounded text-xs font-semibold"
+                  style={{ background: '#2d3148', color: '#94a3b8', border: '1px solid #3d4163' }}
+                >
+                  列印 / PDF
+                </button>
+                <button
+                  onClick={handleDownloadHtml}
+                  className="flex items-center justify-center gap-1 h-10 w-full rounded text-xs font-semibold"
+                  style={{ background: '#1e3a5f', color: '#38bdf8', border: '1px solid #2d4a6f' }}
+                >
+                  <Globe size={11} /> 下載 HTML
+                </button>
+              </div>
+              <p className="text-[9px] mb-4" style={{ color: '#475569' }}>
+                Word 可編輯；PDF 適合存檔；HTML 可離線互動瀏覽。
+              </p>
+
+              {/* Data grid — 5 核心欄位（badge 已顯示風險等級，不重複） */}
+              <div className="grid grid-cols-2 gap-x-6 text-xs mb-2">
                 {([
-                  ['標的',         symbol],
-                  ['文本社群風險語言強度', riskLabelZh(result.predicted_risk_label)],
-                  ['FOMO 強度',    result.fomo_score.toFixed(0)],
-                  ['炒作語言',     result.hype_language_score.toFixed(0)],
-                  ['操縱訊號',     result.manipulation_signal_score.toFixed(0)],
-                  ['軋空敘事',     result.short_squeeze_narrative_detected ? '⚠ 已偵測' : '未偵測'],
-                  ['模型來源',     result.model_source],
-                  ['資料品質',     result.data_quality],
+                  ['標的',    symbol],
+                  ['FOMO 強度', result.fomo_score.toFixed(0)],
+                  ['炒作語言',  result.hype_language_score.toFixed(0)],
+                  ['操縱訊號',  result.manipulation_signal_score.toFixed(0)],
+                  ['軋空敘事',  result.short_squeeze_narrative_detected ? '⚠ 已偵測' : '未偵測'],
                 ] as [string, string][]).map(([label, val]) => (
                   <div key={label} className="flex justify-between py-1" style={{ borderBottom: '1px solid #1a1d27' }}>
                     <span style={{ color: '#64748b' }}>{label}</span>
-                    <span
-                      className="font-mono text-right ml-2 truncate max-w-[140px]"
-                      style={{ color: label === '文本社群風險語言強度' ? riskColor : '#f1f5f9' }}
-                    >
-                      {val}
-                    </span>
+                    <span className="font-mono text-right ml-2" style={{ color: '#f1f5f9' }}>{val}</span>
                   </div>
                 ))}
               </div>
 
               {result.highlighted_terms.length > 0 && (
-                <p className="text-[10px] mt-2">
+                <p className="text-[10px] mt-2 mb-2">
                   <span style={{ color: '#64748b' }}>關鍵詞彙：</span>
                   <span style={{ color: '#a78bfa' }}>{result.highlighted_terms.join(', ')}</span>
                 </p>
               )}
 
-              <p className="text-xs mt-2" style={{ color: '#64748b' }}>
+              <p className="text-xs mt-2 mb-3" style={{ color: '#64748b' }}>
                 {MONITORING_ACTIONS[result.predicted_risk_label]}
               </p>
+
+              {/* 技術資訊 collapsible（model_source、data_quality、英文原始輸出） */}
+              <div className="rounded-md" style={{ background: '#0a0c14', border: '1px solid #1a1d27' }}>
+                <button
+                  onClick={() => setShowTechInfo(v => !v)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold"
+                  style={{ color: '#475569' }}
+                >
+                  <span>技術資訊</span>
+                  {showTechInfo ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                </button>
+                {showTechInfo && (
+                  <div className="px-3 pb-3 flex flex-col gap-1 text-[10px]">
+                    <div className="flex justify-between py-0.5">
+                      <span style={{ color: '#64748b' }}>模型來源</span>
+                      <span style={{ color: '#94a3b8' }}>{getFriendlyModelSource(result.model_source)}</span>
+                    </div>
+                    <div className="flex justify-between py-0.5">
+                      <span style={{ color: '#64748b' }}>模型代碼</span>
+                      <span className="font-mono" style={{ color: '#475569' }}>{result.model_source}</span>
+                    </div>
+                    <div className="flex justify-between py-0.5">
+                      <span style={{ color: '#64748b' }}>資料品質</span>
+                      <span style={{ color: '#94a3b8' }}>{getFriendlyDataQuality(result.data_quality)}</span>
+                    </div>
+                    <div className="flex justify-between py-0.5">
+                      <span style={{ color: '#64748b' }}>品質代碼</span>
+                      <span className="font-mono" style={{ color: '#475569' }}>{result.data_quality}</span>
+                    </div>
+                    <div className="mt-1.5 pt-1.5" style={{ borderTop: '1px solid #1a1d27' }}>
+                      <p className="mb-1" style={{ color: '#475569' }}>模型原始輸出（英文）：</p>
+                      <p style={{ color: '#334155', lineHeight: '1.5' }}>{result.explanation}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* ── CTA：查看多來源綜合警戒報告 ── */}
