@@ -250,6 +250,22 @@ export function RiskReport() {
   const latest           = fastapiSnapshot ?? phpLatest ?? null
   const usingPhpFallback = !hasFastapi && !!phpLatest
 
+  // Payload-level errors: FastAPI can return HTTP 200 with success=false or a populated
+  // errors array. Combine with React Query's network-level isError for full coverage.
+  const hasSignalsPayloadError =
+    signalsData?.success === false ||
+    (signalsData?.errors?.length ?? 0) > 0
+  const hasSnapshotPayloadError =
+    fastapiData?.success === false ||
+    (fastapiData?.errors?.length ?? 0) > 0
+  const hasHistoryPayloadError =
+    histData?.success === false ||
+    (histData?.errors?.length ?? 0) > 0
+
+  const effectiveSignalsError  = signalsError  || hasSignalsPayloadError
+  const effectiveSnapshotError = fastapiSnapshotError || hasSnapshotPayloadError
+  const effectiveHistoryError  = histError  || hasHistoryPayloadError
+
   // Computed fresh on every render — no useMemo to avoid stale results when
   // content changes but array length stays the same
   const caution = computeInvestorCaution(
@@ -258,9 +274,9 @@ export function RiskReport() {
     histItems,
     phpLatest,
     {
-      externalNewsError:  signalsError,
-      latestSnapshotError: fastapiSnapshotError,
-      marketHistoryError: histError,
+      externalNewsError:   effectiveSignalsError,
+      latestSnapshotError: effectiveSnapshotError,
+      marketHistoryError:  effectiveHistoryError,
     },
   )
 
@@ -274,8 +290,8 @@ export function RiskReport() {
 
   // ── news coverage display string ──────────────────────────────────────────
   const newsCoverageText = (() => {
-    if (signalsLoading) return '載入中…'
-    if (signalsError)   return '取得失敗'
+    if (signalsLoading)         return '載入中…'
+    if (effectiveSignalsError)  return '取得失敗'
     if (caution.newsCoverage.scoredCount > 0) {
       return `可分析 ${caution.newsCoverage.scoredCount} 篇 / 原始 ${caution.newsCoverage.rawCount} 篇 · Finnhub`
     }
@@ -283,8 +299,8 @@ export function RiskReport() {
   })()
 
   const newsCoverageColor = (() => {
-    if (signalsError) return '#ef4444'
-    if (caution.newsCoverage.scoredCount > 0) return '#10b981'
+    if (effectiveSignalsError)                   return '#ef4444'
+    if (caution.newsCoverage.scoredCount > 0)    return '#10b981'
     return '#64748b'
   })()
 
@@ -363,16 +379,16 @@ export function RiskReport() {
             <div className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
               <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>最新市場快照</div>
               <div className="text-xs font-semibold" style={{
-                color: fastapiLoading          ? '#64748b'
-                     : hasFastapi             ? '#10b981'
-                     : phpLatest              ? '#f59e0b'
-                     : fastapiSnapshotError   ? '#ef4444'
+                color: fastapiLoading           ? '#64748b'
+                     : hasFastapi              ? '#10b981'
+                     : phpLatest               ? '#f59e0b'
+                     : effectiveSnapshotError  ? '#ef4444'
                      : '#64748b',
               }}>
-                {fastapiLoading        ? '載入中…'
-                 : hasFastapi         ? '可用'
-                 : phpLatest          ? '歷史 fallback'
-                 : fastapiSnapshotError ? '取得失敗'
+                {fastapiLoading          ? '載入中…'
+                 : hasFastapi           ? '可用'
+                 : phpLatest            ? '歷史 fallback'
+                 : effectiveSnapshotError ? '取得失敗'
                  : '無資料'}
               </div>
             </div>
@@ -381,14 +397,14 @@ export function RiskReport() {
             <div className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
               <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>近期市場趨勢</div>
               <div className="text-xs font-semibold" style={{
-                color: histLoading  ? '#64748b'
-                     : histError    ? '#ef4444'
-                     : histItems.length > 0 ? '#10b981'
+                color: histLoading            ? '#64748b'
+                     : effectiveHistoryError  ? '#ef4444'
+                     : histItems.length > 0   ? '#10b981'
                      : '#64748b',
               }}>
-                {histLoading      ? '載入中…'
-                 : histError      ? '取得失敗'
-                 : histItems.length > 0 ? `${histItems.length} 個交易日`
+                {histLoading            ? '載入中…'
+                 : effectiveHistoryError ? '取得失敗'
+                 : histItems.length > 0  ? `${histItems.length} 個交易日`
                  : '無資料'}
               </div>
             </div>

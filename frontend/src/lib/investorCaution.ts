@@ -320,22 +320,38 @@ export function computeInvestorCaution(
   // Build coverage note
   const noteParts: string[] = []
 
+  // 1. PHP fallback already explains snapshot unavailability; no duplicate note needed.
   if (snapR.usingPhpFallback) {
     noteParts.push('最新市場快照無法取得，目前使用歷史資料庫快照作為參考。')
   }
 
+  // 2. Snapshot error without a PHP fallback rescue
+  if (options.latestSnapshotError && !snapR.usingPhpFallback && (hasNews || hasHistory)) {
+    noteParts.push('最新市場快照目前取得失敗；本摘要僅能視為初步觀察。')
+  }
+
+  // 3. External news coverage (mutually exclusive branches)
   if (options.externalNewsError && (hasSnapshot || hasHistory)) {
     noteParts.push('外部新聞資料目前取得失敗；本摘要主要依市場訊號形成，僅能視為初步觀察。')
   } else if (!hasNews && !options.externalNewsError && (hasSnapshot || hasHistory)) {
     const isHigh = signalLevel === 'high' || signalLevel === 'extreme'
-    const src = hasHistory ? '市場歷史異常訊號' : '市場訊號'
+    const marketSourceText =
+      hasSnapshot && hasHistory
+        ? '最新市場快照與近期市場趨勢'
+        : hasSnapshot
+          ? '最新市場快照'
+          : '近期市場趨勢'
     noteParts.push(
-      `目前${isHigh ? '高' : ''}警戒主要來自${src}；外部新聞無可分析資料，僅能視為初步觀察。`
+      `目前${isHigh ? '高' : ''}警戒主要來自${marketSourceText}；外部新聞無可分析資料，僅能視為初步觀察。`
     )
-  } else if (hasNews && !hasHistory && !hasSnapshot && !options.marketHistoryError) {
+  } else if (
+    hasNews && !hasHistory && !hasSnapshot &&
+    !options.marketHistoryError && !options.latestSnapshotError
+  ) {
     noteParts.push('目前訊號主要來自外部新聞；市場資料不足，僅能視為初步觀察。')
   }
 
+  // 4. Market history error
   if (options.marketHistoryError && (hasNews || hasSnapshot)) {
     noteParts.push('近期市場趨勢目前取得失敗；本摘要僅能視為初步觀察。')
   }
