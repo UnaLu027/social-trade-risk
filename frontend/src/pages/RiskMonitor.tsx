@@ -28,6 +28,33 @@ function saveWatchlist(list: string[]) {
 
 // ── types ────────────────────────────────────────────────────────────────────
 
+interface CautionSummaryRecord {
+  id: number
+  symbol: string
+  signal_level: string
+  combined_score: number
+  external_news_score: number | null
+  latest_snapshot_score: number | null
+  market_history_score: number | null
+  data_coverage: string
+  interpretation_status: string
+  coverage_note: string | null
+  source_count: number
+  generated_at: string
+  created_at: string
+}
+
+interface ExternalSignalRecord {
+  id: number
+  symbol: string
+  source: string
+  headline: string
+  url: string | null
+  published_at: string | null
+  ai_risk_label: string | null
+  ai_risk_score: number | null
+}
+
 interface RiskSnapshot {
   symbol: string
   name: string | null
@@ -65,6 +92,27 @@ const RISK_CFG = {
   High:     { color: '#f97316', bg: '#431407', border: '#9a3412' },
   Medium:   { color: '#f59e0b', bg: '#451a03', border: '#92400e' },
   Low:      { color: '#10b981', bg: '#052e16', border: '#065f46' },
+}
+
+const SIG_COLOR: Record<string, string> = {
+  low: '#10b981', medium: '#f59e0b', high: '#f97316',
+  extreme: '#ef4444', insufficient_data: '#64748b',
+}
+const SIG_LABEL: Record<string, string> = {
+  low: '低警戒', medium: '中警戒', high: '高警戒',
+  extreme: '極高警戒', insufficient_data: '資料不足',
+}
+const RISK_ZH: Record<string, string> = {
+  Low: '低警戒', Medium: '中警戒', High: '高警戒', Critical: '極高警戒',
+}
+const INTERP_LABEL: Record<string, string> = {
+  comprehensive: '綜合觀察', preliminary: '初步觀察', insufficient_data: '資料不足',
+}
+
+function formatHistTime(iso: string): string {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return iso
+  return d.toISOString().replace('T', ' ').slice(0, 16) + ' UTC'
 }
 
 function riskCfg(label: string | null) {
@@ -241,6 +289,34 @@ export function RiskMonitor() {
     staleTime: 5 * 60_000,
     refetchInterval: 10 * 60_000,
   })
+
+  // ── History monitoring ──────────────────────────────────────────────────────
+  const [selectedHistorySymbol, setSelectedHistorySymbol] = useState<string>(
+    watchlist.length > 0 ? watchlist[0] : 'GME'
+  )
+
+  const { data: cauSumData } = useQuery({
+    queryKey: ['php-caution-summaries', selectedHistorySymbol],
+    queryFn:  () => phpGet<{ summaries: CautionSummaryRecord[]; count: number }>(
+      `/caution_summaries.php?symbol=${selectedHistorySymbol}&limit=7`
+    ),
+    enabled:   !!selectedHistorySymbol,
+    retry:     0,
+    staleTime: 2 * 60_000,
+  })
+
+  const { data: extSigData } = useQuery({
+    queryKey: ['php-external-signals', selectedHistorySymbol],
+    queryFn:  () => phpGet<{ items: ExternalSignalRecord[]; count: number }>(
+      `/external_signals.php?symbol=${selectedHistorySymbol}&limit=5`
+    ),
+    enabled:   !!selectedHistorySymbol,
+    retry:     0,
+    staleTime: 2 * 60_000,
+  })
+
+  const historySummaries = cauSumData?.summaries ?? []
+  const historyNews      = extSigData?.items      ?? []
 
   // Data priority: FastAPI (non-empty) > PHP > DEMO
   // Empty array from FastAPI (all tickers rate-limited) must NOT block PHP fallback
@@ -430,6 +506,111 @@ export function RiskMonitor() {
             ))}
           </div>
         )}
+
+        {/* ── 歷史監控概覽 ──────────────────────────────────────────────────── */}
+        <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp size={14} color="#a78bfa" />
+            <span className="text-sm font-semibold text-white">歷史監控概覽</span>
+            <span className="text-[10px]" style={{ color: '#475569' }}>由 RiskReport 自動儲存</span>
+          </div>
+
+          {/* Symbol selector */}
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {watchlist.slice(0, 12).map(sym => (
+              <button
+                key={sym}
+                onClick={() => setSelectedHistorySymbol(sym)}
+                className="px-2.5 py-0.5 rounded text-xs font-semibold transition-colors"
+                style={{
+                  background: selectedHistorySymbol === sym ? '#1e3a5f' : '#0f1117',
+                  color:      selectedHistorySymbol === sym ? '#38bdf8' : '#64748b',
+                  border:     `1px solid ${selectedHistorySymbol === sym ? '#2d4a6f' : '#2d3148'}`,
+                }}
+              >
+                {sym}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Caution summary history */}
+            <div className="flex flex-col gap-2">
+              <div className="text-[11px] font-semibold mb-1" style={{ color: '#64748b' }}>
+                {selectedHistorySymbol} 綜合警戒摘要（近 7 筆）
+              </div>
+              {historySummaries.length === 0 ? (
+                <p className="text-xs py-4 text-center" style={{ color: '#475569' }}>
+                  尚無歷史摘要，請先查看該標的風險報告。
+                </p>
+              ) : (
+                historySummaries.map(s => {
+                  const sigColor = SIG_COLOR[s.signal_level] ?? '#64748b'
+                  const sigLabel = SIG_LABEL[s.signal_level] ?? s.signal_level
+                  return (
+                    <div key={s.id} className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-semibold" style={{ color: sigColor }}>{sigLabel}</span>
+                        <span className="text-[10px] font-mono" style={{ color: '#64748b' }}>{s.combined_score} / 100</span>
+                      </div>
+                      <div className="text-[10px] mb-1.5" style={{ color: '#64748b' }}>
+                        {s.data_coverage} · {INTERP_LABEL[s.interpretation_status] ?? s.interpretation_status}
+                      </div>
+                      <div style={{ background: '#2d3148', height: '3px', borderRadius: '2px' }}>
+                        <div style={{ background: sigColor, width: `${Math.min(s.combined_score, 100)}%`, height: '3px', borderRadius: '2px' }} />
+                      </div>
+                      <div className="text-[10px] mt-1" style={{ color: '#475569' }}>
+                        {formatHistTime(s.generated_at)}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+
+            {/* Recent external news */}
+            <div className="flex flex-col gap-2">
+              <div className="text-[11px] font-semibold mb-1" style={{ color: '#64748b' }}>
+                {selectedHistorySymbol} 最近外部新聞文本訊號
+              </div>
+              {historyNews.length === 0 ? (
+                <p className="text-xs py-4 text-center" style={{ color: '#475569' }}>
+                  尚無儲存之外部新聞文本訊號。
+                </p>
+              ) : (
+                historyNews.map(item => {
+                  const rColor = item.ai_risk_label === 'Critical' ? '#ef4444'
+                    : item.ai_risk_label === 'High' ? '#f97316'
+                    : item.ai_risk_label === 'Medium' ? '#f59e0b' : '#10b981'
+                  return (
+                    <div key={item.id} className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                      <div className="flex items-center justify-between mb-1">
+                        {item.ai_risk_label ? (
+                          <span className="text-[10px] font-semibold" style={{ color: rColor }}>
+                            文本風險語言強度：{RISK_ZH[item.ai_risk_label] ?? item.ai_risk_label}
+                            {item.ai_risk_score != null ? ` · ${item.ai_risk_score}` : ''}
+                          </span>
+                        ) : <span />}
+                        <span className="text-[10px]" style={{ color: '#475569' }}>Finnhub</span>
+                      </div>
+                      <div className="text-xs text-white leading-snug mb-1">
+                        {item.url ? (
+                          <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ color: '#e2e8f0' }}>
+                            {item.headline}
+                          </a>
+                        ) : item.headline}
+                      </div>
+                      <div className="text-[10px]" style={{ color: '#475569' }}>
+                        {item.published_at ? formatHistTime(item.published_at) : '—'}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   )

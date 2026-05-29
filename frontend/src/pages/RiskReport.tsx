@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   Calendar, TrendingUp, AlertTriangle, FileText, Newspaper, ExternalLink,
   ShieldAlert, Info, Copy, Printer, Globe,
 } from 'lucide-react'
-import { phpGet } from '../api/phpClient'
+import { phpGet, phpApi } from '../api/phpClient'
 import { api } from '../api/client'
 import { TopBar } from '../components/layout/TopBar'
 import {
@@ -357,6 +357,62 @@ export function RiskReport() {
     setTimeout(() => setCopyDone(false), 2000)
   }
 
+  // ── persistence: save signals + caution summary once per distinct data set ──
+  const savedRef   = useRef<Set<string>>(new Set())
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'failed'>('idle')
+
+  const firstSignalId = signalItems[0]?.id ?? ''
+  const snapshotDate  = fastapiSnapshot?.snapshot_date ?? ''
+
+  useEffect(() => {
+    if (cautionLoading) return
+    const saveKey = `${upper}|${firstSignalId}|${histItems.length}|${snapshotDate}`
+    if (savedRef.current.has(saveKey)) return
+    savedRef.current.add(saveKey)
+
+    if (signalItems.length > 0) {
+      phpApi.post('/external_signals.php', { symbol: upper, items: signalItems })
+        .catch(err => console.warn('[DB] signal save failed:', err))
+    }
+
+    const sourceCount = [
+      caution.newsCoverage.scoredCount > 0,
+      !!(fastapiSnapshot ?? phpLatest),
+      histItems.length > 0,
+    ].filter(Boolean).length
+
+    phpApi.post('/caution_summaries.php', {
+      symbol:                upper,
+      signal_level:          caution.signalLevel,
+      combined_score:        caution.score,
+      external_news_score:   caution.scoreBreakdown.externalNews,
+      latest_snapshot_score: caution.scoreBreakdown.latestMarketSnapshot,
+      market_history_score:  caution.scoreBreakdown.marketHistory,
+      data_coverage:         caution.dataCoverage,
+      interpretation_status: caution.interpretationStatus,
+      coverage_note:         caution.coverageNote,
+      source_count:          sourceCount,
+      generated_at:          new Date().toISOString(),
+    })
+      .then(() => setSaveStatus('saved'))
+      .catch(err => {
+        console.warn('[DB] summary save failed:', err)
+        setSaveStatus('failed')
+      })
+    // caution excluded from deps intentionally — it changes every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [upper, cautionLoading, firstSignalId, histItems.length, snapshotDate])
+
+  const logExport = (exportType: string) => {
+    phpApi.post('/report_exports.php', {
+      symbol:         upper,
+      export_type:    exportType,
+      signal_level:   caution.signalLevel,
+      combined_score: caution.score,
+      exported_at:    new Date().toISOString(),
+    }).catch(err => console.warn('[DB] export log failed:', err))
+  }
+
   return (
     <div className="flex flex-col flex-1 overflow-auto">
       <TopBar title={`綜合警戒摘要 · ${upper}`} />
@@ -491,9 +547,9 @@ export function RiskReport() {
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {[
                     { icon: <Copy size={15} />, label: copyDone ? '已複製' : '複製摘要', action: handleCopy },
-                    { icon: <FileText size={15} />, label: '下載 Word', action: () => downloadWord(exportInput) },
-                    { icon: <Printer size={15} />, label: '列印 / PDF', action: () => printReport(exportInput) },
-                    { icon: <Globe size={15} />, label: '下載 HTML', action: () => downloadHtml(exportInput) },
+                    { icon: <FileText size={15} />, label: '下載 Word', action: () => { downloadWord(exportInput); logExport('word') } },
+                    { icon: <Printer size={15} />, label: '列印 / PDF', action: () => { printReport(exportInput); logExport('pdf') } },
+                    { icon: <Globe size={15} />, label: '下載 HTML', action: () => { downloadHtml(exportInput); logExport('html') } },
                   ].map(({ icon, label, action }) => (
                     <button
                       key={label}
@@ -570,6 +626,15 @@ export function RiskReport() {
               <div className="text-[10px] font-mono" style={{ color: '#475569' }}>
                 生成時間：{formatUtc(caution.generatedAt)} UTC
               </div>
+              {saveStatus !== 'idle' && (
+                <div className="text-[10px]" style={{
+                  color: saveStatus === 'saved' ? '#10b981' : '#64748b',
+                }}>
+                  {saveStatus === 'saved'
+                    ? '本次摘要已儲存至歷史紀錄'
+                    : '歷史紀錄暫時無法更新，不影響目前分析'}
+                </div>
+              )}
 
               {/* ── 匯出按鈕區 ── */}
               <div className="rounded p-3 mt-1" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
@@ -580,9 +645,9 @@ export function RiskReport() {
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {[
                     { icon: <Copy size={15} />, label: copyDone ? '已複製' : '複製摘要', action: handleCopy, color: copyDone ? '#10b981' : '#38bdf8' },
-                    { icon: <FileText size={15} />, label: '下載 Word', action: () => downloadWord(exportInput), color: '#38bdf8' },
-                    { icon: <Printer size={15} />, label: '列印 / PDF', action: () => printReport(exportInput), color: '#38bdf8' },
-                    { icon: <Globe size={15} />, label: '下載 HTML', action: () => downloadHtml(exportInput), color: '#38bdf8' },
+                    { icon: <FileText size={15} />, label: '下載 Word', action: () => { downloadWord(exportInput); logExport('word') }, color: '#38bdf8' },
+                    { icon: <Printer size={15} />, label: '列印 / PDF', action: () => { printReport(exportInput); logExport('pdf') }, color: '#38bdf8' },
+                    { icon: <Globe size={15} />, label: '下載 HTML', action: () => { downloadHtml(exportInput); logExport('html') }, color: '#38bdf8' },
                   ].map(({ icon, label, action, color }) => (
                     <button
                       key={label}

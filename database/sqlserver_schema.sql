@@ -190,3 +190,83 @@ BEGIN
     );
 END
 GO
+
+-- ============================================================
+-- 9. external_signal_records  (Finnhub news text signals)
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'external_signal_records')
+BEGIN
+    CREATE TABLE external_signal_records (
+        id            INT IDENTITY(1,1) PRIMARY KEY,
+        symbol        NVARCHAR(20)   NOT NULL,
+        source        NVARCHAR(30)   NOT NULL DEFAULT 'finnhub',
+        external_id   NVARCHAR(255)  NULL,       -- Finnhub article id
+        url           NVARCHAR(1000) NULL,
+        headline      NVARCHAR(1000) NOT NULL,
+        summary       NVARCHAR(MAX)  NULL,
+        published_at  DATETIME2      NULL,
+        ai_risk_label NVARCHAR(30)   NULL,
+        ai_risk_score DECIMAL(6,2)   NULL,
+        fetched_at    DATETIME2      NOT NULL,
+        created_at    DATETIME2      DEFAULT SYSDATETIME()
+    );
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UQ_ext_signal_symbol_extid')
+    CREATE UNIQUE INDEX UQ_ext_signal_symbol_extid
+        ON external_signal_records (symbol, external_id)
+        WHERE external_id IS NOT NULL;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ext_signal_symbol')
+    CREATE INDEX IX_ext_signal_symbol ON external_signal_records (symbol, published_at DESC, id DESC);
+GO
+
+-- ============================================================
+-- 10. caution_summary_records  (computed caution summaries)
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'caution_summary_records')
+BEGIN
+    CREATE TABLE caution_summary_records (
+        id                     INT IDENTITY(1,1) PRIMARY KEY,
+        symbol                 NVARCHAR(20)  NOT NULL,
+        signal_level           NVARCHAR(30)  NOT NULL,
+        combined_score         DECIMAL(6,2)  NOT NULL,
+        external_news_score    DECIMAL(6,2)  NULL,
+        latest_snapshot_score  DECIMAL(6,2)  NULL,
+        market_history_score   DECIMAL(6,2)  NULL,
+        data_coverage          NVARCHAR(20)  NOT NULL,
+        interpretation_status  NVARCHAR(30)  NOT NULL,
+        coverage_note          NVARCHAR(MAX) NULL,
+        source_count           INT           NOT NULL DEFAULT 0,
+        generated_at           NVARCHAR(50)  NOT NULL,  -- ISO-8601 string for exact dedup
+        created_at             DATETIME2     DEFAULT SYSDATETIME()
+    );
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_caution_summary_symbol')
+    CREATE INDEX IX_caution_summary_symbol ON caution_summary_records (symbol, created_at DESC);
+GO
+
+-- ============================================================
+-- 11. report_export_logs  (user export actions)
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'report_export_logs')
+BEGIN
+    CREATE TABLE report_export_logs (
+        id             INT IDENTITY(1,1) PRIMARY KEY,
+        symbol         NVARCHAR(20)  NOT NULL,
+        export_type    NVARCHAR(20)  NOT NULL,   -- 'word' | 'pdf' | 'html'
+        signal_level   NVARCHAR(30)  NULL,
+        combined_score DECIMAL(6,2)  NULL,
+        exported_at    DATETIME2     NOT NULL,
+        created_at     DATETIME2     DEFAULT SYSDATETIME()
+    );
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_report_export_symbol')
+    CREATE INDEX IX_report_export_symbol ON report_export_logs (symbol, exported_at DESC);
+GO
