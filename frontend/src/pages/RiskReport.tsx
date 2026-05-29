@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
-  Calendar, TrendingUp, AlertTriangle, FileText, Newspaper, ExternalLink, ShieldAlert, Info,
+  Calendar, TrendingUp, AlertTriangle, FileText, Newspaper, ExternalLink,
+  ShieldAlert, Info, Copy, Printer, Globe,
 } from 'lucide-react'
 import { phpGet } from '../api/phpClient'
 import { api } from '../api/client'
@@ -16,6 +18,10 @@ import {
   type DataCoverageLevel,
   type InterpretationStatus,
 } from '../lib/investorCaution'
+import {
+  copySummary, downloadWord, printReport, downloadHtml,
+  type BriefExportInput,
+} from '../lib/investorBriefExport'
 
 // ── types ────────────────────────────────────────────────────────────────────
 
@@ -155,6 +161,7 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
 export function RiskReport() {
   const { symbol = 'GME' } = useParams<{ symbol: string }>()
   const upper = symbol.toUpperCase()
+  const [copyDone, setCopyDone] = useState(false)
 
   const { data: snapData, isLoading: snapLoading } = useQuery({
     queryKey: ['php-snapshots', upper],
@@ -304,6 +311,52 @@ export function RiskReport() {
     return '#64748b'
   })()
 
+  // ── export-ready computed strings ────────────────────────────────────────
+  const snapshotStatusText = fastapiLoading ? '載入中…'
+    : hasFastapi ? '可用'
+    : phpLatest ? '歷史 fallback'
+    : effectiveSnapshotError ? '取得失敗'
+    : '無資料'
+
+  const historyStatusText = histLoading ? '載入中…'
+    : effectiveHistoryError ? '取得失敗'
+    : histItems.length > 0 ? `${histItems.length} 個交易日`
+    : '無資料'
+
+  const exportInput: BriefExportInput = {
+    symbol: upper,
+    caution,
+    signalItems: signalItems.map(s => ({
+      headline:      s.headline,
+      url:           s.url,
+      ai_risk_label: s.ai_risk_label,
+      ai_risk_score: s.ai_risk_score,
+      published_at:  s.published_at,
+      source:        s.source,
+    })),
+    histItems: histItems.map(h => ({
+      date:                   h.date,
+      market_heat_score:      h.market_heat_score,
+      volatility_anomaly_score: h.volatility_anomaly_score,
+      fomo_score:             h.fomo_score,
+      short_squeeze_pressure: h.short_squeeze_pressure,
+      market_risk_label:      h.market_risk_label,
+    })),
+    latestSnapshot: latest
+      ? { snapshot_date: latest.snapshot_date, price: latest.price, ai_risk_label: latest.ai_risk_label }
+      : null,
+    snapshotIsPhpFallback: usingPhpFallback,
+    newsCoverageText,
+    snapshotStatusText,
+    historyStatusText,
+  }
+
+  const handleCopy = async () => {
+    await copySummary(exportInput)
+    setCopyDone(true)
+    setTimeout(() => setCopyDone(false), 2000)
+  }
+
   return (
     <div className="flex flex-col flex-1 overflow-auto">
       <TopBar title={`綜合警戒摘要 · ${upper}`} />
@@ -430,7 +483,31 @@ export function RiskReport() {
           {cautionLoading ? (
             <div className="h-32 animate-pulse rounded" style={{ background: '#2d3148' }} />
           ) : caution.signalLevel === 'insufficient_data' ? (
-            <p className="text-xs py-4 text-center" style={{ color: '#64748b' }}>資料不足，無法產生警戒摘要。</p>
+            <div>
+              <p className="text-xs py-4 text-center" style={{ color: '#64748b' }}>資料不足，無法產生警戒摘要。</p>
+              <div className="rounded p-3" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                <div className="text-[11px] font-semibold mb-1" style={{ color: '#64748b' }}>綜合警戒摘要報告</div>
+                <div className="text-[10px] mb-3" style={{ color: '#475569' }}>資料不足時仍可匯出，報告將清楚標示來源狀態。</div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {[
+                    { icon: <Copy size={15} />, label: copyDone ? '已複製' : '複製摘要', action: handleCopy },
+                    { icon: <FileText size={15} />, label: '下載 Word', action: () => downloadWord(exportInput) },
+                    { icon: <Printer size={15} />, label: '列印 / PDF', action: () => printReport(exportInput) },
+                    { icon: <Globe size={15} />, label: '下載 HTML', action: () => downloadHtml(exportInput) },
+                  ].map(({ icon, label, action }) => (
+                    <button
+                      key={label}
+                      onClick={action}
+                      className="flex flex-col items-center gap-1.5 rounded p-2.5"
+                      style={{ background: '#1a1d27', border: '1px solid #2d3148' }}
+                    >
+                      <span style={{ color: '#64748b' }}>{icon}</span>
+                      <span className="text-[10px] font-semibold whitespace-nowrap" style={{ color: '#64748b' }}>{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="flex flex-col gap-4">
               {/* Status row */}
@@ -492,6 +569,36 @@ export function RiskReport() {
 
               <div className="text-[10px] font-mono" style={{ color: '#475569' }}>
                 生成時間：{formatUtc(caution.generatedAt)} UTC
+              </div>
+
+              {/* ── 匯出按鈕區 ── */}
+              <div className="rounded p-3 mt-1" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                <div className="text-[11px] font-semibold mb-1" style={{ color: '#64748b' }}>綜合警戒摘要報告</div>
+                <div className="text-[10px] mb-3" style={{ color: '#475569' }}>
+                  匯出目前已接入來源之警戒摘要與查證資訊。
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {[
+                    { icon: <Copy size={15} />, label: copyDone ? '已複製' : '複製摘要', action: handleCopy, color: copyDone ? '#10b981' : '#38bdf8' },
+                    { icon: <FileText size={15} />, label: '下載 Word', action: () => downloadWord(exportInput), color: '#38bdf8' },
+                    { icon: <Printer size={15} />, label: '列印 / PDF', action: () => printReport(exportInput), color: '#38bdf8' },
+                    { icon: <Globe size={15} />, label: '下載 HTML', action: () => downloadHtml(exportInput), color: '#38bdf8' },
+                  ].map(({ icon, label, action, color }) => (
+                    <button
+                      key={label}
+                      onClick={action}
+                      className="flex flex-col items-center gap-1.5 rounded p-2.5 transition-colors"
+                      style={{ background: '#1a1d27', border: '1px solid #2d3148' }}
+                      onMouseEnter={e => (e.currentTarget.style.borderColor = '#38bdf8')}
+                      onMouseLeave={e => (e.currentTarget.style.borderColor = '#2d3148')}
+                    >
+                      <span style={{ color }}>{icon}</span>
+                      <span className="text-[10px] font-semibold whitespace-nowrap" style={{ color: '#94a3b8' }}>
+                        {label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
