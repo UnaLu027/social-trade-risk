@@ -118,9 +118,9 @@ const SIGNAL_LEVEL_COLOR: Record<SignalLevel, string> = {
 }
 
 const COVERAGE_LABEL: Record<DataCoverageLevel, string> = {
-  FULL:    '完整',
-  PARTIAL: '部分',
-  MINIMAL: '最少',
+  FULL:    '完整（3 / 3）',
+  PARTIAL: '部分可用',
+  MINIMAL: '僅一類可用',
   NONE:    '無資料',
 }
 
@@ -364,7 +364,7 @@ export function RiskReport() {
         <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
           <div className="flex items-center gap-2 mb-3">
             <Info size={13} color="#64748b" />
-            <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>資料涵蓋狀態</span>
+            <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>已接入資料來源涵蓋狀態</span>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {/* 外部新聞文本訊號 */}
@@ -415,6 +415,9 @@ export function RiskReport() {
               <div className="text-xs font-semibold" style={{ color: '#475569' }}>尚未接入</div>
             </div>
           </div>
+          <p className="text-[10px] mt-3 leading-relaxed" style={{ color: '#475569' }}>
+            完整係指目前已接入之 Finnhub 外部新聞、最新市場快照與近期市場趨勢資料；社群論壇資料尚未納入本階段摘要。
+          </p>
         </div>
 
         {/* ── 綜合警戒摘要卡 ────────────────────────────────────────────────── */}
@@ -442,16 +445,12 @@ export function RiskReport() {
                   </div>
                 </div>
                 <div className="rounded p-2.5 text-center" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
-                  <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>資料涵蓋</div>
+                  <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>已接入來源涵蓋</div>
                   <div className="text-sm font-bold text-white">{COVERAGE_LABEL[caution.dataCoverage]}</div>
-                  <div className="text-[10px] mt-0.5" style={{ color: '#64748b' }}>{caution.dataCoverage}</div>
                 </div>
                 <div className="rounded p-2.5 text-center" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
                   <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>分析狀態</div>
                   <div className="text-sm font-bold text-white">{INTERPRETATION_LABEL[caution.interpretationStatus]}</div>
-                  <div className="text-[10px] mt-0.5" style={{ color: '#64748b' }}>
-                    {caution.interpretationStatus}
-                  </div>
                 </div>
               </div>
 
