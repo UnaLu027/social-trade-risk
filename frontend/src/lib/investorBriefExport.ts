@@ -152,7 +152,7 @@ function buildSummaryText(inp: BriefExportInput): string {
   if (histItems.length > 0) {
     const recent = histItems.slice(-1)[0]
     lines.push('', '【近期市場趨勢（最新一日）】')
-    lines.push(`日期：${recent.date}　風險等級：${RISK_ZH[recent.market_risk_label] ?? recent.market_risk_label}`)
+    lines.push(`日期：${recent.date}　市場警戒訊號：${RISK_ZH[recent.market_risk_label] ?? recent.market_risk_label}`)
     lines.push(`市場熱度：${recent.market_heat_score}　波動異常：${recent.volatility_anomaly_score}`)
     lines.push(`FOMO：${recent.fomo_score}　軋空壓力：${recent.short_squeeze_pressure}`)
   }
@@ -192,19 +192,22 @@ function buildWordHtml(inp: BriefExportInput): string {
     return `<tr><td>${escapeHtml(label)}</td><td>${val} / 100</td></tr>`
   }
 
-  function newsRows(): string {
-    if (signalItems.length === 0) return '<tr><td colspan="4">（無可顯示之新聞項目）</td></tr>'
-    return signalItems.slice(0, 5).map(item => {
-      const u = safeUrl(item.url)
-      const headline = escapeHtml(item.headline ?? '（無標題）')
-      const urlCell = u ? `<a href="${escapeHtml(u)}">${escapeHtml(u)}</a>` : '—'
-      return `<tr>
-        <td>${escapeHtml(item.ai_risk_label ? (RISK_ZH[item.ai_risk_label] ?? item.ai_risk_label) : '—')}</td>
-        <td>${item.ai_risk_score ?? 0}</td>
-        <td>${headline}</td>
-        <td>${escapeHtml(fmtUtc(item.published_at))}</td>
-        <td>${urlCell}</td>
-      </tr>`
+  function newsCards(): string {
+    if (signalItems.length === 0) return '<p>目前無可分析之外部新聞文本訊號</p>'
+    return signalItems.slice(0, 5).map((item, i) => {
+      const u     = safeUrl(item.url)
+      const label = item.ai_risk_label ? (RISK_ZH[item.ai_risk_label] ?? item.ai_risk_label) : '—'
+      const score = item.ai_risk_score ?? 0
+      return `<table class="word-news-card-table">
+        <tr>
+          <td>
+            <p class="news-title">${i + 1}. ${escapeHtml(item.headline ?? '（無標題）')}</p>
+            <p>文本風險語言強度：${escapeHtml(label)}　｜　分數：${score}</p>
+            <p>發布時間：${escapeHtml(fmtUtc(item.published_at))}　｜　來源：Finnhub</p>
+            ${u ? `<p><a href="${escapeHtml(u)}">查看原文</a></p>` : ''}
+          </td>
+        </tr>
+      </table>`
     }).join('\n')
   }
 
@@ -230,7 +233,7 @@ function buildWordHtml(inp: BriefExportInput): string {
       <td>${h.short_squeeze_pressure}</td>
     </tr>`).join('\n')
     return `<table border="1" cellpadding="4" cellspacing="0">
-      <tr><th>日期</th><th>風險等級</th><th>市場熱度</th><th>波動異常</th><th>FOMO</th><th>軋空壓力</th></tr>
+      <tr><th>日期</th><th>市場警戒訊號</th><th>市場熱度</th><th>波動異常</th><th>FOMO</th><th>軋空壓力</th></tr>
       ${rows}
     </table>`
   }
@@ -246,8 +249,17 @@ h2 { font-size: 13pt; font-weight: bold; margin-top: 18pt; margin-bottom: 6pt;
      border-bottom: 1pt solid #ccc; padding-bottom: 3pt; }
 .meta { color: #555; font-size: 9pt; margin-bottom: 12pt; }
 .signal-badge { font-size: 14pt; font-weight: bold; color: ${sigColor}; }
-.disclaimer-box { background: #fff8e1; border: 1pt solid #f0c040; padding: 8pt; margin: 12pt 0; }
+.disclaimer-table { width: 100%; border-collapse: collapse; margin: 12pt 0; }
+.disclaimer-table td { background: #fff8e1; border: 1pt solid #f0c040; padding: 8pt; }
 .warning-box { background: #fef2f2; border: 1pt solid #fca5a5; padding: 6pt; margin: 8pt 0; }
+.word-news-card-table { width: 100%; border-collapse: collapse; margin: 8pt 0;
+  page-break-inside: avoid; break-inside: avoid; }
+.word-news-card-table td { border: 1pt solid #d9e2f3; padding: 8pt;
+  page-break-inside: avoid; break-inside: avoid; }
+.word-news-card-table tr { page-break-inside: avoid; break-inside: avoid; }
+.news-title { font-weight: bold; margin: 0 0 4pt 0; }
+.word-news-card-table p { margin: 2pt 0; }
+a { color: #2563eb; text-decoration: underline; }
 table { border-collapse: collapse; width: 100%; margin: 8pt 0; }
 td, th { border: 1pt solid #ccc; padding: 4pt 6pt; }
 th { background: #f0f0f0; font-weight: bold; }
@@ -263,9 +275,11 @@ li { margin: 3pt 0; }
   生成時間：${escapeHtml(fmtUtc(caution.generatedAt))}
 </div>
 
-<div class="disclaimer-box">
-⚠ <strong>非投資建議聲明：</strong>本報告用於觀察警戒訊號強度，不構成投資建議、買賣建議、持倉建議或財務顧問服務，也不代表未來價格走勢。
-</div>
+<table class="disclaimer-table">
+  <tr>
+    <td>⚠ <strong>非投資建議聲明：</strong>本報告用於觀察警戒訊號強度，不構成投資建議、買賣建議、持倉建議或財務顧問服務，也不代表未來價格走勢。</td>
+  </tr>
+</table>
 
 <h2>一、已接入資料來源涵蓋狀態</h2>
 <table>
@@ -296,13 +310,10 @@ ${caution.coverageNote ? `<div class="warning-box">${escapeHtml(caution.coverage
 <h2>三、主要警戒因子</h2>
 ${factorRows()}
 
-<h2>四、最新外部新聞文本訊號（Finnhub）</h2>
-<table>
-  <tr><th>風險等級</th><th>分數</th><th>標題</th><th>時間</th><th>連結</th></tr>
-  ${newsRows()}
-</table>
+<h2 style="page-break-before: always;">四、最新外部新聞文本訊號（Finnhub）</h2>
+${newsCards()}
 
-<h2>五、近期市場趨勢</h2>
+<h2 style="page-break-before: always;">五、近期市場趨勢</h2>
 ${histTable()}
 
 <h2>六、交叉查證建議</h2>
@@ -344,7 +355,7 @@ function buildPrintHtml(inp: BriefExportInput): string {
     return signalItems.slice(0, 5).map(item => {
       const u = safeUrl(item.url)
       const label = item.ai_risk_label ? `[${RISK_ZH[item.ai_risk_label] ?? item.ai_risk_label}]` : ''
-      return `<div style="border:1px solid #e5e7eb;padding:8px 12px;margin:6px 0;border-radius:4px;">
+      return `<div class="news-card" style="border:1px solid #e5e7eb;padding:8px 12px;margin:6px 0;border-radius:4px;">
         <div style="font-weight:600;">${escapeHtml(item.headline ?? '（無標題）')}</div>
         <div style="color:#555;font-size:10pt;">${escapeHtml(label)} ${escapeHtml(item.source)} · ${escapeHtml(fmtUtc(item.published_at))}${item.ai_risk_score != null ? ` · ${item.ai_risk_score}分` : ''}</div>
         ${u ? `<div style="font-size:9pt;color:#2563eb;word-break:break-all;">${escapeHtml(u)}</div>` : ''}
@@ -366,7 +377,7 @@ function buildPrintHtml(inp: BriefExportInput): string {
     return `<table style="border-collapse:collapse;width:100%;font-size:10pt;">
       <tr style="background:#f5f5f5;">
         <th style="border:1px solid #ddd;padding:4px 8px;">日期</th>
-        <th style="border:1px solid #ddd;padding:4px 8px;">風險等級</th>
+        <th style="border:1px solid #ddd;padding:4px 8px;">市場警戒訊號</th>
         <th style="border:1px solid #ddd;padding:4px 8px;">市場熱度</th>
         <th style="border:1px solid #ddd;padding:4px 8px;">波動異常</th>
         <th style="border:1px solid #ddd;padding:4px 8px;">FOMO</th>
@@ -406,10 +417,20 @@ function buildPrintHtml(inp: BriefExportInput): string {
     background: #1d4ed8; color: white; border: none;
     border-radius: 4px; cursor: pointer; font-size: 11pt;
   }
+  .news-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  table {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
   @media print {
     .no-print { display: none !important; }
     @page { margin: 1.8cm; }
     body { max-width: 100%; padding: 0; }
+    .news-card { break-inside: avoid; page-break-inside: avoid; }
+    table { break-inside: avoid; page-break-inside: avoid; }
   }
 </style>
 </head>
@@ -665,7 +686,7 @@ function buildFullHtml(inp: BriefExportInput): string {
       <ul style="padding-left:18px;margin-bottom:16px;">
         <li>外部新聞文本訊號：Finnhub company-news API，系統使用 Model 1 分析文本中的社群交易風險語言</li>
         <li>最新市場快照：規則式市場計算（yfinance），包含社群炒作代理指標與波動性指標</li>
-        <li>近期市場趨勢：規則式歷史每日序列（yfinance），依市場指標計算風險等級</li>
+        <li>近期市場趨勢：規則式歷史每日序列（yfinance），依市場指標計算市場警戒訊號</li>
       </ul>
       <h3 style="color:#e2e8f0;font-size:14px;margin:0 0 12px;">計分方法</h3>
       <ul style="padding-left:18px;margin-bottom:16px;">
