@@ -91,12 +91,13 @@ function heuristicAnalyze(text: string): AnalyzeResult {
     composite >= 20 ? 'Medium' : 'Low'
 
   const highlighted = [...hypeHits, ...fomoHits, ...(squeezeHit ? ['short squeeze'] : []), ...manipHits]
+  const riskZh: Record<string, string> = { Critical: '極高風險', High: '高風險', Medium: '中度風險', Low: '低風險' }
   return {
     sentiment_score: sentiment, bullish_probability: bullish, bearish_probability: bearish,
     fomo_score: fomoScore, hype_language_score: hypeScore, manipulation_signal_score: manipScore,
     urgency_score: urgency, short_squeeze_narrative_detected: squeezeHit,
     predicted_risk_label: label,
-    explanation: `Detected ${hypeHits.length} hype term(s), ${fomoHits.length} FOMO term(s)${squeezeHit ? ', and short squeeze narrative' : ''}. Risk assessed as ${label}.`,
+    explanation: `此結果為單篇文本中的社群風險語言強度判斷（${riskZh[label]}）。偵測到炒作詞彙 ${hypeHits.length} 個、FOMO 詞彙 ${fomoHits.length} 個${squeezeHit ? '，並含有軋空敘事' : ''}。本結果不代表股票投資價值或價格走勢。`,
     highlighted_terms: [...new Set(highlighted)],
     model_source: 'keyword_heuristic_v0.1', data_quality: 'heuristic',
   }
@@ -171,36 +172,144 @@ function generateTextSummary(res: AnalyzeResult, sym: string): string {
   ].join('\n')
 }
 
-function generateHtmlBrief(res: AnalyzeResult, sym: string): string {
-  const color  = RISK_COLOR[res.predicted_risk_label] ?? '#64748b'
-  const action = MONITORING_ACTIONS[res.predicted_risk_label] ?? ''
-  const now    = new Date().toISOString().slice(0, 19).replace('T', ' ')
+function generateHtmlBrief(res: AnalyzeResult, sym: string, sourceText: string): string {
+  const now         = new Date().toISOString().slice(0, 19).replace('T', ' ')
+  const color       = RISK_COLOR[res.predicted_risk_label] ?? '#64748b'
+  const eSym        = escapeHtml(sym)
+  const eLabel      = escapeHtml(riskLabelZh(res.predicted_risk_label))
+  const eModel      = escapeHtml(res.model_source)
+  const eQuality    = escapeHtml(res.data_quality)
+  const eExplanation = escapeHtml(res.explanation)
+  const eAction     = escapeHtml(MONITORING_ACTIONS[res.predicted_risk_label] ?? '')
+  const eSourceText = sourceText.trim() ? escapeHtml(sourceText.slice(0, 1200)) : '（無可用原始文本）'
+  const eNow        = escapeHtml(now)
+  const clamp       = (v: number) => Math.min(100, Math.max(0, v)).toFixed(0)
+  const fomoW       = clamp(res.fomo_score)
+  const hypeW       = clamp(res.hype_language_score)
+  const manipW      = clamp(res.manipulation_signal_score)
+  const urgencyW    = clamp(res.urgency_score)
+  const bullW       = clamp(res.bullish_probability * 100)
+  const bearW       = clamp(res.bearish_probability * 100)
+  const squeezeHtml = res.short_squeeze_narrative_detected
+    ? '<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#450a0a;color:#f87171;font-size:0.75rem;border:1px solid #991b1b;">⚠ 已偵測</span>'
+    : '<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#1a1d27;color:#64748b;font-size:0.75rem;border:1px solid #2d3148;">未偵測</span>'
+  const mkBar = (label: string, pct: string, c: string) =>
+    `<div style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:3px;">
+        <span style="color:#94a3b8;">${escapeHtml(label)}</span>
+        <span style="color:${c};font-family:monospace;">${pct}</span>
+      </div>
+      <div style="background:#2d3148;border-radius:4px;height:6px;">
+        <div style="width:${pct}%;background:${c};height:6px;border-radius:4px;max-width:100%;"></div>
+      </div>
+    </div>`
+  const barsHtml = [
+    mkBar('FOMO 語言強度',  fomoW,    '#a78bfa'),
+    mkBar('炒作語言強度',   hypeW,    color),
+    mkBar('操縱訊號強度',   manipW,   '#f97316'),
+    mkBar('緊迫感強度',     urgencyW, '#38bdf8'),
+    mkBar('方向性情緒：看多', bullW,  '#10b981'),
+    mkBar('方向性情緒：看空', bearW,  '#ef4444'),
+  ].join('\n')
+  const termsHtml = res.highlighted_terms.length > 0
+    ? res.highlighted_terms.map(t => `<mark style="background:#451a03;color:#fb923c;padding:1px 4px;border-radius:3px;margin:2px;">${escapeHtml(t)}</mark>`).join(' ')
+    : '<span style="color:#475569;">（無）</span>'
+
   return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>社群交易風險文本分析：${sym}</title></head>
-<body style="margin:0;padding:20px;background:#0d0f1a;font-family:monospace;">
-<div style="max-width:600px;background:#1a1d27;border:1px solid #2d3148;border-radius:8px;padding:20px;">
-  <h2 style="color:#ef4444;margin:0 0 4px;font-size:1rem;">社群交易風險文本分析報告</h2>
-  <p style="color:#64748b;font-size:0.75rem;margin:0 0 4px;">Generated ${now} UTC · Social Trading Risk Copilot</p>
-  <p style="color:#94a3b8;font-size:0.7rem;margin:0 0 16px;">本結果僅代表該文本中的社群風險語言強度，不代表該股票本身的投資價值或價格走勢。</p>
-  <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
-    <tr><td style="color:#64748b;padding:4px 8px 4px 0;width:160px;">標的</td><td style="color:#f1f5f9;font-weight:bold;">${sym}</td></tr>
-    <tr><td style="color:#64748b;padding:4px 8px 4px 0;">文本風險語言強度</td><td style="color:${color};font-weight:bold;">${res.predicted_risk_label}</td></tr>
-    <tr><td style="color:#64748b;padding:4px 8px 4px 0;">FOMO 語言強度</td><td style="color:#f1f5f9;">${res.fomo_score.toFixed(0)}</td></tr>
-    <tr><td style="color:#64748b;padding:4px 8px 4px 0;">炒作語言強度</td><td style="color:#f1f5f9;">${res.hype_language_score.toFixed(0)}</td></tr>
-    <tr><td style="color:#64748b;padding:4px 8px 4px 0;">操縱訊號強度</td><td style="color:#f1f5f9;">${res.manipulation_signal_score.toFixed(0)}</td></tr>
-    <tr><td style="color:#64748b;padding:4px 8px 4px 0;">軋空敘事</td><td style="color:#f1f5f9;">${res.short_squeeze_narrative_detected ? '⚠ 已偵測' : '未偵測'}</td></tr>
-    <tr><td style="color:#64748b;padding:4px 8px 4px 0;">模型來源</td><td style="color:#f1f5f9;">${res.model_source}</td></tr>
-    <tr><td style="color:#64748b;padding:4px 8px 4px 0;">資料品質</td><td style="color:#f1f5f9;">${res.data_quality}</td></tr>
-  </table>
-  ${res.highlighted_terms.length > 0 ? `<div style="margin-top:12px;font-size:0.8rem;"><span style="color:#64748b;">關鍵詞彙：</span><span style="color:#a78bfa;">${res.highlighted_terms.join(', ')}</span></div>` : ''}
-  <div style="margin-top:12px;font-size:0.8rem;color:#94a3b8;">${res.explanation}</div>
-  <div style="margin-top:12px;padding:10px;background:#0d0f1a;border-radius:4px;font-size:0.75rem;color:#f59e0b;">${action}</div>
-  <div style="margin-top:16px;border-top:1px solid #2d3148;padding-top:12px;">
-    <p style="font-size:0.7rem;color:#64748b;margin:0 0 6px;"><strong>方法與限制：</strong>基於 FOMO、炒作語言、操縱訊號、軋空敘事等文本特徵進行演算法評估。無法覆蓋基本面、財報、總體經濟或機構研究資訊。</p>
-    <p style="font-size:0.7rem;color:#64748b;margin:0;"><strong>非投資建議聲明：</strong>本報告由 Social Trading Risk Copilot 自動生成，僅用於分析單篇文本中的社群交易風險訊號。本報告不構成投資建議、買賣建議、持倉建議或財務顧問服務。使用者不應僅依據單篇文章或本分析結果做出投資決策。</p>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>單篇文本分析報告：${eSym} — Social Trading Risk Copilot</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#0d0f1a;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;padding:24px 16px;}
+.card{max-width:680px;margin:0 auto;background:#1a1d27;border:1px solid #2d3148;border-radius:10px;overflow:hidden;}
+.card-header{padding:18px 20px 14px;border-bottom:1px solid #2d3148;}
+.card-header h1{font-size:0.95rem;font-weight:700;color:#f1f5f9;margin-bottom:3px;}
+.card-header .sub{font-size:0.7rem;color:#64748b;}
+.risk-badge{display:inline-block;padding:4px 16px;border-radius:20px;font-size:1rem;font-weight:700;margin-top:8px;}
+.tabs{display:flex;gap:0;border-bottom:1px solid #2d3148;background:#0d0f1a;}
+.tab{padding:9px 14px;font-size:0.75rem;font-weight:600;cursor:pointer;color:#64748b;background:transparent;border:none;border-bottom:2px solid transparent;transition:color 0.15s;}
+.tab.active{color:#38bdf8;border-bottom:2px solid #38bdf8;}
+.tab:hover{color:#94a3b8;}
+.tab-content{padding:18px 20px;}
+.kv-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+.kv-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1a1d27;font-size:0.8rem;}
+.kv-row .k{color:#64748b;}
+.kv-row .v{font-family:monospace;color:#f1f5f9;text-align:right;}
+.action-box{margin-top:14px;padding:10px 12px;background:#0d0f1a;border-radius:6px;font-size:0.78rem;color:#f59e0b;border:1px solid #451a03;line-height:1.5;}
+.raw-text{font-size:0.75rem;line-height:1.7;color:#94a3b8;white-space:pre-wrap;word-break:break-word;background:#0d0f1a;padding:12px;border-radius:6px;border:1px solid #2d3148;max-height:320px;overflow-y:auto;}
+.disclaimer{font-size:0.7rem;color:#64748b;line-height:1.6;margin-top:8px;}
+.disclaimer strong{color:#94a3b8;}
+.footer{font-size:0.65rem;color:#334155;text-align:center;padding:10px 20px;border-top:1px solid #1a1d27;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="card-header">
+    <h1>單篇文本分析報告 — Social Trading Risk Copilot</h1>
+    <div class="sub">產生時間：${eNow} UTC &nbsp;·&nbsp; 標的：${eSym}</div>
+    <div style="margin-top:6px;">
+      <span class="risk-badge" style="background:${color}22;color:${color};border:1px solid ${color};">${eLabel}</span>
+      <span style="font-size:0.68rem;color:#475569;margin-left:10px;">此為單篇文本社群風險語言強度，不代表股票投資價值。</span>
+    </div>
   </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('summary',this)">摘要</button>
+    <button class="tab" onclick="showTab('indicators',this)">風險指標</button>
+    <button class="tab" onclick="showTab('rawtext',this)">原始文本</button>
+    <button class="tab" onclick="showTab('explain',this)">模型解釋</button>
+    <button class="tab" onclick="showTab('method',this)">方法與限制</button>
+  </div>
+
+  <div id="tab-summary" class="tab-content">
+    <div class="kv-grid">
+      <div class="kv-row"><span class="k">標的</span><span class="v">${eSym}</span></div>
+      <div class="kv-row"><span class="k">文本社群風險語言強度</span><span class="v" style="color:${color};font-weight:700;">${eLabel}</span></div>
+      <div class="kv-row"><span class="k">FOMO 語言強度</span><span class="v">${fomoW}</span></div>
+      <div class="kv-row"><span class="k">炒作語言強度</span><span class="v">${hypeW}</span></div>
+      <div class="kv-row"><span class="k">操縱訊號強度</span><span class="v">${manipW}</span></div>
+      <div class="kv-row"><span class="k">軋空敘事</span><span class="v">${squeezeHtml}</span></div>
+      <div class="kv-row"><span class="k">模型來源</span><span class="v">${eModel}</span></div>
+      <div class="kv-row"><span class="k">資料品質</span><span class="v">${eQuality}</span></div>
+    </div>
+    ${res.highlighted_terms.length > 0 ? `<div style="margin-top:12px;font-size:0.78rem;"><span style="color:#64748b;">關鍵詞彙：</span><span style="margin-left:6px;">${termsHtml}</span></div>` : ''}
+    <div class="action-box">${eAction}</div>
+  </div>
+
+  <div id="tab-indicators" class="tab-content" style="display:none;">
+    ${barsHtml}
+    <p style="font-size:0.7rem;color:#475569;margin-top:8px;">方向性情緒僅為文字語氣估計，不代表買賣建議。</p>
+  </div>
+
+  <div id="tab-rawtext" class="tab-content" style="display:none;">
+    <p style="font-size:0.75rem;color:#64748b;margin-bottom:8px;">以下為輸入分析的原始文本內容（最多 1200 字元）：</p>
+    <div class="raw-text">${eSourceText}</div>
+  </div>
+
+  <div id="tab-explain" class="tab-content" style="display:none;">
+    <p style="font-size:0.8rem;color:#94a3b8;line-height:1.6;">${eExplanation}</p>
+  </div>
+
+  <div id="tab-method" class="tab-content" style="display:none;">
+    <p class="disclaimer"><strong>方法與限制：</strong>本分析基於 FOMO、炒作語言、操縱訊號、軋空敘事等文本特徵進行演算法評估。無法覆蓋基本面、財報、總體經濟或機構研究資訊。分析結果因輸入文本品質而有所差異，不應作為投資決策的唯一依據。</p>
+    <p class="disclaimer" style="margin-top:10px;"><strong>非投資建議聲明：</strong>本報告由 Social Trading Risk Copilot 自動生成，僅用於分析單篇文本中的社群交易風險訊號，例如 FOMO、炒作語言、操縱訊號與軋空敘事。本報告不構成投資建議、買賣建議、持倉建議或財務顧問服務。使用者不應僅依據單篇文章或本分析結果做出投資決策。</p>
+  </div>
+
+  <div class="footer">Social Trading Risk Copilot · ${eNow} UTC · 僅供社群風險語言分析，非投資建議</div>
 </div>
-</body></html>`
+<script>
+function showTab(name,btn){
+  document.querySelectorAll('[id^="tab-"]').forEach(function(el){el.style.display='none';});
+  document.querySelectorAll('.tab').forEach(function(el){el.classList.remove('active');});
+  document.getElementById('tab-'+name).style.display='block';
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>`
 }
 
 // ── risk label ZH ─────────────────────────────────────────────────────────────
@@ -247,7 +356,7 @@ function downloadWordReport(res: AnalyzeResult, sym: string) {
   const color = RISK_COLOR[res.predicted_risk_label] ?? '#10b981'
   const rows  = [
     ['標的', escapeHtml(sym)],
-    ['風險等級', `<span style="color:${color};font-weight:bold;">${escapeHtml(riskLabelZh(res.predicted_risk_label))}</span>`],
+    ['文本社群風險語言強度', `<span style="color:${color};font-weight:bold;">${escapeHtml(riskLabelZh(res.predicted_risk_label))}</span>`],
     ['FOMO 語言強度', res.fomo_score.toFixed(0)],
     ['炒作語言強度',  res.hype_language_score.toFixed(0)],
     ['操縱訊號強度',  res.manipulation_signal_score.toFixed(0)],
@@ -259,7 +368,7 @@ function downloadWordReport(res: AnalyzeResult, sym: string) {
     ['模型說明',      escapeHtml(res.explanation)],
   ]
   const tableRows = rows.map(([k, v]) =>
-    `<tr><td style="padding:6px 12px 6px 0;color:#555;width:140px;">${k}</td><td style="padding:6px 0;">${v}</td></tr>`
+    `<tr><td style="padding:6px 12px 6px 0;color:#555;width:160px;">${k}</td><td style="padding:6px 0;">${v}</td></tr>`
   ).join('')
   const html = `<html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;padding:32px;">
 <h2 style="color:#c00;">社群交易風險文本分析報告</h2>
@@ -285,7 +394,7 @@ function printReport(res: AnalyzeResult, sym: string) {
   const color = RISK_COLOR[res.predicted_risk_label] ?? '#10b981'
   const rows  = [
     ['標的', escapeHtml(sym)],
-    ['風險等級', `<span style="color:${color};font-weight:bold;">${escapeHtml(riskLabelZh(res.predicted_risk_label))}</span>`],
+    ['文本社群風險語言強度', `<span style="color:${color};font-weight:bold;">${escapeHtml(riskLabelZh(res.predicted_risk_label))}</span>`],
     ['FOMO 語言強度', res.fomo_score.toFixed(0)],
     ['炒作語言強度',  res.hype_language_score.toFixed(0)],
     ['操縱訊號強度',  res.manipulation_signal_score.toFixed(0)],
@@ -296,7 +405,7 @@ function printReport(res: AnalyzeResult, sym: string) {
     ['模型說明',      escapeHtml(res.explanation)],
   ]
   const tableRows = rows.map(([k, v]) =>
-    `<tr><td style="padding:6px 12px 6px 0;color:#555;width:160px;vertical-align:top;">${k}</td><td>${v}</td></tr>`
+    `<tr><td style="padding:6px 12px 6px 0;color:#555;width:180px;vertical-align:top;">${k}</td><td>${v}</td></tr>`
   ).join('')
   const win = window.open('', '_blank')
   if (!win) return
@@ -381,7 +490,6 @@ export function PostAnalyzer() {
   const [urlResult, setUrlResult] = useState<UrlAnalysisResult | null>(null)
 
   // Brief
-  const [copiedBrief, setCopiedBrief]     = useState(false)
   const [copiedSummary, setCopiedSummary] = useState(false)
 
   // Samples
@@ -479,22 +587,16 @@ export function PostAnalyzer() {
     analyzeMutation.mutate({ text, symbol })
   }
 
-  function handleCopyBrief() {
+  function handleDownloadHtml() {
     if (!result) return
-    const html = generateHtmlBrief(result, symbol)
-    navigator.clipboard.writeText(html).then(() => {
-      setCopiedBrief(true)
-      setTimeout(() => setCopiedBrief(false), 2000)
-    }).catch(() => {
-      const ta = document.createElement('textarea')
-      ta.value = html
-      document.body.appendChild(ta)
-      ta.select()
-      document.execCommand('copy')
-      document.body.removeChild(ta)
-      setCopiedBrief(true)
-      setTimeout(() => setCopiedBrief(false), 2000)
-    })
+    const sourceText = inputText || urlResult?.extracted_text || ''
+    const html = generateHtmlBrief(result, symbol, sourceText)
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `social-risk-text-analysis-${symbol}.html`
+    a.click()
+    URL.revokeObjectURL(a.href)
   }
 
   function handleCopySummary() {
@@ -523,7 +625,7 @@ export function PostAnalyzer() {
 
   return (
     <div className="flex flex-col flex-1 overflow-auto">
-      <TopBar title="社群交易風險分析" />
+      <TopBar title="社群交易風險文本分析器" />
 
       <div className="p-6 flex flex-col gap-6 max-w-4xl mx-auto w-full">
 
@@ -949,8 +1051,7 @@ export function PostAnalyzer() {
             {/* Explanation */}
             <div className="flex flex-col gap-1">
               <p className="text-[11px]" style={{ color: '#475569' }}>
-                本結果僅代表該文本中的社群交易風險訊號，不代表該股票本身的投資價值或價格走勢。
-                此分析無法覆蓋基本面、財報、總體經濟或機構研究報告，不應作為任何投資決策的唯一依據。
+                本結果僅代表該文本中的社群交易風險訊號，不代表股票價值或價格走勢。
               </p>
               <div className="text-sm leading-relaxed" style={{ color: '#94a3b8' }}>
                 {result.explanation}
@@ -960,7 +1061,7 @@ export function PostAnalyzer() {
             {/* ── Risk Brief ── */}
             <div className="rounded-lg p-4" style={{ background: '#0d0f1a', border: '1px solid #2d3148' }}>
               <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                <span className="text-xs font-semibold text-white">社群交易風險報告</span>
+                <span className="text-xs font-semibold text-white">單篇文本分析報告</span>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {/* 複製摘要 */}
                   <button
@@ -993,20 +1094,16 @@ export function PostAnalyzer() {
                     </button>
                     <span className="text-[9px]" style={{ color: '#475569' }}>可透過瀏覽器列印功能另存為 PDF。</span>
                   </div>
-                  {/* 複製 HTML */}
+                  {/* 下載 HTML 報告 */}
                   <div className="flex flex-col items-end gap-0.5">
                     <button
-                      onClick={handleCopyBrief}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold transition-colors"
-                      style={{
-                        background: copiedBrief ? '#052e16' : '#1e3a5f',
-                        color:      copiedBrief ? '#10b981' : '#38bdf8',
-                        border:     `1px solid ${copiedBrief ? '#065f46' : '#2d4a6f'}`,
-                      }}
+                      onClick={handleDownloadHtml}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold"
+                      style={{ background: '#1e3a5f', color: '#38bdf8', border: '1px solid #2d4a6f' }}
                     >
-                      {copiedBrief ? <><Check size={11} /> 已複製</> : <><Copy size={11} /> 複製 HTML</>}
+                      <Globe size={11} /> 下載 HTML 報告
                     </button>
-                    <span className="text-[9px]" style={{ color: '#475569' }}>供嵌入網頁或系統報告使用。</span>
+                    <span className="text-[9px]" style={{ color: '#475569' }}>可離線開啟，適合展示完整的單篇文本分析結果。</span>
                   </div>
                 </div>
               </div>
@@ -1014,7 +1111,7 @@ export function PostAnalyzer() {
               <div className="grid grid-cols-2 gap-x-6 text-xs">
                 {([
                   ['標的',         symbol],
-                  ['風險等級',     riskLabelZh(result.predicted_risk_label)],
+                  ['文本社群風險語言強度', riskLabelZh(result.predicted_risk_label)],
                   ['FOMO 強度',    result.fomo_score.toFixed(0)],
                   ['炒作語言',     result.hype_language_score.toFixed(0)],
                   ['操縱訊號',     result.manipulation_signal_score.toFixed(0)],
@@ -1026,7 +1123,7 @@ export function PostAnalyzer() {
                     <span style={{ color: '#64748b' }}>{label}</span>
                     <span
                       className="font-mono text-right ml-2 truncate max-w-[140px]"
-                      style={{ color: label === '風險等級' ? riskColor : '#f1f5f9' }}
+                      style={{ color: label === '文本社群風險語言強度' ? riskColor : '#f1f5f9' }}
                     >
                       {val}
                     </span>
@@ -1051,19 +1148,19 @@ export function PostAnalyzer() {
               className="rounded-lg px-4 py-3 flex flex-col gap-2"
               style={{ background: '#0d1a2e', border: '1px solid #1e3a5f' }}
             >
-              <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-xs font-semibold text-white">單篇分析的範圍有限</span>
                   <span className="text-[10px]" style={{ color: '#64748b' }}>
-                    單篇文本僅能反映該文章的社群風險訊號；若要評估標的整體警戒狀態，請參考多篇新聞、社群訊號與市場資料的綜合報告。
+                    單篇文本僅能反映該文章的社群風險訊號；此頁可進一步查看近期市場走勢與外部新聞訊號。多來源綜合警戒摘要將於後續階段加入。
                   </span>
                 </div>
                 <Link
                   to={`/risk-report/${symbol}`}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-semibold flex-shrink-0 transition-opacity hover:opacity-80"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-semibold flex-shrink-0 whitespace-nowrap transition-opacity hover:opacity-80"
                   style={{ background: '#1e3a5f', color: '#38bdf8', border: '1px solid #2d4a6f' }}
                 >
-                  查看此標的的多來源綜合警戒報告 →
+                  查看此標的的市場與外部訊號 →
                 </Link>
               </div>
             </div>
