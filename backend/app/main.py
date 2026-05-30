@@ -8,23 +8,40 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.database import engine, SessionLocal
 from app.models import Base, Ticker, Watchlist
+from app.models.user import UserWatchlistItem
 from app.ml import inference
 from app.ml.fakenews import inference_fakenews
 from app.routers import market_pulse, event_replay, alerts, scenario, screener, fake_news, model_insights, copilot
+from app.routers import auth as auth_router, me_watchlist as me_watchlist_router
 
 settings = get_settings()
 _scheduler = BackgroundScheduler()
 
 
+def _get_tracked_symbols(db: Session) -> list[str]:
+    """
+    Returns DISTINCT symbols currently tracked by at least one active user.
+    If the same symbol is in multiple users' watchlists, it appears only once.
+    Returns an empty list if no active tracked symbols exist.
+    """
+    from sqlalchemy import distinct as sql_distinct
+    return list(
+        db.execute(
+            select(sql_distinct(UserWatchlistItem.symbol))
+            .where(UserWatchlistItem.is_active == True)
+        ).scalars().all()
+    )
+
+
 def _sync_prices():
     """
-    Fetch latest OHLCV data for every watchlist symbol.
+    Fetch latest OHLCV data for every personally-tracked symbol (any active user).
     Cascade: 1-day/5-min (intraday) → 5-day/1-hour (after-hours / weekends) → 1-month/1-day.
     Taiwan stocks (.TW) skip the 5-min interval (not available via yfinance).
     """
     db: Session = SessionLocal()
     try:
-        symbols = [w.symbol for w in db.execute(select(Watchlist)).scalars().all()]
+        symbols = _get_tracked_symbols(db)
         from app.services import yfinance_service as yf_svc
         for sym in symbols:
             is_tw = sym.endswith(".TW")
@@ -45,7 +62,7 @@ def _sync_prices():
 def _sync_reddit():
     db: Session = SessionLocal()
     try:
-        symbols = [w.symbol for w in db.execute(select(Watchlist)).scalars().all()]
+        symbols = _get_tracked_symbols(db)
         from app.services import reddit_service, sentiment_service, yfinance_service as yf_svc
         for sym in symbols:
             ticker = db.execute(select(Ticker).where(Ticker.symbol == sym)).scalar_one_or_none()
@@ -135,6 +152,8 @@ app.include_router(screener.router)
 app.include_router(fake_news.router)
 app.include_router(model_insights.router)
 app.include_router(copilot.router)
+app.include_router(auth_router.router)
+app.include_router(me_watchlist_router.router)
 
 
 @app.get("/health")

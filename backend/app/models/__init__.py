@@ -4,5 +4,9 @@ from app.models.price_snapshot import PriceSnapshot
 from app.models.social_mention import SocialMention
 from app.models.hype_score import HypeScore
 from app.models.alert import Alert, Watchlist
+from app.models.user import User, UserWatchlistItem
 
-__all__ = ["Base", "Ticker", "PriceSnapshot", "SocialMention", "HypeScore", "Alert", "Watchlist"]
+__all__ = [
+    "Base", "Ticker", "PriceSnapshot", "SocialMention", "HypeScore",
+    "Alert", "Watchlist", "User", "UserWatchlistItem",
+]
