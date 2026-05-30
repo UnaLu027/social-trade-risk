@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { ShieldAlert, TrendingUp, RefreshCw, Eye, Clock, BookmarkCheck } from 'lucide-react'
@@ -248,7 +248,7 @@ function RiskCard({ snap, onView, onRemove }: { snap: RiskSnapshot; onView: () =
 export function RiskMonitor() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, user, logout } = useAuth()
 
   const [filter, setFilter]           = useState<'All' | 'Critical' | 'High' | 'Medium' | 'Low'>('All')
   const [searchTicker, setSearchTicker] = useState('')
@@ -257,16 +257,31 @@ export function RiskMonitor() {
   // Guest-mode watchlist (localStorage)
   const [localWatchlist, setLocalWatchlist] = useState<string[]>(loadLocalWatchlist)
 
-  // Personal watchlist (Railway, authenticated users only)
-  const { data: personalWatchlistData, isLoading: personalLoading } = useQuery({
-    queryKey: ['personal-watchlist'],
+  // Personal watchlist (Railway, authenticated users only).
+  // Key is scoped to user.id to prevent cross-account cache leakage.
+  const {
+    data:    personalWatchlistData,
+    isLoading: personalLoading,
+    isError: personalIsError,
+    error:   personalError,
+    refetch: refetchPersonal,
+  } = useQuery({
+    queryKey: ['personal-watchlist', user?.id],
     queryFn:  async () => {
       const res = await personalApi.get<PersonalWatchlistItem[]>('/api/v1/me/watchlist')
       return res.data.map(i => i.symbol)
     },
-    enabled:   isAuthenticated,
+    enabled:   isAuthenticated && !!user?.id,
     staleTime: 5 * 60_000,
   })
+
+  // 401 from the personal watchlist means the stored token is no longer valid.
+  // Log out and redirect rather than silently showing an empty list.
+  const personal401 = isAuthenticated && personalIsError &&
+    (personalError as ApiErr)?.response?.status === 401
+  useEffect(() => {
+    if (personal401) { logout(); navigate('/login') }
+  }, [personal401, logout, navigate])
 
   // Active watchlist: personal (Railway) when logged in, local otherwise
   const watchlist = isAuthenticated
@@ -285,7 +300,7 @@ export function RiskMonitor() {
     if (isAuthenticated) {
       try {
         await personalApi.post('/api/v1/me/watchlist', { symbol: val })
-        queryClient.invalidateQueries({ queryKey: ['personal-watchlist'] })
+        queryClient.invalidateQueries({ queryKey: ['personal-watchlist', user?.id] })
       } catch (err) {
         const status = (err as ApiErr)?.response?.status
         const detail = (err as ApiErr)?.response?.data?.detail ?? ''
@@ -321,7 +336,7 @@ export function RiskMonitor() {
     if (isAuthenticated) {
       try {
         await personalApi.delete(`/api/v1/me/watchlist/${sym}`)
-        queryClient.invalidateQueries({ queryKey: ['personal-watchlist'] })
+        queryClient.invalidateQueries({ queryKey: ['personal-watchlist', user?.id] })
       } catch { /* silently ignore */ }
     } else {
       const next = localWatchlist.filter(s => s !== sym)
@@ -500,7 +515,7 @@ export function RiskMonitor() {
             <div>
               <p className="text-sm font-semibold" style={{ color: '#10b981' }}>觀察清單已同步至帳號</p>
               <p className="text-xs mt-0.5" style={{ color: '#6ee7b7' }}>
-                已登入為 {user?.email}。新增或移除的標的將儲存至 Railway 帳號，並由背景排程自動監控。
+                已登入為 {user?.email}。新增標的將儲存至您的帳號並啟用背景監控；移除後不再顯示於個人清單，系統仍可能保留快取資料以支援快速載入。
               </p>
             </div>
           </div>
@@ -511,7 +526,7 @@ export function RiskMonitor() {
           <div className="px-4 py-2 rounded-lg"
                style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
             <p className="text-xs" style={{ color: '#475569' }}>
-              目前以訪客身分瀏覽。觀察清單僅暫存於本機瀏覽器，關閉分頁後將不保留。
+              目前以訪客身分瀏覽。觀察清單僅儲存在此瀏覽器，不會同步至帳號或其他裝置。
               <button onClick={() => navigate('/login')} className="ml-1.5 underline" style={{ color: '#64748b' }}>
                 登入
               </button>
@@ -595,8 +610,28 @@ export function RiskMonitor() {
           </div>
         </div>
 
+        {/* Personal watchlist fetch error (non-401) */}
+        {isAuthenticated && personalIsError && !personal401 && (
+          <div className="px-4 py-3 rounded-lg flex items-start gap-3"
+               style={{ background: '#1c0505', border: '1px solid #7f1d1d' }}>
+            <div className="flex-1">
+              <p className="text-sm font-semibold" style={{ color: '#fca5a5' }}>
+                無法讀取您的個人觀察清單，請重新整理或重新登入。
+              </p>
+            </div>
+            <button
+              onClick={() => refetchPersonal()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold flex-shrink-0 transition-opacity hover:opacity-80"
+              style={{ background: '#450a0a', color: '#fca5a5', border: '1px solid #7f1d1d' }}
+            >
+              <RefreshCw size={11} />
+              重試
+            </button>
+          </div>
+        )}
+
         {/* Risk grid */}
-        {isLoading ? (
+        {isAuthenticated && personalIsError && !personal401 ? null : isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: Math.max(watchlist.length, 4) }).map((_, i) => (
               <div key={i} className="h-52 rounded-lg animate-pulse" style={{ background: '#2d3148' }} />

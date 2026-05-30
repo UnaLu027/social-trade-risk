@@ -2,6 +2,7 @@ import {
   createContext, useContext, useState, useEffect, useCallback,
 } from 'react'
 import type { ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { personalApi } from '../api/personalApiClient'
 
 export interface UserProfile {
@@ -26,6 +27,7 @@ const AuthContext = createContext<AuthContextType | null>(null)
 const TOKEN_KEY = 'auth_token'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient               = useQueryClient()
   const [user, setUser]           = useState<UserProfile | null>(null)
   const [token, setToken]         = useState<string | null>(null)
   const [authLoading, setLoading] = useState(true)
@@ -62,7 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.removeItem(TOKEN_KEY)
     setToken(null)
     setUser(null)
-  }, [])
+    // Remove all personal-watchlist cache entries so a new user session
+    // cannot see a prior user's data (covers any user-id variant of the key).
+    queryClient.removeQueries({ queryKey: ['personal-watchlist'] })
+  }, [queryClient])
 
   return (
     <AuthContext.Provider
