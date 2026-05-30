@@ -353,6 +353,45 @@ test('META: "New metadata framework improves research" → not relevant', () => 
   assert.strictEqual(r.relevance_basis, 'no_issuer_match')
 })
 
+test('META: "A meta analysis of AI investment trends" (spaced, no hyphen) → not relevant', () => {
+  const r = evaluateNewsRelevance(
+    item('A meta analysis of AI investment trends',
+         'Researchers surveyed 30 AI investment papers.'),
+    'META'
+  )
+  assert.strictEqual(r.is_relevant, false)
+  assert.strictEqual(r.relevance_basis, 'no_issuer_match')
+})
+
+test('META: "Meta analysis of AI investment trends" (sentence-start capital) → not relevant', () => {
+  const r = evaluateNewsRelevance(
+    item('Meta analysis of AI investment trends reveals mixed results'),
+    'META'
+  )
+  assert.strictEqual(r.is_relevant, false)
+  assert.strictEqual(r.relevance_basis, 'no_issuer_match')
+})
+
+test('META: "meta strategy framework for researchers" (lowercase) → not relevant', () => {
+  const r = evaluateNewsRelevance(
+    item('meta strategy framework for researchers in 2026'),
+    'META'
+  )
+  assert.strictEqual(r.is_relevant, false)
+  assert.strictEqual(r.relevance_basis, 'no_issuer_match')
+})
+
+test('META: "Meta launches a metadata tool for advertisers" → relevant (company Meta, not metadata)', () => {
+  const r = evaluateNewsRelevance(
+    item('Meta launches a metadata tool for advertisers',
+         'Meta Platforms unveiled a new ad-targeting toolkit.'),
+    'META'
+  )
+  assert.strictEqual(r.is_relevant, true)
+  // "Meta" in the headline refers to the company; "metadata" is a separate word
+  // and does not trigger a match (no word boundary inside "metadata")
+})
+
 // ── AMC Networks article-wide exclusion across headline + summary ─────────────
 
 test('AMC: Networks in headline, bare AMC in summary → excluded_other_company', () => {

@@ -44,13 +44,22 @@ const ISSUER_PATTERNS = {
     { pattern: /\bMicrosoft\b/i,       label: 'Microsoft' },
   ],
   META: [
-    // \bMETA\b(?!-) rejects generic contexts such as "meta-analysis" (where "meta"
-    // is followed by a hyphen) while accepting the stock ticker and brand name.
-    { pattern: /\bMETA\b(?!-)/i,       label: 'META' },
-    { pattern: /\bMeta\s+Platforms\b/i, label: 'Meta Platforms' },
-    { pattern: /\bFacebook\b/i,        label: 'Facebook' },
-    { pattern: /\bInstagram\b/i,       label: 'Instagram' },
-    { pattern: /\bWhatsApp\b/i,        label: 'WhatsApp' },
+    // 1. All-uppercase stock ticker — case-SENSITIVE, no false positives.
+    { pattern: /\bMETA\b/,                label: 'META' },
+    // 2. Full company name — case-insensitive, always unambiguous.
+    { pattern: /\bMeta\s+Platforms\b/i,    label: 'Meta Platforms' },
+    // 3. Company brand "Meta" — case-SENSITIVE (capital M only) so that lowercase
+    //    generic "meta" (as in meta-analysis, meta strategy, metadata) is never
+    //    matched.  A negative lookahead further excludes capitalised forms that
+    //    open a sentence but refer to a methodology, e.g. "Meta analysis of…" or
+    //    "Meta-analysis of…".  The lookahead checks for an optional whitespace/
+    //    hyphen separator followed by a known generic meta-prefix word stem.
+    { pattern: /\bMeta\b(?![\s-]*(?:analy|data|strateg|framework|model|research|stud(?:y|ie)|review|tag|description))/,
+      label: 'Meta' },
+    // 4. Ecosystem brands — case-insensitive, unambiguous company references.
+    { pattern: /\bFacebook\b/i,            label: 'Facebook' },
+    { pattern: /\bInstagram\b/i,           label: 'Instagram' },
+    { pattern: /\bWhatsApp\b/i,            label: 'WhatsApp' },
   ],
   AMZN: [
     { pattern: /\bAMZN\b/i,                         label: 'AMZN' },
