@@ -13,6 +13,7 @@ And scheduler helper:
 Scenarios 1-8 as specified, plus extra edge cases.
 """
 
+import os
 import uuid
 import pytest
 from sqlalchemy import create_engine
@@ -23,10 +24,17 @@ from app.database import Base, get_db
 from app.main import app, _get_tracked_symbols
 from app.models.alert import Watchlist  # legacy global watchlist model
 
-# ── Isolated in-memory SQLite DB for these tests ─────────────────────────────
+# ── Isolated test DB ──────────────────────────────────────────────────────────
+# Defaults to SQLite for local runs.  Set PERSONAL_WATCHLIST_TEST_DATABASE_URL
+# to a PostgreSQL DSN in CI (see backend-ci.yml test-postgres job).
 
-TEST_URL = "sqlite:///./test_auth.db"
-_engine = create_engine(TEST_URL, connect_args={"check_same_thread": False})
+_TEST_URL = os.environ.get(
+    "PERSONAL_WATCHLIST_TEST_DATABASE_URL", "sqlite:///./test_auth.db"
+)
+_engine_kwargs: dict = {}
+if _TEST_URL.startswith("sqlite"):
+    _engine_kwargs["connect_args"] = {"check_same_thread": False}
+_engine = create_engine(_TEST_URL, **_engine_kwargs)
 _Session = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
 
 
@@ -318,6 +326,14 @@ def test_password_too_long_rejected(client):
     assert "128" in r.json()["detail"]
 
 
+def test_login_oversized_password_rejected(client):
+    """Login with password > 128 chars returns 401 without calling Argon2."""
+    email = unique_email()
+    client.post("/api/v1/auth/register", json={"email": email, "password": "ValidPass1"})
+    r = client.post("/api/v1/auth/login", json={"email": email, "password": "A" * 129})
+    assert r.status_code == 401
+
+
 # ── _compute_hype filtering tests ────────────────────────────────────────────
 # Verifies _compute_hype only processes Ticker rows whose symbols are in
 # _get_tracked_symbols (legacy Watchlist UNION active UserWatchlistItem).
@@ -325,6 +341,7 @@ def test_password_too_long_rejected(client):
 
 _HYPE_TRACKED_SYM   = "ZTRKED"   # added to legacy Watchlist → tracked
 _HYPE_UNTRACKED_SYM = "ZNOTRK"   # NOT in any watchlist → not tracked
+_HYPE_PERSONAL_SYM  = "ZPRSNL"   # tracked only via UserWatchlistItem, no legacy row
 
 
 def test_compute_hype_only_processes_tracked_symbols(db):
@@ -357,6 +374,36 @@ def test_compute_hype_only_processes_tracked_symbols(db):
 
     assert _HYPE_TRACKED_SYM in processed
     assert _HYPE_UNTRACKED_SYM not in processed
+
+
+def test_compute_hype_processes_personal_only_tracked_symbol(client, db):
+    """_compute_hype processes a Ticker tracked only via UserWatchlistItem (no legacy row)."""
+    from app.models import Ticker
+    import app.main as main_module
+    from unittest.mock import patch
+
+    token, _ = register_and_login(client)
+    client.post("/api/v1/me/watchlist", json={"symbol": _HYPE_PERSONAL_SYM}, headers=auth_header(token))
+
+    if not db.query(Ticker).filter(Ticker.symbol == _HYPE_PERSONAL_SYM).first():
+        db.add(Ticker(symbol=_HYPE_PERSONAL_SYM, is_active=True))
+    db.commit()
+
+    processed: list[str] = []
+
+    class _SessionProxy:
+        def close(self):
+            pass
+        def __getattr__(self, name):
+            return getattr(db, name)
+
+    with patch("app.main.SessionLocal", return_value=_SessionProxy()), \
+         patch("app.services.hype_calculator.compute_and_store_hype",
+               side_effect=lambda _db, ticker: processed.append(ticker.symbol) or None), \
+         patch("app.services.alert_engine.evaluate_alerts"):
+        main_module._compute_hype()
+
+    assert _HYPE_PERSONAL_SYM in processed
 
 
 # ── Extra: invalid email rejected at register ────────────────────────────────

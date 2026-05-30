@@ -70,6 +70,10 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login", response_model=LoginResponse)
 def login(body: LoginRequest, db: Session = Depends(get_db)):
     email = _normalize_email(body.email)
+    # Reject out-of-range passwords before Argon2 to prevent hash-DoS on oversized input.
+    # Return the generic 401 — we don't reveal which policy check failed.
+    if not (8 <= len(body.password) <= 128):
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
     user = db.query(User).filter(User.email == email, User.is_active == True).first()
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Incorrect email or password")
