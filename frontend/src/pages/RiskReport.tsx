@@ -26,6 +26,7 @@ import {
   getFreshnessStatus, formatFreshnessTime,
   FRESHNESS_LABEL, FRESHNESS_COLOR,
 } from '../lib/monitoringFreshness'
+import { RELEVANCE_LABEL, RELEVANCE_COLOR } from '../lib/newsRelevance'
 
 // ── types ────────────────────────────────────────────────────────────────────
 
@@ -290,6 +291,7 @@ export function RiskReport() {
   // Computed fresh on every render — no useMemo to avoid stale results when
   // content changes but array length stays the same
   const caution = computeInvestorCaution(
+    upper,
     signalItems,
     fastapiSnapshot,
     histItems,
@@ -326,9 +328,10 @@ export function RiskReport() {
     if (signalsLoading)         return '載入中…'
     if (effectiveSignalsError)  return '取得失敗'
     if (caution.newsCoverage.scoredCount > 0) {
-      return `可分析 ${caution.newsCoverage.scoredCount} 篇 / 原始 ${caution.newsCoverage.rawCount} 篇 · Finnhub`
+      return `納入計分 ${caution.newsCoverage.scoredCount} 篇 / 原始 ${caution.newsCoverage.rawCount} 篇 · Finnhub`
     }
-    return '無可分析新聞 · Finnhub'
+    if (caution.newsCoverage.lowCount > 0) return `原始 ${caution.newsCoverage.rawCount} 篇均低相關 · Finnhub`
+    return '無相關新聞 · Finnhub'
   })()
 
   const newsCoverageColor = (() => {
@@ -359,6 +362,7 @@ export function RiskReport() {
       ai_risk_score: s.ai_risk_score,
       published_at:  s.published_at,
       source:        s.source,
+      relevance:     caution.newsRelevance[s.id],
     })),
     histItems: histItems.map(h => ({
       date:                   h.date,
@@ -799,9 +803,14 @@ export function RiskReport() {
               live_social_signals
             </span>
           </div>
-          <p className="text-[10px] mb-4 leading-relaxed" style={{ color: '#475569' }}>
+          <p className="text-[10px] mb-2 leading-relaxed" style={{ color: '#475569' }}>
             目前資料來源為 Finnhub 新聞；系統分析新聞文本中是否含有社群交易風險語言，尚未代表論壇社群討論熱度。
           </p>
+          {!signalsLoading && caution.newsCoverage.lowCount > 0 && (
+            <p className="text-[10px] mb-3 leading-relaxed px-2.5 py-1.5 rounded" style={{ color: '#94a3b8', background: '#1a1d27', border: '1px solid #2d3148' }}>
+              部分新聞與目前標的關聯性較低，已保留供查閱但未納入主要警戒計分。
+            </p>
+          )}
           {signalsLoading ? (
             <div className="h-24 animate-pulse rounded" style={{ background: '#2d3148' }} />
           ) : signalItems.length === 0 ? (
@@ -810,10 +819,15 @@ export function RiskReport() {
             </p>
           ) : (
             <div className="flex flex-col gap-3">
-              {signalItems.map((item) => (
-                <div key={item.id} className="rounded p-3" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+              {signalItems.map((item) => {
+                const rel = caution.newsRelevance[item.id]
+                const relColor = rel ? RELEVANCE_COLOR[rel] : '#64748b'
+                const relLabel = rel ? RELEVANCE_LABEL[rel] : null
+                const isLow    = rel === 'low'
+                return (
+                <div key={item.id} className="rounded p-3" style={{ background: '#0f1117', border: `1px solid ${isLow ? '#2d3148' : '#2d3148'}`, opacity: isLow ? 0.7 : 1 }}>
                   <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {item.ai_risk_label && (
                         <span
                           className="text-[10px] font-bold px-1.5 py-0.5 rounded"
@@ -828,6 +842,14 @@ export function RiskReport() {
                       )}
                       {item.ai_risk_score != null && (
                         <span className="text-[11px]" style={{ color: '#94a3b8' }}>{item.ai_risk_score}</span>
+                      )}
+                      {relLabel && (
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded"
+                          style={{ background: relColor + '18', color: relColor, border: `1px solid ${relColor}44` }}
+                        >
+                          {relLabel}{isLow ? ' · 未納入主要計分' : ''}
+                        </span>
                       )}
                     </div>
                     <span
@@ -875,7 +897,8 @@ export function RiskReport() {
                     </div>
                   )}
                 </div>
-              ))}
+              )
+              })}
             </div>
           )}
         </div>

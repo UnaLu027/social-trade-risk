@@ -2,6 +2,9 @@
 // Data source: Finnhub external news text signals + FastAPI market data
 // NOT social forum/Reddit signals
 
+import { getNewsRelevance, type NewsRelevanceLevel } from './newsRelevance'
+export type { NewsRelevanceLevel } from './newsRelevance'
+
 export type SignalLevel = 'low' | 'medium' | 'high' | 'extreme' | 'insufficient_data'
 export type DataCoverageLevel = 'FULL' | 'PARTIAL' | 'MINIMAL' | 'NONE'
 export type InterpretationStatus = 'comprehensive' | 'preliminary' | 'insufficient_data'
@@ -41,8 +44,12 @@ export interface InvestorCautionResult {
   newsCoverage: {
     rawCount: number
     uniqueCount: number
-    scoredCount: number
+    scoredCount: number      // direct + contextual items with valid model scores (納入計分)
+    directCount: number
+    contextualCount: number
+    lowCount: number
   }
+  newsRelevance: Record<string, NewsRelevanceLevel>  // keyed by item id
   generatedAt: string
 }
 
@@ -52,6 +59,7 @@ interface NewsSignalInput {
   id: string
   url: string | null
   headline: string | null
+  summary?: string | null    // used for relevance check
   ai_risk_label: string | null
   ai_risk_score: number | null
   published_at: string
@@ -126,18 +134,24 @@ function isScoredItem(item: NewsSignalInput): boolean {
 
 // ── sub-scorers ───────────────────────────────────────────────────────────────
 
-function scoreNews(items: NewsSignalInput[]): {
+function scoreNews(
+  symbol: string,
+  items: NewsSignalInput[],
+): {
   score: number
   factors: CautionFactor[]
   rawCount: number
   uniqueCount: number
   scoredCount: number
+  directCount: number
+  contextualCount: number
+  lowCount: number
+  relevanceMap: Record<string, NewsRelevanceLevel>
 } {
   const rawCount = items.length
+  const empty = { score: 0, factors: [], rawCount: 0, uniqueCount: 0, scoredCount: 0, directCount: 0, contextualCount: 0, lowCount: 0, relevanceMap: {} }
 
-  if (rawCount === 0) {
-    return { score: 0, factors: [], rawCount: 0, uniqueCount: 0, scoredCount: 0 }
-  }
+  if (rawCount === 0) return empty
 
   // Deduplicate by URL then by normalised headline
   const seenUrls      = new Set<string>()
@@ -156,18 +170,41 @@ function scoreNews(items: NewsSignalInput[]): {
   }
 
   const uniqueCount = unique.length
-  const scored      = unique.filter(isScoredItem)
-  const scoredCount = scored.length
 
-  if (scoredCount === 0) {
-    return { score: 0, factors: [], rawCount, uniqueCount, scoredCount: 0 }
+  // Assign relevance per item
+  const relevanceMap: Record<string, NewsRelevanceLevel> = {}
+  let directCount = 0, contextualCount = 0, lowCount = 0
+
+  for (const item of unique) {
+    const rel = getNewsRelevance(symbol, item.headline, item.summary)
+    relevanceMap[item.id] = rel
+    if (rel === 'direct')          directCount++
+    else if (rel === 'contextual') contextualCount++
+    else                           lowCount++
   }
 
-  const scores  = scored.map(item => normalizeRiskScore(item.ai_risk_score, item.ai_risk_label))
-  const score   = Math.min(100, avg(scores))
+  // Only score direct + contextual items with valid model output
+  const scoreable = unique.filter(item =>
+    relevanceMap[item.id] !== 'low' && isScoredItem(item)
+  )
+  const scoredCount = scoreable.length
 
+  if (scoredCount === 0) {
+    return { score: 0, factors: [], rawCount, uniqueCount, scoredCount: 0, directCount, contextualCount, lowCount, relevanceMap }
+  }
+
+  // Weighted average: direct=1.0, contextual=0.5
+  let weightedSum = 0, totalWeight = 0
+  for (const item of scoreable) {
+    const w = relevanceMap[item.id] === 'direct' ? 1.0 : 0.5
+    weightedSum += normalizeRiskScore(item.ai_risk_score, item.ai_risk_label) * w
+    totalWeight += w
+  }
+  const score = Math.min(100, weightedSum / totalWeight)
+
+  // Key factors only from direct/contextual high-risk items
   const factors: CautionFactor[] = []
-  for (const item of scored) {
+  for (const item of scoreable) {
     if (isHighOrCritical(item.ai_risk_label) && factors.length < 2) {
       factors.push({
         description: item.headline ?? '外部新聞高風險文本訊號',
@@ -177,7 +214,7 @@ function scoreNews(items: NewsSignalInput[]): {
     }
   }
 
-  return { score, factors, rawCount, uniqueCount, scoredCount }
+  return { score, factors, rawCount, uniqueCount, scoredCount, directCount, contextualCount, lowCount, relevanceMap }
 }
 
 function scoreSnapshot(
@@ -245,17 +282,19 @@ function scoreHistory(items: HistoryInput[]): { score: number; factors: CautionF
 // ── main export ───────────────────────────────────────────────────────────────
 
 export function computeInvestorCaution(
+  symbol: string,
   newsItems: NewsSignalInput[],
   fastapiSnapshot: SnapshotInput | null,
   histItems: HistoryInput[],
   phpSnapshot: SnapshotInput | null,
   options: CautionOptions = {},
 ): InvestorCautionResult {
-  const newsR = scoreNews(newsItems)
+  const newsR = scoreNews(symbol, newsItems)
   const snapR = scoreSnapshot(fastapiSnapshot, phpSnapshot)
   const histR = scoreHistory(histItems)
 
   // hasNews uses scoredCount to exclude items with no valid model output
+  // and excludes low-relevance items that are filtered by the relevance check
   const hasNews     = newsR.scoredCount > 0
   const hasSnapshot = !!(fastapiSnapshot ?? phpSnapshot)
   const hasHistory  = histItems.length > 0
@@ -277,10 +316,15 @@ export function computeInvestorCaution(
   else                                          interpretationStatus = 'preliminary'
 
   const newsCoverage = {
-    rawCount:    newsR.rawCount,
-    uniqueCount: newsR.uniqueCount,
-    scoredCount: newsR.scoredCount,
+    rawCount:       newsR.rawCount,
+    uniqueCount:    newsR.uniqueCount,
+    scoredCount:    newsR.scoredCount,
+    directCount:    newsR.directCount,
+    contextualCount: newsR.contextualCount,
+    lowCount:       newsR.lowCount,
   }
+
+  const newsRelevance = newsR.relevanceMap
 
   if (dataCoverage === 'NONE') {
     return {
@@ -292,6 +336,7 @@ export function computeInvestorCaution(
       coverageNote:         '資料不足，無法產生警戒摘要。',
       keyFactors:           [],
       newsCoverage,
+      newsRelevance,
       generatedAt:          new Date().toISOString(),
     }
   }
@@ -320,30 +365,31 @@ export function computeInvestorCaution(
   // Build coverage note
   const noteParts: string[] = []
 
-  // 1. PHP fallback already explains snapshot unavailability; no duplicate note needed.
   if (snapR.usingPhpFallback) {
     noteParts.push('最新市場快照無法取得，目前使用歷史資料庫快照作為參考。')
   }
 
-  // 2. Snapshot error without a PHP fallback rescue
   if (options.latestSnapshotError && !snapR.usingPhpFallback && (hasNews || hasHistory)) {
     noteParts.push('最新市場快照目前取得失敗；本摘要僅能視為初步觀察。')
   }
 
-  // 3. External news coverage (mutually exclusive branches)
   if (options.externalNewsError && (hasSnapshot || hasHistory)) {
     noteParts.push('外部新聞資料目前取得失敗；本摘要主要依市場訊號形成，僅能視為初步觀察。')
   } else if (!hasNews && !options.externalNewsError && (hasSnapshot || hasHistory)) {
-    const isHigh = signalLevel === 'high' || signalLevel === 'extreme'
-    const marketSourceText =
-      hasSnapshot && hasHistory
-        ? '最新市場快照與近期市場趨勢'
-        : hasSnapshot
-          ? '最新市場快照'
-          : '近期市場趨勢'
-    noteParts.push(
-      `目前${isHigh ? '高' : ''}警戒主要來自${marketSourceText}；外部新聞無可分析資料，僅能視為初步觀察。`
-    )
+    if (newsR.lowCount > 0) {
+      noteParts.push('外部新聞項目均與目標標的關聯性較低，未納入主要警戒計分；本摘要依市場資料形成，僅能視為初步觀察。')
+    } else {
+      const isHigh = signalLevel === 'high' || signalLevel === 'extreme'
+      const marketSourceText =
+        hasSnapshot && hasHistory
+          ? '最新市場快照與近期市場趨勢'
+          : hasSnapshot
+            ? '最新市場快照'
+            : '近期市場趨勢'
+      noteParts.push(
+        `目前${isHigh ? '高' : ''}警戒主要來自${marketSourceText}；外部新聞無可分析資料，僅能視為初步觀察。`
+      )
+    }
   } else if (
     hasNews && !hasHistory && !hasSnapshot &&
     !options.marketHistoryError && !options.latestSnapshotError
@@ -351,7 +397,6 @@ export function computeInvestorCaution(
     noteParts.push('目前訊號主要來自外部新聞；市場資料不足，僅能視為初步觀察。')
   }
 
-  // 4. Market history error
   if (options.marketHistoryError && (hasNews || hasSnapshot)) {
     noteParts.push('近期市場趨勢目前取得失敗；本摘要僅能視為初步觀察。')
   }
@@ -373,6 +418,7 @@ export function computeInvestorCaution(
     coverageNote:  noteParts.join(' '),
     keyFactors,
     newsCoverage,
+    newsRelevance,
     generatedAt:   new Date().toISOString(),
   }
 }

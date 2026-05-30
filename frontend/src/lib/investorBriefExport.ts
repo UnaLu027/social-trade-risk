@@ -2,7 +2,7 @@
 // Positions: external news text signals + market data only
 // NOT investment advice; NOT social forum signals
 
-import type { InvestorCautionResult } from './investorCaution'
+import type { InvestorCautionResult, NewsRelevanceLevel } from './investorCaution'
 
 // ── Input types ───────────────────────────────────────────────────────────────
 
@@ -13,6 +13,7 @@ export interface BriefNewsItem {
   ai_risk_score: number | null
   published_at: string
   source: string
+  relevance?: NewsRelevanceLevel
 }
 
 export interface BriefHistItem {
@@ -60,6 +61,12 @@ const INTERP_LABEL: Record<string, string> = {
 }
 const RISK_ZH: Record<string, string> = {
   Low: '低警戒', Medium: '中警戒', High: '高警戒', Critical: '極高警戒',
+}
+
+// ── Label constants ── (continued) ────────────────────────────────────────────
+
+const REL_LABEL: Record<string, string> = {
+  direct: '直接相關', contextual: '間接相關', low: '低相關 · 未納入主要計分',
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -136,13 +143,15 @@ function buildSummaryText(inp: BriefExportInput): string {
   }
 
   lines.push('', '【最新外部新聞文本訊號（Finnhub）】')
+  lines.push(`納入計分：${inp.newsCoverageText}`)
   lines.push('目前資料來源為 Finnhub 新聞文本；系統分析文本中的社群交易風險語言，尚未代表論壇社群討論熱度。')
   if (signalItems.length === 0) {
     lines.push('（無可顯示之新聞項目）')
   } else {
     signalItems.slice(0, 5).forEach((item, i) => {
-      const label = item.ai_risk_label ? `[${RISK_ZH[item.ai_risk_label] ?? item.ai_risk_label} / ${item.ai_risk_score ?? 0}]` : ''
-      lines.push(`${i + 1}. ${label} ${item.headline ?? '（無標題）'}`.trim())
+      const label  = item.ai_risk_label ? `[${RISK_ZH[item.ai_risk_label] ?? item.ai_risk_label} / ${item.ai_risk_score ?? 0}]` : ''
+      const relStr = item.relevance ? `[${REL_LABEL[item.relevance] ?? item.relevance}]` : ''
+      lines.push(`${i + 1}. ${label} ${relStr} ${item.headline ?? '（無標題）'}`.trim())
       lines.push(`   ${item.source} · ${fmtUtc(item.published_at)}`)
       const u = safeUrl(item.url)
       if (u) lines.push(`   ${u}`)
@@ -168,6 +177,7 @@ function buildSummaryText(inp: BriefExportInput): string {
     '',
     '【方法與限制】',
     '本階段整合 Finnhub 外部新聞文本訊號、最新市場快照與近期市場趨勢。',
+    '外部新聞先依標的關聯性進行規則式篩選；低相關新聞不納入主要警戒計分。',
     '外部新聞文本模型係偵測社群交易風險語言，並非判斷新聞真偽，也不是預測股價。',
     '完整（3 / 3）只代表目前已接入三類來源可取得，不代表已涵蓋所有可能資訊來源。',
     '社群論壇資料尚未接入。',
@@ -195,14 +205,15 @@ function buildWordHtml(inp: BriefExportInput): string {
   function newsCards(): string {
     if (signalItems.length === 0) return '<p>目前無可分析之外部新聞文本訊號</p>'
     return signalItems.slice(0, 5).map((item, i) => {
-      const u     = safeUrl(item.url)
-      const label = item.ai_risk_label ? (RISK_ZH[item.ai_risk_label] ?? item.ai_risk_label) : '—'
-      const score = item.ai_risk_score ?? 0
+      const u      = safeUrl(item.url)
+      const label  = item.ai_risk_label ? (RISK_ZH[item.ai_risk_label] ?? item.ai_risk_label) : '—'
+      const score  = item.ai_risk_score ?? 0
+      const relStr = item.relevance ? `【${REL_LABEL[item.relevance] ?? item.relevance}】` : ''
       return `<table class="word-news-card-table">
         <tr>
           <td>
             <p class="news-title">${i + 1}. ${escapeHtml(item.headline ?? '（無標題）')}</p>
-            <p>文本風險語言強度：${escapeHtml(label)}　｜　分數：${score}</p>
+            <p>相關性：${escapeHtml(relStr || '—')}　｜　文本風險語言強度：${escapeHtml(label)}　｜　分數：${score}</p>
             <p>發布時間：${escapeHtml(fmtUtc(item.published_at))}　｜　來源：Finnhub</p>
             ${u ? `<p><a href="${escapeHtml(u)}">查看原文</a></p>` : ''}
           </td>
@@ -327,6 +338,7 @@ ${histTable()}
 
 <h2>七、方法與限制</h2>
 <p>本階段整合 Finnhub 外部新聞文本訊號、最新市場快照與近期市場趨勢。</p>
+<p>外部新聞先依標的關聯性進行規則式篩選；低相關新聞不納入主要警戒計分。</p>
 <p>外部新聞文本模型係偵測社群交易風險語言，並非判斷新聞真偽，也不是預測股價。</p>
 <p>完整（3 / 3）只代表目前已接入三類來源可取得，不代表已涵蓋所有可能資訊來源。</p>
 <p>社群論壇資料尚未接入。</p>
@@ -336,6 +348,7 @@ ${histTable()}
 </body>
 </html>`
 }
+
 
 // ── Print HTML builder ────────────────────────────────────────────────────────
 
@@ -353,11 +366,13 @@ function buildPrintHtml(inp: BriefExportInput): string {
   function newsSection(): string {
     if (signalItems.length === 0) return '<p style="color:#666;">（無可顯示之新聞項目）</p>'
     return signalItems.slice(0, 5).map(item => {
-      const u = safeUrl(item.url)
-      const label = item.ai_risk_label ? `[${RISK_ZH[item.ai_risk_label] ?? item.ai_risk_label}]` : ''
-      return `<div class="news-card" style="border:1px solid #e5e7eb;padding:8px 12px;margin:6px 0;border-radius:4px;">
+      const u      = safeUrl(item.url)
+      const label  = item.ai_risk_label ? `[${RISK_ZH[item.ai_risk_label] ?? item.ai_risk_label}]` : ''
+      const relStr = item.relevance ? `[${REL_LABEL[item.relevance] ?? item.relevance}]` : ''
+      const isLow  = item.relevance === 'low'
+      return `<div class="news-card" style="border:1px solid #e5e7eb;padding:8px 12px;margin:6px 0;border-radius:4px;${isLow ? 'opacity:0.7;' : ''}">
         <div style="font-weight:600;">${escapeHtml(item.headline ?? '（無標題）')}</div>
-        <div style="color:#555;font-size:10pt;">${escapeHtml(label)} ${escapeHtml(item.source)} · ${escapeHtml(fmtUtc(item.published_at))}${item.ai_risk_score != null ? ` · ${item.ai_risk_score}分` : ''}</div>
+        <div style="color:#555;font-size:10pt;">${escapeHtml(relStr)} ${escapeHtml(label)} ${escapeHtml(item.source)} · ${escapeHtml(fmtUtc(item.published_at))}${item.ai_risk_score != null ? ` · ${item.ai_risk_score}分` : ''}</div>
         ${u ? `<div style="font-size:9pt;color:#2563eb;word-break:break-all;">${escapeHtml(u)}</div>` : ''}
       </div>`
     }).join('\n')
@@ -495,6 +510,7 @@ ${histSection()}
 
 <h2>七、方法與限制</h2>
 <p>本階段整合 Finnhub 外部新聞文本訊號、最新市場快照與近期市場趨勢。</p>
+<p>外部新聞先依標的關聯性進行規則式篩選；低相關新聞不納入主要警戒計分。</p>
 <p>外部新聞文本模型係偵測社群交易風險語言，並非判斷新聞真偽，也不是預測股價。</p>
 <p>完整（3 / 3）只代表目前已接入三類來源可取得，不代表已涵蓋所有可能資訊來源。</p>
 <p>社群論壇資料尚未接入。</p>
@@ -634,16 +650,21 @@ function buildFullHtml(inp: BriefExportInput): string {
   const newsCards = signalItems.length === 0
     ? `<div style="color:#64748b;font-size:13px;padding:24px 0;text-align:center;">（無可顯示之新聞項目）</div>`
     : signalItems.slice(0, 5).map(item => {
-        const u = safeUrl(item.url)
+        const u      = safeUrl(item.url)
         const rLabel = item.ai_risk_label ? (RISK_ZH[item.ai_risk_label] ?? item.ai_risk_label) : null
         const rColor = item.ai_risk_label === 'Critical' ? '#ef4444'
           : item.ai_risk_label === 'High' ? '#f97316'
           : item.ai_risk_label === 'Medium' ? '#f59e0b' : '#10b981'
-        return `<div style="background:#0f1117;border:1px solid #2d3148;border-radius:6px;padding:14px;margin-bottom:10px;">
+        const relLabel = item.relevance ? REL_LABEL[item.relevance] ?? item.relevance : null
+        const relColor = item.relevance === 'direct'     ? '#10b981'
+          : item.relevance === 'contextual' ? '#38bdf8' : '#64748b'
+        const isLow    = item.relevance === 'low'
+        return `<div style="background:#0f1117;border:1px solid #2d3148;border-radius:6px;padding:14px;margin-bottom:10px;${isLow ? 'opacity:0.7;' : ''}">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <div style="display:flex;gap:8px;align-items:center;">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               ${rLabel ? `<span style="background:${rColor}22;color:${rColor};border:1px solid ${rColor}55;border-radius:3px;padding:1px 6px;font-size:10px;font-weight:700;">${escapeHtml(rLabel)}</span>` : ''}
               ${item.ai_risk_score != null ? `<span style="font-size:11px;color:#94a3b8;">${item.ai_risk_score}</span>` : ''}
+              ${relLabel ? `<span style="background:${relColor}18;color:${relColor};border:1px solid ${relColor}44;border-radius:3px;padding:1px 6px;font-size:10px;">${escapeHtml(relLabel)}</span>` : ''}
             </div>
             <span style="font-size:10px;background:#2d3148;color:#94a3b8;padding:2px 6px;border-radius:3px;">${escapeHtml(item.source)}</span>
           </div>
@@ -654,7 +675,7 @@ function buildFullHtml(inp: BriefExportInput): string {
 
   const tab4 = `
     <div style="font-size:11px;color:#475569;margin-bottom:14px;padding:8px 12px;background:#1a1d27;border-radius:4px;">
-      目前資料來源為 Finnhub 新聞文本；系統分析文本中的社群交易風險語言，尚未代表論壇社群討論熱度。
+      目前資料來源為 Finnhub 新聞文本；系統分析文本中的社群交易風險語言，尚未代表論壇社群討論熱度。納入計分：${escapeHtml(inp.newsCoverageText)}
     </div>
     ${newsCards}`
 
@@ -697,6 +718,7 @@ function buildFullHtml(inp: BriefExportInput): string {
       </ul>
       <h3 style="color:#e2e8f0;font-size:14px;margin:0 0 12px;">重要限制</h3>
       <ul style="padding-left:18px;margin-bottom:16px;">
+        <li>外部新聞先依標的關聯性進行規則式篩選；低相關新聞不納入主要警戒計分，保留供查閱</li>
         <li>外部新聞文本模型係偵測社群交易風險語言，並非判斷新聞真偽，也不是預測股價</li>
         <li>完整（3 / 3）只代表目前已接入三類來源可取得，不代表已涵蓋所有可能資訊來源</li>
         <li>社群論壇資料（Reddit、X 等）尚未接入本階段摘要</li>
