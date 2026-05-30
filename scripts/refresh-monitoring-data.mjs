@@ -4,15 +4,24 @@
  *
  * Scheduled refresh script — run by GitHub Actions every 6 hours.
  * For each monitored symbol:
- *   1. Fetches social-signals, market-snapshots, market-history from HF backend
- *   2. Validates payload (success=true, non-empty data), records fetch errors
- *   3. Computes caution summary (mirrors investorCaution.ts scoring logic)
- *   4. Merges result into history (max 7 entries, read from monitoring-previous.json)
- *   5. Writes aggregated JSON to generated-data/monitoring-latest.json
- *   (GitHub Actions FTPS-uploads that file to InfinityFree /htdocs/data/)
+ *   1. Fetches a candidate pool of social-signals, market-snapshots, and
+ *      market-history from the HF backend.
+ *   2. Applies a relevance gate (news-relevance.mjs) so only symbol-relevant
+ *      Finnhub articles contribute to scoring and are published in the JSON.
+ *   3. Validates payload (success=true, non-empty data), records fetch errors.
+ *   4. Computes caution summary (mirrors investorCaution.ts scoring logic)
+ *      using only relevant news items.
+ *   5. Merges result into history (max 7 entries, read from monitoring-previous.json).
+ *   6. Writes aggregated JSON to generated-data/monitoring-latest.json.
+ *      GitHub Actions commits the file back to the repository; the frontend
+ *      reads the JSON directly from the GitHub raw content URL.
  *
  * Required env vars:
  *   HF_API_BASE  — e.g. https://your-space.hf.space
+ *
+ * Candidate / publish limits (verified against live HF endpoint):
+ *   CANDIDATE_NEWS_LIMIT = 20  — items requested from the HF API per symbol
+ *   PUBLISHED_NEWS_LIMIT = 10  — max relevant items stored in output JSON
  *
  * JSON shape per symbol:
  *   symbols[SYM].latest            — last known-good result (preserved on failure)
@@ -20,6 +29,18 @@
  *   symbols[SYM].last_attempt_status — 'success'|'partial'|'error'
  *   symbols[SYM].last_attempt_errors — array of error strings
  *   symbols[SYM].history           — last 7 compact run entries (all statuses)
+ *
+ * Per-symbol latest.items shape (published relevant news):
+ *   id, headline, url, published_at, source, ai_risk_label, ai_risk_score,
+ *   relevance_basis, matched_terms
+ *   (summary is excluded from the stored JSON)
+ *
+ * Per-symbol latest audit fields:
+ *   news_count            — number of published relevant items (backward-compat)
+ *   candidate_news_count  — total items returned by HF API
+ *   relevant_news_count   — items passing the relevance gate
+ *   published_news_count  — items written to JSON (≤ PUBLISHED_NEWS_LIMIT)
+ *   excluded_news_count   — candidate items filtered out as irrelevant
  *
  * overallStatus rules:
  *   'error'   — all symbols failed → exit(1), DO NOT write or upload JSON
@@ -29,13 +50,18 @@
 
 import { mkdir, writeFile, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { filterRelevantNews } from './news-relevance.mjs'
 
-const SYMBOLS       = ['GME', 'TSLA', 'AAPL', 'AMC', 'NVDA', 'MSFT', 'META', 'AMZN']
-const HF_API_BASE   = process.env.HF_API_BASE ?? ''
-const OUTPUT_DIR    = 'generated-data'
-const OUTPUT_FILE   = join(OUTPUT_DIR, 'monitoring-latest.json')
-const PREVIOUS_FILE = join(OUTPUT_DIR, 'monitoring-previous.json')
-const MAX_HISTORY   = 7
+const SYMBOLS              = ['GME', 'TSLA', 'AAPL', 'AMC', 'NVDA', 'MSFT', 'META', 'AMZN']
+const HF_API_BASE          = process.env.HF_API_BASE ?? ''
+const OUTPUT_DIR           = 'generated-data'
+const OUTPUT_FILE          = join(OUTPUT_DIR, 'monitoring-latest.json')
+const PREVIOUS_FILE        = join(OUTPUT_DIR, 'monitoring-previous.json')
+const MAX_HISTORY          = 7
+// Verified 2026-05-30: live HF endpoint returns up to 20 items at limit=20
+// (GME: 15, NVDA/MSFT/AMZN: 20). Limit=20 is supported.
+const CANDIDATE_NEWS_LIMIT = 20
+const PUBLISHED_NEWS_LIMIT = 10
 
 if (!HF_API_BASE) {
   console.error('[refresh] Missing required env var: HF_API_BASE')
@@ -71,6 +97,7 @@ function isScoredItem(item) {
   return hasValidScore || hasValidLabel
 }
 
+// scoreNews receives already-filtered relevant items; it deduplicates internally.
 function scoreNews(items) {
   if (items.length === 0) return { score: 0, rawCount: 0, scoredCount: 0 }
   const seenUrls = new Set(), seenHeadlines = new Set(), unique = []
@@ -108,8 +135,9 @@ function scoreHistory(items) {
   ))}
 }
 
-function computeCautionSummary(newsItems, fastapiSnapshot, histItems, generatedAt) {
-  const newsR = scoreNews(newsItems)
+// relevantNewsItems: already gated by filterRelevantNews; scoreNews deduplicates internally.
+function computeCautionSummary(relevantNewsItems, fastapiSnapshot, histItems, generatedAt) {
+  const newsR = scoreNews(relevantNewsItems)
   const snapR = scoreSnapshot(fastapiSnapshot)
   const histR = scoreHistory(histItems)
   const hasNews = newsR.scoredCount > 0, hasSnap = !!fastapiSnapshot, hasHist = histItems.length > 0
@@ -155,27 +183,44 @@ async function fetchJson(url, label) {
   return parseJsonResponse(res, label)
 }
 
-// ── Per-symbol fetch — returns the 'latest' payload shape ────────────────────
-// fetchSymbol never throws; all errors are captured in fetch_errors.
-// refresh_status is derived from fetch_errors after all three fetches:
-//   'success': 0 errors       'partial': 1-2 errors       'error': 3 errors
+// ── Per-symbol fetch ──────────────────────────────────────────────────────────
+// Data flow:
+//   candidateNewsItems = raw items from HF social-signals API
+//   relevantNewsItems  = filterRelevantNews(candidateNewsItems, symbol)
+//   scoringNewsItems   = deduplicated relevant items (inside scoreNews)
+//   publishedNewsItems = relevantNewsItems.slice(0, PUBLISHED_NEWS_LIMIT)
+//
+// Only relevant items contribute to caution scoring and the output JSON.
+// If the API succeeds but zero candidates are relevant, no fetch error is
+// recorded; snapshot and history sources carry the full caution score weight.
 
 async function fetchSymbol(symbol) {
   const fetchedAt = new Date().toISOString()
-  let newsItems = [], fastapiSnapshot = null, histItems = []
+  let candidateNewsItems = [], fastapiSnapshot = null, histItems = []
   const fetchErrors = []
 
-  // 1. Social signals (Finnhub news)
+  // 1. Social signals (Finnhub news) — fetch a larger candidate pool
   try {
-    const d = await fetchJson(`${HF_API_BASE}/api/v1/social-signals?symbol=${symbol}&sources=finnhub&limit=5`, `social-signals[${symbol}]`)
+    const d = await fetchJson(
+      `${HF_API_BASE}/api/v1/social-signals?symbol=${symbol}&sources=finnhub&limit=${CANDIDATE_NEWS_LIMIT}`,
+      `social-signals[${symbol}]`
+    )
     if (d?.success === true && Array.isArray(d.items)) {
-      newsItems = d.items
-      if (newsItems.length === 0) console.log(`[refresh] ${symbol} social-signals: success=true but no items (valid)`)
+      candidateNewsItems = d.items
+      if (candidateNewsItems.length === 0) {
+        console.log(`[refresh] ${symbol} social-signals: success=true but no items (valid)`)
+      }
     } else {
       const errDetail = d?.errors ? JSON.stringify(d.errors).slice(0, 120) : 'success=false'
       fetchErrors.push(`social-signals: ${errDetail}`)
     }
   } catch (e) { fetchErrors.push(`social-signals: ${e.message}`) }
+
+  // Apply relevance gate: only symbol-relevant items are scored and published.
+  // summary is available here (from HF API) for matching but is not stored.
+  const relevantNewsItems  = filterRelevantNews(candidateNewsItems, symbol)
+  const excludedNewsCount  = candidateNewsItems.length - relevantNewsItems.length
+  const publishedNewsItems = relevantNewsItems.slice(0, PUBLISHED_NEWS_LIMIT)
 
   // 2. Market snapshot
   try {
@@ -204,9 +249,10 @@ async function fetchSymbol(symbol) {
     }
   } catch (e) { fetchErrors.push(`market-history: ${e.message}`) }
 
-  const summary = computeCautionSummary(newsItems, fastapiSnapshot, histItems, fetchedAt)
+  // Caution score is computed from relevant news only
+  const summary = computeCautionSummary(relevantNewsItems, fastapiSnapshot, histItems, fetchedAt)
 
-  // Status based on how many of the 3 sources failed
+  // Status based on how many of the 3 sources failed (zero relevant news is not a failure)
   const refresh_status = fetchErrors.length === 0 ? 'success'
     : fetchErrors.length < 3  ? 'partial'
     : 'error'
@@ -216,10 +262,23 @@ async function fetchSymbol(symbol) {
     refresh_status,
     fetch_errors:   fetchErrors,
     summary,
-    news_count:     newsItems.length,
-    items:          newsItems.slice(0, 5).map(({ id, headline, url, published_at, source, ai_risk_label, ai_risk_score }) =>
-      ({ id, headline, url, published_at, source, ai_risk_label, ai_risk_score })
-    ),
+    // news_count: published relevant count (backward-compatible field)
+    news_count:           publishedNewsItems.length,
+    // Audit fields for observability
+    candidate_news_count: candidateNewsItems.length,
+    relevant_news_count:  relevantNewsItems.length,
+    published_news_count: publishedNewsItems.length,
+    excluded_news_count:  excludedNewsCount,
+    // Published items include relevance metadata; summary is excluded from stored JSON
+    items: publishedNewsItems.map(({
+      id, headline, url, published_at, source,
+      ai_risk_label, ai_risk_score,
+      relevance_basis, matched_terms,
+    }) => ({
+      id, headline, url, published_at, source,
+      ai_risk_label, ai_risk_score,
+      relevance_basis, matched_terms,
+    })),
   }
 }
 
@@ -230,6 +289,7 @@ async function main() {
   console.log(`[refresh] Starting at ${runStarted}`)
   console.log(`[refresh] HF_API_BASE: ${HF_API_BASE}`)
   console.log(`[refresh] Symbols: ${SYMBOLS.join(', ')}`)
+  console.log(`[refresh] Candidate limit: ${CANDIDATE_NEWS_LIMIT}, Publish limit: ${PUBLISHED_NEWS_LIMIT}`)
 
   // Load previous JSON to carry forward history and preserve latest on failure
   let previousJson = null
@@ -249,29 +309,38 @@ async function main() {
     try {
       attemptBySymbol[symbol] = await fetchSymbol(symbol)
     } catch (unexpectedErr) {
-      // Should not reach here since fetchSymbol catches all errors internally
       attemptBySymbol[symbol] = {
         fetched_at: new Date().toISOString(), refresh_status: 'error',
         fetch_errors: [`unexpected: ${unexpectedErr.message}`],
-        summary: null, news_count: 0, items: [],
+        summary: null,
+        news_count: 0, candidate_news_count: 0, relevant_news_count: 0,
+        published_news_count: 0, excluded_news_count: 0,
+        items: [],
       }
     }
 
     const attempt = attemptBySymbol[symbol]
-    if (attempt.refresh_status === 'success')      { successCount++; console.log(`[refresh] ${symbol} ✓ score=${attempt.summary?.combined_score ?? 'N/A'} news=${attempt.news_count}`) }
-    else if (attempt.refresh_status === 'partial')  { partialCount++; console.warn(`[refresh] ${symbol} ⚠ partial — ${attempt.fetch_errors.join('; ')}`) }
-    else                                             { errorCount++;  console.error(`[refresh] ${symbol} ✗ error — ${attempt.fetch_errors.join('; ')}`) }
+    const relevanceInfo = `cand=${attempt.candidate_news_count} rel=${attempt.relevant_news_count} pub=${attempt.published_news_count} excl=${attempt.excluded_news_count}`
+    if (attempt.refresh_status === 'success') {
+      successCount++
+      console.log(`[refresh] ${symbol} ✓ score=${attempt.summary?.combined_score ?? 'N/A'} news=${attempt.news_count} (${relevanceInfo})`)
+    } else if (attempt.refresh_status === 'partial') {
+      partialCount++
+      console.warn(`[refresh] ${symbol} ⚠ partial — ${attempt.fetch_errors.join('; ')} (${relevanceInfo})`)
+    } else {
+      errorCount++
+      console.error(`[refresh] ${symbol} ✗ error — ${attempt.fetch_errors.join('; ')}`)
+    }
   }
 
   console.log(`\n[refresh] Summary: ${successCount} success, ${partialCount} partial, ${errorCount} error`)
 
-  // overallStatus: all-error → abort; any partial/error → partial; all success → success
   const overallStatus = errorCount === SYMBOLS.length ? 'error'
     : (partialCount > 0 || errorCount > 0) ? 'partial'
     : 'success'
 
   if (overallStatus === 'error') {
-    console.error('[refresh] All symbols failed — aborting without writing output (no upload will occur)')
+    console.error('[refresh] All symbols failed — aborting without writing output')
     process.exit(1)
   }
 
@@ -282,14 +351,10 @@ async function main() {
     const prevSymData   = previousJson?.symbols?.[symbol]
     const prevHistory   = prevSymData?.history ?? []
 
-    // If this attempt failed, preserve the previous known-good latest so the
-    // website still shows real data rather than an empty/null state.
-    // The failure is recorded in last_attempt_* and history.
     const publishedLatest = attempt.refresh_status === 'error' && prevSymData?.latest
-      ? prevSymData.latest        // keep last known-good data
-      : attempt                   // use this run's result
+      ? prevSymData.latest
+      : attempt
 
-    // Compact history entry (all runs, including failures)
     const historyEntry = {
       fetched_at:     attempt.fetched_at,
       refresh_status: attempt.refresh_status,
@@ -302,10 +367,10 @@ async function main() {
     }
 
     symbolsOutput[symbol] = {
-      latest:              publishedLatest,           // last known-good (frontend reads this)
-      last_attempt_at:     attempt.fetched_at,        // when this run happened
-      last_attempt_status: attempt.refresh_status,    // success | partial | error
-      last_attempt_errors: attempt.fetch_errors,      // empty on success
+      latest:              publishedLatest,
+      last_attempt_at:     attempt.fetched_at,
+      last_attempt_status: attempt.refresh_status,
+      last_attempt_errors: attempt.fetch_errors,
       history:             [historyEntry, ...prevHistory].slice(0, MAX_HISTORY),
     }
   }
