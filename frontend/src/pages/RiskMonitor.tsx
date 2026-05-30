@@ -32,14 +32,23 @@ function saveWatchlist(list: string[]) {
 
 // ── types ────────────────────────────────────────────────────────────────────
 
-interface MonitorRefreshRun {
-  id: number
-  symbol: string
-  refresh_status: string
+interface SymbolMonitorData {
   fetched_at: string
-  news_item_count: number
-  error_message: string | null
-  created_at: string
+  refresh_status: string
+  fetch_errors: string[]
+  summary: {
+    signal_level: string
+    combined_score: number
+    data_coverage: string
+    interpretation_status: string
+  } | null
+  news_count: number
+}
+
+interface MonitoringJsonData {
+  generated_at: string
+  refresh_status: string
+  symbols: Record<string, SymbolMonitorData>
 }
 
 interface CautionSummaryRecord {
@@ -329,20 +338,18 @@ export function RiskMonitor() {
     staleTime: 2 * 60_000,
   })
 
-  const { data: refreshRunData } = useQuery({
-    queryKey: ['php-monitor-refresh', selectedHistorySymbol],
-    queryFn:  () => phpGet<{ symbol: string; runs: MonitorRefreshRun[]; count: number }>(
-      `/monitor_refresh_runs.php?symbol=${selectedHistorySymbol}&limit=1`
-    ),
-    enabled:   !!selectedHistorySymbol,
-    retry:     0,
-    staleTime: 5 * 60_000,
+  const { data: monitoringJson } = useQuery({
+    queryKey: ['monitoring-json'],
+    queryFn:  () => phpGet<MonitoringJsonData | null>('/monitoring-data.php'),
+    retry:    0,
+    staleTime: 10 * 60_000,
   })
 
-  const historySummaries = cauSumData?.summaries ?? []
-  const historyNews      = extSigData?.items      ?? []
-  const latestRun        = refreshRunData?.runs?.[0] ?? null
-  const freshness        = getFreshnessStatus(latestRun?.fetched_at)
+  const historySummaries  = cauSumData?.summaries ?? []
+  const historyNews       = extSigData?.items      ?? []
+  const symbolMonitorData = monitoringJson?.symbols?.[selectedHistorySymbol] ?? null
+  const lastFetchedAt     = symbolMonitorData?.fetched_at ?? monitoringJson?.generated_at ?? null
+  const freshness         = getFreshnessStatus(lastFetchedAt)
 
   // Data priority: FastAPI (non-empty) > PHP > DEMO
   // Empty array from FastAPI (all tickers rate-limited) must NOT block PHP fallback
@@ -541,10 +548,10 @@ export function RiskMonitor() {
             <span className="text-[10px]" style={{ color: '#475569' }}>由排程自動更新</span>
             <div className="flex items-center gap-2 ml-auto">
               <Clock size={11} color="#64748b" />
-              {latestRun ? (
+              {lastFetchedAt ? (
                 <>
                   <span className="text-[10px] font-mono" style={{ color: '#64748b' }}>
-                    {formatFreshnessTime(latestRun.fetched_at)}
+                    {formatFreshnessTime(lastFetchedAt)}
                   </span>
                   <span
                     className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
@@ -558,13 +565,13 @@ export function RiskMonitor() {
                   </span>
                 </>
               ) : (
-                <span className="text-[10px]" style={{ color: '#475569' }}>尚無排程紀錄</span>
+                <span className="text-[10px]" style={{ color: '#475569' }}>尚未完成首次自動更新</span>
               )}
             </div>
           </div>
-          {!latestRun && (
+          {!lastFetchedAt && (
             <div className="px-3 py-2 rounded mb-3 text-xs" style={{ background: '#0f1117', border: '1px solid #2d3148', color: '#475569' }}>
-              尚無自動監控紀錄，請先執行更新排程。
+              尚未完成首次自動更新，歷史摘要將在 workflow 執行後顯示。
             </div>
           )}
 

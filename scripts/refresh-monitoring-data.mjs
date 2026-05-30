@@ -5,27 +5,28 @@
  * Scheduled refresh script — run by GitHub Actions every 6 hours.
  * For each monitored symbol:
  *   1. Fetches social-signals, market-snapshots, market-history from HF backend
- *   2. Computes caution summary (mirrors investorCaution.ts logic exactly)
- *   3. POSTs batch to InfinityFree ingest_monitoring_batch.php with X-INGEST-KEY
+ *   2. Computes caution summary (mirrors investorCaution.ts logic)
+ *   3. Writes aggregated JSON to generated-data/monitoring-latest.json
+ *   (GitHub Actions then FTP-uploads that file to InfinityFree /htdocs/data/)
  *
  * Required env vars:
- *   HF_API_BASE      — e.g. https://your-space.hf.space
- *   INGEST_ENDPOINT  — e.g. https://yoursite.infinityfreeapp.com/php-api/ingest_monitoring_batch.php
- *   INGEST_SECRET    — must match INGEST_SECRET defined in config.local.php
+ *   HF_API_BASE  — e.g. https://your-space.hf.space
  */
 
-const SYMBOLS = ['GME', 'TSLA', 'AAPL', 'AMC', 'NVDA', 'MSFT', 'META', 'AMZN']
+import { mkdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
-const HF_API_BASE     = process.env.HF_API_BASE     ?? ''
-const INGEST_ENDPOINT = process.env.INGEST_ENDPOINT ?? ''
-const INGEST_SECRET   = process.env.INGEST_SECRET   ?? ''
+const SYMBOLS     = ['GME', 'TSLA', 'AAPL', 'AMC', 'NVDA', 'MSFT', 'META', 'AMZN']
+const HF_API_BASE = process.env.HF_API_BASE ?? ''
+const OUTPUT_DIR  = 'generated-data'
+const OUTPUT_FILE = join(OUTPUT_DIR, 'monitoring-latest.json')
 
-if (!HF_API_BASE || !INGEST_ENDPOINT || !INGEST_SECRET) {
-  console.error('[refresh] Missing required env vars: HF_API_BASE, INGEST_ENDPOINT, INGEST_SECRET')
+if (!HF_API_BASE) {
+  console.error('[refresh] Missing required env var: HF_API_BASE')
   process.exit(1)
 }
 
-// ── Caution scoring — mirrors investorCaution.ts exactly ─────────────────────
+// ── Caution scoring — mirrors investorCaution.ts ──────────────────────────────
 
 function labelScore(label) {
   switch (label) {
@@ -46,10 +47,6 @@ function normalizeRiskScore(value, label) {
 function avg(values) {
   if (values.length === 0) return 0
   return values.reduce((a, b) => a + b, 0) / values.length
-}
-
-function isHighOrCritical(label) {
-  return label === 'Critical' || label === 'High'
 }
 
 function isScoredItem(item) {
@@ -131,13 +128,10 @@ function computeCautionSummary(newsItems, fastapiSnapshot, histItems, generatedA
   wNews /= totalW; wSnap /= totalW; wHist /= totalW
 
   const combinedScore = Math.round(newsR.score * wNews + snapR.score * wSnap + histR.score * wHist)
-
   const signalLevel =
     combinedScore >= 80 ? 'extreme' :
     combinedScore >= 60 ? 'high' :
     combinedScore >= 35 ? 'medium' : 'low'
-
-  const interpretationStatus = dataCoverage === 'FULL' ? 'comprehensive' : 'preliminary'
 
   return {
     signal_level:          signalLevel,
@@ -146,7 +140,7 @@ function computeCautionSummary(newsItems, fastapiSnapshot, histItems, generatedA
     latest_snapshot_score: Math.round(snapR.score),
     market_history_score:  Math.round(histR.score),
     data_coverage:         dataCoverage,
-    interpretation_status: interpretationStatus,
+    interpretation_status: dataCoverage === 'FULL' ? 'comprehensive' : 'preliminary',
     coverage_note:         dataCoverage !== 'FULL' ? '部分資料來源無法取得，摘要為初步觀察。' : '',
     source_count:          sourceCount,
     generated_at:          generatedAt,
@@ -155,52 +149,58 @@ function computeCautionSummary(newsItems, fastapiSnapshot, histItems, generatedA
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 
-async function fetchJson(url, label) {
-  const res = await fetch(url, { signal: AbortSignal.timeout(30_000) })
-  if (!res.ok) throw new Error(`HTTP ${res.status} from ${label}`)
-  return res.json()
+/**
+ * Reads the response body as text first, then attempts JSON.parse.
+ * On failure, includes HTTP status, content-type and body preview in the error
+ * so GitHub Actions logs show the exact response (e.g. HTML error pages).
+ */
+async function parseJsonResponse(res, label) {
+  const contentType = res.headers.get('content-type') || ''
+  const text = await res.text()
+  let data
+  try {
+    data = JSON.parse(text)
+  } catch {
+    const preview = text.replace(/\s+/g, ' ').slice(0, 500)
+    throw new Error(
+      `${label} returned non-JSON: HTTP ${res.status}; content-type=${contentType}; body=${preview}`
+    )
+  }
+  if (!res.ok) {
+    throw new Error(`${label} HTTP ${res.status}: ${JSON.stringify(data).slice(0, 300)}`)
+  }
+  return data
 }
 
-async function postIngest(symbol, payload) {
-  const res = await fetch(INGEST_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'X-INGEST-KEY':  INGEST_SECRET,
-    },
-    body: JSON.stringify(payload),
+async function fetchJson(url, label) {
+  const res = await fetch(url, {
+    headers: { 'Accept': 'application/json' },
     signal: AbortSignal.timeout(30_000),
   })
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`Ingest HTTP ${res.status}: ${text.slice(0, 200)}`)
-  }
-  return res.json()
+  return parseJsonResponse(res, label)
 }
 
-// ── Per-symbol refresh ────────────────────────────────────────────────────────
+// ── Per-symbol fetch ──────────────────────────────────────────────────────────
 
-async function refreshSymbol(symbol) {
-  const generatedAt = new Date().toISOString()
+async function fetchSymbol(symbol) {
+  const fetchedAt = new Date().toISOString()
   let newsItems = [], fastapiSnapshot = null, histItems = []
-  let fetchErrors = []
+  const fetchErrors = []
 
-  // Fetch social signals (Finnhub news)
   try {
     const data = await fetchJson(
       `${HF_API_BASE}/api/v1/social-signals?symbol=${symbol}&sources=finnhub&limit=5`,
-      'social-signals'
+      `social-signals[${symbol}]`
     )
     if (data?.success && Array.isArray(data.items)) newsItems = data.items
   } catch (err) {
     fetchErrors.push(`social-signals: ${err.message}`)
   }
 
-  // Fetch market snapshot
   try {
     const data = await fetchJson(
       `${HF_API_BASE}/api/v1/market-snapshots?symbols=${symbol}`,
-      'market-snapshots'
+      `market-snapshots[${symbol}]`
     )
     if (data?.success && Array.isArray(data?.data?.snapshots) && data.data.snapshots.length > 0) {
       fastapiSnapshot = data.data.snapshots[0]
@@ -209,67 +209,91 @@ async function refreshSymbol(symbol) {
     fetchErrors.push(`market-snapshots: ${err.message}`)
   }
 
-  // Fetch market history
   try {
     const data = await fetchJson(
       `${HF_API_BASE}/api/v1/market-history?symbol=${symbol}&period=1mo`,
-      'market-history'
+      `market-history[${symbol}]`
     )
     if (data?.success && Array.isArray(data.items) && data.items.length > 0) histItems = data.items
   } catch (err) {
     fetchErrors.push(`market-history: ${err.message}`)
   }
 
-  const summary = computeCautionSummary(newsItems, fastapiSnapshot, histItems, generatedAt)
+  const summary = computeCautionSummary(newsItems, fastapiSnapshot, histItems, fetchedAt)
 
   const refresh_status = fetchErrors.length === 0 ? 'success'
-    : fetchErrors.length < 3 ? 'partial'
-    : 'error'
+    : fetchErrors.length < 3 ? 'partial' : 'error'
 
-  const payload = {
-    symbol,
-    fetched_at:      generatedAt,
+  return {
+    fetched_at:     fetchedAt,
     refresh_status,
-    error_message:   fetchErrors.length > 0 ? fetchErrors.join('; ') : null,
-    items:           newsItems,
+    fetch_errors:   fetchErrors,
     summary,
+    news_count:     newsItems.length,
+    // include up to 5 items for potential future use; exclude full text to limit file size
+    items:          newsItems.slice(0, 5).map(item => ({
+      id:            item.id,
+      headline:      item.headline,
+      url:           item.url,
+      published_at:  item.published_at,
+      source:        item.source,
+      ai_risk_label: item.ai_risk_label,
+      ai_risk_score: item.ai_risk_score,
+    })),
   }
-
-  const result = await postIngest(symbol, payload)
-  return { symbol, refresh_status, fetchErrors, ingestResult: result?.data }
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log(`[refresh] Starting monitoring refresh for ${SYMBOLS.length} symbols`)
+  const runStarted = new Date().toISOString()
+  console.log(`[refresh] Starting at ${runStarted}`)
   console.log(`[refresh] HF_API_BASE: ${HF_API_BASE}`)
-  console.log(`[refresh] INGEST_ENDPOINT: ${INGEST_ENDPOINT}`)
-  // INGEST_SECRET intentionally NOT logged
+  console.log(`[refresh] Symbols: ${SYMBOLS.join(', ')}`)
 
-  const results = []
+  const symbolResults = {}
+  let successCount = 0, failCount = 0
+
   for (const symbol of SYMBOLS) {
     try {
-      const r = await refreshSymbol(symbol)
-      results.push({ symbol, ok: true, status: r.refresh_status, fetchErrors: r.fetchErrors })
-      const newsCount = r.ingestResult?.news_inserted ?? '?'
-      console.log(`[refresh] ${symbol} ✓ status=${r.refresh_status} news_inserted=${newsCount}`)
-      if (r.fetchErrors.length > 0) {
-        console.warn(`[refresh] ${symbol} fetch warnings: ${r.fetchErrors.join(', ')}`)
+      symbolResults[symbol] = await fetchSymbol(symbol)
+      const r = symbolResults[symbol]
+      console.log(`[refresh] ${symbol} ✓ status=${r.refresh_status} news=${r.news_count} score=${r.summary?.combined_score ?? 'N/A'}`)
+      if (r.fetch_errors.length > 0) {
+        console.warn(`[refresh] ${symbol} warnings: ${r.fetch_errors.join('; ')}`)
       }
+      successCount++
     } catch (err) {
-      results.push({ symbol, ok: false, error: err.message })
       console.error(`[refresh] ${symbol} ✗ ${err.message}`)
+      symbolResults[symbol] = {
+        fetched_at:     new Date().toISOString(),
+        refresh_status: 'error',
+        fetch_errors:   [err.message],
+        summary:        null,
+        news_count:     0,
+        items:          [],
+      }
+      failCount++
     }
   }
 
-  const succeeded = results.filter(r => r.ok).length
-  const failed    = results.filter(r => !r.ok).length
-  console.log(`\n[refresh] Done: ${succeeded} succeeded, ${failed} failed`)
+  const overallStatus = failCount === SYMBOLS.length ? 'error'
+    : failCount > 0 ? 'partial' : 'success'
 
-  if (failed > 0) {
-    console.log('[refresh] Failed symbols:')
-    results.filter(r => !r.ok).forEach(r => console.log(`  - ${r.symbol}: ${r.error}`))
+  const output = {
+    generated_at:   runStarted,
+    refresh_status: overallStatus,
+    symbols:        symbolResults,
+  }
+
+  await mkdir(OUTPUT_DIR, { recursive: true })
+  await writeFile(OUTPUT_FILE, JSON.stringify(output, null, 2), 'utf-8')
+  console.log(`\n[refresh] Done: ${successCount} succeeded, ${failCount} failed`)
+  console.log(`[refresh] Output written to ${OUTPUT_FILE}`)
+
+  // Fail the workflow only if ALL symbols failed (no usable data at all)
+  if (overallStatus === 'error') {
+    console.error('[refresh] All symbols failed — no data written')
     process.exit(1)
   }
 }

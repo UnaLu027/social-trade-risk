@@ -29,14 +29,23 @@ import {
 
 // ── types ────────────────────────────────────────────────────────────────────
 
-interface MonitorRefreshRun {
-  id: number
-  symbol: string
-  refresh_status: string
+interface SymbolMonitorData {
   fetched_at: string
-  news_item_count: number
-  error_message: string | null
-  created_at: string
+  refresh_status: string
+  fetch_errors: string[]
+  summary: {
+    signal_level: string
+    combined_score: number
+    data_coverage: string
+    interpretation_status: string
+  } | null
+  news_count: number
+}
+
+interface MonitoringJsonData {
+  generated_at: string
+  refresh_status: string
+  symbols: Record<string, SymbolMonitorData>
 }
 
 interface Snapshot {
@@ -304,17 +313,16 @@ export function RiskReport() {
   const cautionColor   = SIGNAL_LEVEL_COLOR[caution.signalLevel]
   const cautionLoading = fastapiLoading || signalsLoading || histLoading
 
-  // ── latest scheduled refresh run (read-only, never writes) ───────────────
-  const { data: refreshRunData } = useQuery({
-    queryKey: ['php-monitor-refresh', upper],
-    queryFn: () => phpGet<{ symbol: string; runs: MonitorRefreshRun[]; count: number }>(
-      `/monitor_refresh_runs.php?symbol=${upper}&limit=1`
-    ),
+  // ── monitoring JSON (FTP-uploaded by GitHub Actions, served via PHP) ────────
+  const { data: monitoringJson } = useQuery({
+    queryKey: ['monitoring-json'],
+    queryFn: () => phpGet<MonitoringJsonData | null>('/monitoring-data.php'),
     retry: 0,
-    staleTime: 5 * 60_000,
+    staleTime: 10 * 60_000,
   })
-  const latestRun = refreshRunData?.runs?.[0] ?? null
-  const freshness = getFreshnessStatus(latestRun?.fetched_at)
+  const symbolMonitorData = monitoringJson?.symbols?.[upper] ?? null
+  const lastFetchedAt     = symbolMonitorData?.fetched_at ?? monitoringJson?.generated_at ?? null
+  const freshness         = getFreshnessStatus(lastFetchedAt)
 
   // ── snapshot market status label (Chinese) ────────────────────────────────
   const snapshotZhLabel = latest?.ai_risk_label
@@ -513,10 +521,10 @@ export function RiskReport() {
         <div className="rounded-lg px-4 py-3 flex items-center gap-3" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
           <Clock size={13} color="#64748b" />
           <span className="text-xs" style={{ color: '#64748b' }}>排程監控更新：</span>
-          {latestRun ? (
+          {lastFetchedAt ? (
             <>
               <span className="text-xs font-mono" style={{ color: '#94a3b8' }}>
-                {formatFreshnessTime(latestRun.fetched_at)}
+                {formatFreshnessTime(lastFetchedAt)}
               </span>
               <span
                 className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
@@ -531,7 +539,7 @@ export function RiskReport() {
             </>
           ) : (
             <span className="text-[11px]" style={{ color: '#475569' }}>
-              尚無自動監控紀錄，請先執行更新排程。
+              尚未完成首次自動更新。
             </span>
           )}
         </div>
