@@ -71,6 +71,19 @@ if ($method === 'POST') {
 
     try {
         $pdo = getDbPdo();
+
+        // Rate limit: skip if same symbol + export_type was logged within the last 60 seconds
+        $chk = $pdo->prepare(
+            "SELECT 1 FROM report_export_logs
+             WHERE symbol = ? AND export_type = ?
+               AND exported_at >= DATE_SUB(NOW(), INTERVAL 60 SECOND)
+             LIMIT 1"
+        );
+        $chk->execute([$symbol, $export_type]);
+        if ($chk->fetch()) {
+            jsonSuccess(['saved' => false, 'reason' => 'rate_limited']);
+        }
+
         $ins = $pdo->prepare(
             'INSERT INTO report_export_logs (symbol, export_type, signal_level, combined_score, exported_at)
              VALUES (?, ?, ?, ?, ?)'

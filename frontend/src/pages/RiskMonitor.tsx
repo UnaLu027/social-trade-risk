@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ShieldAlert, TrendingUp, AlertTriangle, RefreshCw, Zap, Eye } from 'lucide-react'
+import { ShieldAlert, TrendingUp, AlertTriangle, RefreshCw, Zap, Eye, Clock } from 'lucide-react'
 import { phpGet } from '../api/phpClient'
 import { api } from '../api/client'
 import { TopBar } from '../components/layout/TopBar'
 import { TickerAutocomplete } from '../components/TickerAutocomplete'
+import {
+  getFreshnessStatus, formatFreshnessTime,
+  FRESHNESS_LABEL, FRESHNESS_COLOR,
+} from '../lib/monitoringFreshness'
 
 const DEFAULT_SYMBOLS = ['GME', 'AMC', 'TSLA', 'NVDA', 'AAPL', 'MSFT', 'AMD', 'NFLX']
 const WATCHLIST_KEY   = 'social_risk_watchlist_v1'
@@ -27,6 +31,16 @@ function saveWatchlist(list: string[]) {
 }
 
 // ── types ────────────────────────────────────────────────────────────────────
+
+interface MonitorRefreshRun {
+  id: number
+  symbol: string
+  refresh_status: string
+  fetched_at: string
+  news_item_count: number
+  error_message: string | null
+  created_at: string
+}
 
 interface CautionSummaryRecord {
   id: number
@@ -315,8 +329,20 @@ export function RiskMonitor() {
     staleTime: 2 * 60_000,
   })
 
+  const { data: refreshRunData } = useQuery({
+    queryKey: ['php-monitor-refresh', selectedHistorySymbol],
+    queryFn:  () => phpGet<{ symbol: string; runs: MonitorRefreshRun[]; count: number }>(
+      `/monitor_refresh_runs.php?symbol=${selectedHistorySymbol}&limit=1`
+    ),
+    enabled:   !!selectedHistorySymbol,
+    retry:     0,
+    staleTime: 5 * 60_000,
+  })
+
   const historySummaries = cauSumData?.summaries ?? []
   const historyNews      = extSigData?.items      ?? []
+  const latestRun        = refreshRunData?.runs?.[0] ?? null
+  const freshness        = getFreshnessStatus(latestRun?.fetched_at)
 
   // Data priority: FastAPI (non-empty) > PHP > DEMO
   // Empty array from FastAPI (all tickers rate-limited) must NOT block PHP fallback
@@ -509,11 +535,38 @@ export function RiskMonitor() {
 
         {/* ── 歷史監控概覽 ──────────────────────────────────────────────────── */}
         <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
             <TrendingUp size={14} color="#a78bfa" />
             <span className="text-sm font-semibold text-white">歷史監控概覽</span>
-            <span className="text-[10px]" style={{ color: '#475569' }}>由 RiskReport 自動儲存</span>
+            <span className="text-[10px]" style={{ color: '#475569' }}>由排程自動更新</span>
+            <div className="flex items-center gap-2 ml-auto">
+              <Clock size={11} color="#64748b" />
+              {latestRun ? (
+                <>
+                  <span className="text-[10px] font-mono" style={{ color: '#64748b' }}>
+                    {formatFreshnessTime(latestRun.fetched_at)}
+                  </span>
+                  <span
+                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                    style={{
+                      background: FRESHNESS_COLOR[freshness] + '22',
+                      color:      FRESHNESS_COLOR[freshness],
+                      border:     `1px solid ${FRESHNESS_COLOR[freshness]}55`,
+                    }}
+                  >
+                    {FRESHNESS_LABEL[freshness]}
+                  </span>
+                </>
+              ) : (
+                <span className="text-[10px]" style={{ color: '#475569' }}>尚無排程紀錄</span>
+              )}
+            </div>
           </div>
+          {!latestRun && (
+            <div className="px-3 py-2 rounded mb-3 text-xs" style={{ background: '#0f1117', border: '1px solid #2d3148', color: '#475569' }}>
+              尚無自動監控紀錄，請先執行更新排程。
+            </div>
+          )}
 
           {/* Symbol selector */}
           <div className="flex flex-wrap gap-1.5 mb-4">

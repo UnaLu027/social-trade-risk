@@ -1,0 +1,27 @@
+name: Refresh Monitoring Data
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # every 6 hours at :00 UTC
+  workflow_dispatch:          # allow manual trigger from GitHub UI
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run monitoring refresh
+        run: node scripts/refresh-monitoring-data.mjs
+        env:
+          HF_API_BASE:     ${{ secrets.HF_API_BASE }}
+          INGEST_ENDPOINT: ${{ secrets.INGEST_ENDPOINT }}
+          INGEST_SECRET:   ${{ secrets.INGEST_SECRET }}

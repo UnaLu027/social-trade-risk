@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   Calendar, TrendingUp, AlertTriangle, FileText, Newspaper, ExternalLink,
-  ShieldAlert, Info, Copy, Printer, Globe,
+  ShieldAlert, Info, Copy, Printer, Globe, Clock,
 } from 'lucide-react'
 import { phpGet, phpApi } from '../api/phpClient'
 import { api } from '../api/client'
@@ -22,8 +22,22 @@ import {
   copySummary, downloadWord, printReport, downloadHtml,
   type BriefExportInput,
 } from '../lib/investorBriefExport'
+import {
+  getFreshnessStatus, formatFreshnessTime,
+  FRESHNESS_LABEL, FRESHNESS_COLOR,
+} from '../lib/monitoringFreshness'
 
 // ── types ────────────────────────────────────────────────────────────────────
+
+interface MonitorRefreshRun {
+  id: number
+  symbol: string
+  refresh_status: string
+  fetched_at: string
+  news_item_count: number
+  error_message: string | null
+  created_at: string
+}
 
 interface Snapshot {
   snapshot_date: string
@@ -290,6 +304,18 @@ export function RiskReport() {
   const cautionColor   = SIGNAL_LEVEL_COLOR[caution.signalLevel]
   const cautionLoading = fastapiLoading || signalsLoading || histLoading
 
+  // ── latest scheduled refresh run (read-only, never writes) ───────────────
+  const { data: refreshRunData } = useQuery({
+    queryKey: ['php-monitor-refresh', upper],
+    queryFn: () => phpGet<{ symbol: string; runs: MonitorRefreshRun[]; count: number }>(
+      `/monitor_refresh_runs.php?symbol=${upper}&limit=1`
+    ),
+    retry: 0,
+    staleTime: 5 * 60_000,
+  })
+  const latestRun = refreshRunData?.runs?.[0] ?? null
+  const freshness = getFreshnessStatus(latestRun?.fetched_at)
+
   // ── snapshot market status label (Chinese) ────────────────────────────────
   const snapshotZhLabel = latest?.ai_risk_label
     ? (RISK_LABEL_ZH[latest.ai_risk_label] ?? latest.ai_risk_label)
@@ -357,52 +383,6 @@ export function RiskReport() {
     setTimeout(() => setCopyDone(false), 2000)
   }
 
-  // ── persistence: save signals + caution summary once per distinct data set ──
-  const savedRef   = useRef<Set<string>>(new Set())
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'failed'>('idle')
-
-  const firstSignalId = signalItems[0]?.id ?? ''
-  const snapshotDate  = fastapiSnapshot?.snapshot_date ?? ''
-
-  useEffect(() => {
-    if (cautionLoading) return
-    const saveKey = `${upper}|${firstSignalId}|${histItems.length}|${snapshotDate}`
-    if (savedRef.current.has(saveKey)) return
-    savedRef.current.add(saveKey)
-
-    if (signalItems.length > 0) {
-      phpApi.post('/external_signals.php', { symbol: upper, items: signalItems })
-        .catch(err => console.warn('[DB] signal save failed:', err))
-    }
-
-    const sourceCount = [
-      caution.newsCoverage.scoredCount > 0,
-      !!(fastapiSnapshot ?? phpLatest),
-      histItems.length > 0,
-    ].filter(Boolean).length
-
-    phpApi.post('/caution_summaries.php', {
-      symbol:                upper,
-      signal_level:          caution.signalLevel,
-      combined_score:        caution.score,
-      external_news_score:   caution.scoreBreakdown.externalNews,
-      latest_snapshot_score: caution.scoreBreakdown.latestMarketSnapshot,
-      market_history_score:  caution.scoreBreakdown.marketHistory,
-      data_coverage:         caution.dataCoverage,
-      interpretation_status: caution.interpretationStatus,
-      coverage_note:         caution.coverageNote,
-      source_count:          sourceCount,
-      generated_at:          new Date().toISOString(),
-    })
-      .then(() => setSaveStatus('saved'))
-      .catch(err => {
-        console.warn('[DB] summary save failed:', err)
-        setSaveStatus('failed')
-      })
-    // caution excluded from deps intentionally — it changes every render
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [upper, cautionLoading, firstSignalId, histItems.length, snapshotDate])
-
   const logExport = (exportType: string) => {
     phpApi.post('/report_exports.php', {
       symbol:         upper,
@@ -410,7 +390,7 @@ export function RiskReport() {
       signal_level:   caution.signalLevel,
       combined_score: caution.score,
       exported_at:    new Date().toISOString(),
-    }).catch(err => console.warn('[DB] export log failed:', err))
+    }).catch(() => { /* export log failure must not block download */ })
   }
 
   return (
@@ -529,6 +509,33 @@ export function RiskReport() {
           </p>
         </div>
 
+        {/* ── 排程資料更新狀態 ──────────────────────────────────────────────── */}
+        <div className="rounded-lg px-4 py-3 flex items-center gap-3" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
+          <Clock size={13} color="#64748b" />
+          <span className="text-xs" style={{ color: '#64748b' }}>排程監控更新：</span>
+          {latestRun ? (
+            <>
+              <span className="text-xs font-mono" style={{ color: '#94a3b8' }}>
+                {formatFreshnessTime(latestRun.fetched_at)}
+              </span>
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                style={{
+                  background: FRESHNESS_COLOR[freshness] + '22',
+                  color:      FRESHNESS_COLOR[freshness],
+                  border:     `1px solid ${FRESHNESS_COLOR[freshness]}55`,
+                }}
+              >
+                {FRESHNESS_LABEL[freshness]}
+              </span>
+            </>
+          ) : (
+            <span className="text-[11px]" style={{ color: '#475569' }}>
+              尚無自動監控紀錄，請先執行更新排程。
+            </span>
+          )}
+        </div>
+
         {/* ── 綜合警戒摘要卡 ────────────────────────────────────────────────── */}
         <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: `1px solid ${cautionColor}44` }}>
           <div className="flex items-center gap-2 mb-4">
@@ -626,15 +633,6 @@ export function RiskReport() {
               <div className="text-[10px] font-mono" style={{ color: '#475569' }}>
                 生成時間：{formatUtc(caution.generatedAt)} UTC
               </div>
-              {saveStatus !== 'idle' && (
-                <div className="text-[10px]" style={{
-                  color: saveStatus === 'saved' ? '#10b981' : '#64748b',
-                }}>
-                  {saveStatus === 'saved'
-                    ? '本次摘要已儲存至歷史紀錄'
-                    : '歷史紀錄暫時無法更新，不影響目前分析'}
-                </div>
-              )}
 
               {/* ── 匯出按鈕區 ── */}
               <div className="rounded p-3 mt-1" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
