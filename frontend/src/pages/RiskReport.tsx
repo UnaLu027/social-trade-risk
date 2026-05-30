@@ -26,17 +26,54 @@ import {
   getFreshnessStatus, formatFreshnessTime,
   FRESHNESS_LABEL, FRESHNESS_COLOR,
 } from '../lib/monitoringFreshness'
+import { fetchMonitoringData } from '../api/monitoringDataClient'
 
 // ── types ────────────────────────────────────────────────────────────────────
 
-interface MonitorRefreshRun {
-  id: number
-  symbol: string
-  refresh_status: string
+interface ScheduledNewsItem {
+  id: string
+  headline: string | null
+  url: string | null
+  published_at: string
+  source: string
+  ai_risk_label: string | null
+  ai_risk_score: number | null
+}
+
+interface ScheduledSummary {
+  signal_level: string
+  combined_score: number
+  external_news_score: number
+  latest_snapshot_score: number
+  market_history_score: number
+  data_coverage: string
+  interpretation_status: string
+  coverage_note: string
+  source_count: number
+  generated_at: string
+}
+
+interface ScheduledLatest {
   fetched_at: string
-  news_item_count: number
-  error_message: string | null
-  created_at: string
+  refresh_status: string
+  fetch_errors: string[]
+  summary: ScheduledSummary | null
+  items: ScheduledNewsItem[]
+  news_count: number
+}
+
+interface SymbolMonitorData {
+  latest:              ScheduledLatest | null    // last known-good; null only before first successful run
+  last_attempt_at:     string                    // when this refresh run happened
+  last_attempt_status: string                    // 'success'|'partial'|'error'
+  last_attempt_errors: string[]
+  history:             unknown[]
+}
+
+interface MonitoringJsonData {
+  generated_at: string
+  refresh_status: string
+  symbols: Record<string, SymbolMonitorData>
 }
 
 interface Snapshot {
@@ -304,17 +341,24 @@ export function RiskReport() {
   const cautionColor   = SIGNAL_LEVEL_COLOR[caution.signalLevel]
   const cautionLoading = fastapiLoading || signalsLoading || histLoading
 
-  // ── latest scheduled refresh run (read-only, never writes) ───────────────
-  const { data: refreshRunData } = useQuery({
-    queryKey: ['php-monitor-refresh', upper],
-    queryFn: () => phpGet<{ symbol: string; runs: MonitorRefreshRun[]; count: number }>(
-      `/monitor_refresh_runs.php?symbol=${upper}&limit=1`
-    ),
+  // ── monitoring JSON (committed to repo by GitHub Actions, read via raw URL) ──
+  const { data: monitoringJson } = useQuery({
+    queryKey: ['monitoring-json'],
+    queryFn: () => fetchMonitoringData<MonitoringJsonData>(),
     retry: 0,
-    staleTime: 5 * 60_000,
+    staleTime: 10 * 60_000,
   })
-  const latestRun = refreshRunData?.runs?.[0] ?? null
-  const freshness = getFreshnessStatus(latestRun?.fetched_at)
+  const symbolMonData     = monitoringJson?.symbols?.[upper] ?? null
+  const symbolLatest      = symbolMonData?.latest ?? null
+  // Freshness is based only on last known-good data, never on a failed attempt's timestamp
+  const lastFetchedAt     = symbolLatest?.fetched_at ?? null
+  const freshness         = getFreshnessStatus(lastFetchedAt)
+  const scheduledSummary  = symbolLatest?.summary ?? null
+  const scheduledItems    = symbolLatest?.items ?? []
+  // Last-attempt info: shows whether the most recent scheduled run succeeded
+  const lastAttemptStatus = symbolMonData?.last_attempt_status ?? null
+  const lastAttemptErrors = symbolMonData?.last_attempt_errors ?? []
+  const lastAttemptFailed = lastAttemptStatus === 'error' || lastAttemptStatus === 'partial'
 
   // ── snapshot market status label (Chinese) ────────────────────────────────
   const snapshotZhLabel = latest?.ai_risk_label
@@ -509,38 +553,113 @@ export function RiskReport() {
           </p>
         </div>
 
-        {/* ── 排程資料更新狀態 ──────────────────────────────────────────────── */}
-        <div className="rounded-lg px-4 py-3 flex items-center gap-3" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
-          <Clock size={13} color="#64748b" />
-          <span className="text-xs" style={{ color: '#64748b' }}>排程監控更新：</span>
-          {latestRun ? (
-            <>
-              <span className="text-xs font-mono" style={{ color: '#94a3b8' }}>
-                {formatFreshnessTime(latestRun.fetched_at)}
-              </span>
-              <span
-                className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                style={{
-                  background: FRESHNESS_COLOR[freshness] + '22',
-                  color:      FRESHNESS_COLOR[freshness],
-                  border:     `1px solid ${FRESHNESS_COLOR[freshness]}55`,
-                }}
-              >
-                {FRESHNESS_LABEL[freshness]}
-              </span>
-            </>
+        {/* ── 排程監控摘要 ─────────────────────────────────────────────────── */}
+        <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <Clock size={13} color="#64748b" />
+            <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>排程自動監控摘要</span>
+            {lastFetchedAt && (
+              <>
+                <span className="text-[10px] font-mono" style={{ color: '#64748b' }}>
+                  {formatFreshnessTime(lastFetchedAt)}
+                </span>
+                <span
+                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                  style={{
+                    background: FRESHNESS_COLOR[freshness] + '22',
+                    color:      FRESHNESS_COLOR[freshness],
+                    border:     `1px solid ${FRESHNESS_COLOR[freshness]}55`,
+                  }}
+                >
+                  {FRESHNESS_LABEL[freshness]}
+                </span>
+              </>
+            )}
+          </div>
+
+          {/* Last-attempt failure warning — shown above the data regardless */}
+          {lastAttemptFailed && (
+            <div className="rounded px-2.5 py-1.5 mb-2 text-[10px]"
+              style={{ background: '#1c0505', border: '1px solid #7f1d1d', color: '#fca5a5' }}>
+              最近排程執行失敗（{lastAttemptStatus}）
+              {lastAttemptErrors.length > 0 && <>：{lastAttemptErrors[0].slice(0, 80)}</>}
+              {lastFetchedAt && ' · 以下顯示上次成功資料'}
+            </div>
+          )}
+
+          {!lastFetchedAt ? (
+            <p className="text-xs" style={{ color: '#475569' }}>尚未完成首次自動更新。</p>
+          ) : !scheduledSummary ? (
+            <p className="text-xs" style={{ color: '#475569' }}>最近一次排程執行未能取得完整資料。</p>
           ) : (
-            <span className="text-[11px]" style={{ color: '#475569' }}>
-              尚無自動監控紀錄，請先執行更新排程。
-            </span>
+            <div className="flex flex-col gap-3">
+              {/* Score chip row */}
+              <div className="flex items-center gap-3 flex-wrap">
+                {(() => {
+                  const sigColor = SIGNAL_LEVEL_COLOR[scheduledSummary.signal_level as import('../lib/investorCaution').SignalLevel] ?? '#64748b'
+                  const sigLabel = SIGNAL_LEVEL_LABEL[scheduledSummary.signal_level as import('../lib/investorCaution').SignalLevel] ?? scheduledSummary.signal_level
+                  return (
+                    <>
+                      <span className="text-sm font-bold px-2.5 py-0.5 rounded-full"
+                        style={{ background: sigColor + '22', color: sigColor, border: `1px solid ${sigColor}55` }}>
+                        {sigLabel}
+                      </span>
+                      <span className="text-xs font-mono" style={{ color: '#64748b' }}>
+                        {scheduledSummary.combined_score} / 100
+                      </span>
+                      <span className="text-[10px]" style={{ color: '#475569' }}>
+                        {scheduledSummary.data_coverage === 'FULL' ? '完整涵蓋' : scheduledSummary.data_coverage}
+                        {' · '}{scheduledSummary.interpretation_status === 'comprehensive' ? '綜合觀察' : '初步觀察'}
+                      </span>
+                    </>
+                  )
+                })()}
+              </div>
+
+              {/* Scheduled news items (compact) */}
+              {scheduledItems.length > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  <div className="text-[10px] font-semibold" style={{ color: '#64748b' }}>排程擷取之新聞文本訊號</div>
+                  {scheduledItems.slice(0, 3).map(item => {
+                    const rc = item.ai_risk_label === 'Critical' ? '#ef4444' : item.ai_risk_label === 'High' ? '#f97316' : item.ai_risk_label === 'Medium' ? '#f59e0b' : '#10b981'
+                    return (
+                      <div key={item.id} className="rounded px-2.5 py-1.5 flex items-start gap-2" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                        {item.ai_risk_label && (
+                          <span className="text-[10px] font-bold flex-shrink-0 mt-0.5 px-1 py-0.5 rounded"
+                            style={{ background: rc + '22', color: rc, border: `1px solid ${rc}44` }}>
+                            {item.ai_risk_label}
+                          </span>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          {item.url ? (
+                            <a href={item.url} target="_blank" rel="noopener noreferrer"
+                              className="text-xs leading-snug" style={{ color: '#e2e8f0' }}>
+                              {item.headline ?? '（無標題）'}
+                            </a>
+                          ) : (
+                            <span className="text-xs leading-snug text-white">{item.headline ?? '（無標題）'}</span>
+                          )}
+                          <div className="text-[10px] mt-0.5 font-mono" style={{ color: '#475569' }}>
+                            {formatUtc(item.published_at)}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
-        {/* ── 綜合警戒摘要卡 ────────────────────────────────────────────────── */}
+        {/* ── 綜合警戒摘要卡（即時） ────────────────────────────────────────── */}
         <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: `1px solid ${cautionColor}44` }}>
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-1">
             <ShieldAlert size={14} color={cautionColor} />
             <span className="text-sm font-semibold text-white">外部新聞與市場訊號綜合警戒摘要</span>
+          </div>
+          <div className="text-[10px] mb-3" style={{ color: '#475569' }}>
+            即時資料查詢結果（Hugging Face 即時計算 · 不與排程更新時間對應）
           </div>
 
           {cautionLoading ? (

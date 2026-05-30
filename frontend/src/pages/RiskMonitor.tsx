@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ShieldAlert, TrendingUp, AlertTriangle, RefreshCw, Zap, Eye, Clock } from 'lucide-react'
+import { ShieldAlert, TrendingUp, RefreshCw, Eye, Clock } from 'lucide-react'
 import { phpGet } from '../api/phpClient'
 import { api } from '../api/client'
 import { TopBar } from '../components/layout/TopBar'
@@ -10,6 +10,7 @@ import {
   getFreshnessStatus, formatFreshnessTime,
   FRESHNESS_LABEL, FRESHNESS_COLOR,
 } from '../lib/monitoringFreshness'
+import { fetchMonitoringData } from '../api/monitoringDataClient'
 
 const DEFAULT_SYMBOLS = ['GME', 'AMC', 'TSLA', 'NVDA', 'AAPL', 'MSFT', 'AMD', 'NFLX']
 const WATCHLIST_KEY   = 'social_risk_watchlist_v1'
@@ -32,42 +33,64 @@ function saveWatchlist(list: string[]) {
 
 // ── types ────────────────────────────────────────────────────────────────────
 
-interface MonitorRefreshRun {
-  id: number
-  symbol: string
-  refresh_status: string
-  fetched_at: string
-  news_item_count: number
-  error_message: string | null
-  created_at: string
-}
-
-interface CautionSummaryRecord {
-  id: number
-  symbol: string
-  signal_level: string
-  combined_score: number
-  external_news_score: number | null
-  latest_snapshot_score: number | null
-  market_history_score: number | null
-  data_coverage: string
-  interpretation_status: string
-  coverage_note: string | null
-  source_count: number
-  generated_at: string
-  created_at: string
-}
-
-interface ExternalSignalRecord {
-  id: number
-  symbol: string
-  source: string
-  headline: string
+// Scheduled news item (from monitoring JSON latest.items)
+interface ScheduledNewsItem {
+  id: string
+  headline: string | null
   url: string | null
-  published_at: string | null
+  published_at: string
+  source: string
   ai_risk_label: string | null
   ai_risk_score: number | null
 }
+
+// Compact history entry (summary only, no items, to control JSON size)
+interface ScheduledHistoryEntry {
+  fetched_at: string
+  refresh_status: string
+  summary: {
+    signal_level: string
+    combined_score: number
+    data_coverage: string
+    interpretation_status: string
+  } | null
+}
+
+interface ScheduledLatest {
+  fetched_at: string
+  refresh_status: string
+  fetch_errors: string[]
+  summary: {
+    signal_level: string
+    combined_score: number
+    external_news_score: number
+    latest_snapshot_score: number
+    market_history_score: number
+    data_coverage: string
+    interpretation_status: string
+    coverage_note: string
+    source_count: number
+    generated_at: string
+  } | null
+  items: ScheduledNewsItem[]
+  news_count: number
+}
+
+interface SymbolMonitorData {
+  latest:              ScheduledLatest | null
+  last_attempt_at:     string
+  last_attempt_status: string
+  last_attempt_errors: string[]
+  history:             ScheduledHistoryEntry[]
+}
+
+interface MonitoringJsonData {
+  generated_at: string
+  refresh_status: string
+  symbols: Record<string, SymbolMonitorData>
+}
+
+
 
 interface RiskSnapshot {
   symbol: string
@@ -309,40 +332,21 @@ export function RiskMonitor() {
     watchlist.length > 0 ? watchlist[0] : 'GME'
   )
 
-  const { data: cauSumData } = useQuery({
-    queryKey: ['php-caution-summaries', selectedHistorySymbol],
-    queryFn:  () => phpGet<{ summaries: CautionSummaryRecord[]; count: number }>(
-      `/caution_summaries.php?symbol=${selectedHistorySymbol}&limit=7`
-    ),
-    enabled:   !!selectedHistorySymbol,
-    retry:     0,
-    staleTime: 2 * 60_000,
+  const { data: monitoringJson } = useQuery({
+    queryKey: ['monitoring-json'],
+    queryFn:  () => fetchMonitoringData<MonitoringJsonData>(),
+    retry:    0,
+    staleTime: 10 * 60_000,
   })
 
-  const { data: extSigData } = useQuery({
-    queryKey: ['php-external-signals', selectedHistorySymbol],
-    queryFn:  () => phpGet<{ items: ExternalSignalRecord[]; count: number }>(
-      `/external_signals.php?symbol=${selectedHistorySymbol}&limit=5`
-    ),
-    enabled:   !!selectedHistorySymbol,
-    retry:     0,
-    staleTime: 2 * 60_000,
-  })
-
-  const { data: refreshRunData } = useQuery({
-    queryKey: ['php-monitor-refresh', selectedHistorySymbol],
-    queryFn:  () => phpGet<{ symbol: string; runs: MonitorRefreshRun[]; count: number }>(
-      `/monitor_refresh_runs.php?symbol=${selectedHistorySymbol}&limit=1`
-    ),
-    enabled:   !!selectedHistorySymbol,
-    retry:     0,
-    staleTime: 5 * 60_000,
-  })
-
-  const historySummaries = cauSumData?.summaries ?? []
-  const historyNews      = extSigData?.items      ?? []
-  const latestRun        = refreshRunData?.runs?.[0] ?? null
-  const freshness        = getFreshnessStatus(latestRun?.fetched_at)
+  const symbolMonitorData = monitoringJson?.symbols?.[selectedHistorySymbol] ?? null
+  const historySummaries  = symbolMonitorData?.history ?? []
+  const historyNews       = symbolMonitorData?.latest?.items ?? []
+  // Freshness uses only the last known-good data timestamp (never a failed-attempt time)
+  const lastFetchedAt     = symbolMonitorData?.latest?.fetched_at ?? null
+  const freshness         = getFreshnessStatus(lastFetchedAt)
+  const lastAttemptFailed = symbolMonitorData?.last_attempt_status === 'error'
+    || symbolMonitorData?.last_attempt_status === 'partial'
 
   // Data priority: FastAPI (non-empty) > PHP > DEMO
   // Empty array from FastAPI (all tickers rate-limited) must NOT block PHP fallback
@@ -541,10 +545,10 @@ export function RiskMonitor() {
             <span className="text-[10px]" style={{ color: '#475569' }}>由排程自動更新</span>
             <div className="flex items-center gap-2 ml-auto">
               <Clock size={11} color="#64748b" />
-              {latestRun ? (
+              {lastFetchedAt ? (
                 <>
                   <span className="text-[10px] font-mono" style={{ color: '#64748b' }}>
-                    {formatFreshnessTime(latestRun.fetched_at)}
+                    {formatFreshnessTime(lastFetchedAt)}
                   </span>
                   <span
                     className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
@@ -558,13 +562,19 @@ export function RiskMonitor() {
                   </span>
                 </>
               ) : (
-                <span className="text-[10px]" style={{ color: '#475569' }}>尚無排程紀錄</span>
+                <span className="text-[10px]" style={{ color: '#475569' }}>尚未完成首次自動更新</span>
               )}
             </div>
           </div>
-          {!latestRun && (
+          {!lastFetchedAt && (
             <div className="px-3 py-2 rounded mb-3 text-xs" style={{ background: '#0f1117', border: '1px solid #2d3148', color: '#475569' }}>
-              尚無自動監控紀錄，請先執行更新排程。
+              尚未完成首次自動更新，歷史摘要將在 workflow 執行後顯示。
+            </div>
+          )}
+          {lastAttemptFailed && lastFetchedAt && (
+            <div className="px-3 py-1.5 rounded mb-3 text-[10px]"
+              style={{ background: '#1c0505', border: '1px solid #7f1d1d', color: '#fca5a5' }}>
+              最近一次排程嘗試失敗 · 以下顯示上次成功資料
             </div>
           )}
 
@@ -594,26 +604,32 @@ export function RiskMonitor() {
               </div>
               {historySummaries.length === 0 ? (
                 <p className="text-xs py-4 text-center" style={{ color: '#475569' }}>
-                  尚無歷史摘要，請先查看該標的風險報告。
+                  尚無排程歷史摘要，請先執行自動監控更新排程。
                 </p>
               ) : (
-                historySummaries.map(s => {
-                  const sigColor = SIG_COLOR[s.signal_level] ?? '#64748b'
-                  const sigLabel = SIG_LABEL[s.signal_level] ?? s.signal_level
+                historySummaries.map((s, i) => {
+                  const sum = s.summary
+                  if (!sum) return (
+                    <div key={i} className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                      <div className="text-[10px]" style={{ color: '#64748b' }}>{formatHistTime(s.fetched_at)} · {s.refresh_status}</div>
+                    </div>
+                  )
+                  const sigColor = SIG_COLOR[sum.signal_level] ?? '#64748b'
+                  const sigLabel = SIG_LABEL[sum.signal_level] ?? sum.signal_level
                   return (
-                    <div key={s.id} className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                    <div key={i} className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-semibold" style={{ color: sigColor }}>{sigLabel}</span>
-                        <span className="text-[10px] font-mono" style={{ color: '#64748b' }}>{s.combined_score} / 100</span>
+                        <span className="text-[10px] font-mono" style={{ color: '#64748b' }}>{sum.combined_score} / 100</span>
                       </div>
                       <div className="text-[10px] mb-1.5" style={{ color: '#64748b' }}>
-                        {s.data_coverage} · {INTERP_LABEL[s.interpretation_status] ?? s.interpretation_status}
+                        {sum.data_coverage} · {INTERP_LABEL[sum.interpretation_status] ?? sum.interpretation_status}
                       </div>
                       <div style={{ background: '#2d3148', height: '3px', borderRadius: '2px' }}>
-                        <div style={{ background: sigColor, width: `${Math.min(s.combined_score, 100)}%`, height: '3px', borderRadius: '2px' }} />
+                        <div style={{ background: sigColor, width: `${Math.min(sum.combined_score, 100)}%`, height: '3px', borderRadius: '2px' }} />
                       </div>
                       <div className="text-[10px] mt-1" style={{ color: '#475569' }}>
-                        {formatHistTime(s.generated_at)}
+                        {formatHistTime(s.fetched_at)}
                       </div>
                     </div>
                   )
@@ -628,7 +644,7 @@ export function RiskMonitor() {
               </div>
               {historyNews.length === 0 ? (
                 <p className="text-xs py-4 text-center" style={{ color: '#475569' }}>
-                  尚無儲存之外部新聞文本訊號。
+                  尚無排程新聞資料，請先執行自動監控更新排程。
                 </p>
               ) : (
                 historyNews.map(item => {

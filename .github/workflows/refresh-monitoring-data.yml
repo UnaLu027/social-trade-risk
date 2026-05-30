@@ -3,7 +3,11 @@ name: Refresh Monitoring Data
 on:
   schedule:
     - cron: '0 */6 * * *'   # every 6 hours at :00 UTC
-  workflow_dispatch:          # allow manual trigger from GitHub UI
+  workflow_dispatch:          # allow manual trigger — select branch in GitHub UI
+
+# Required so the workflow can commit generated-data/monitoring-latest.json
+permissions:
+  contents: write
 
 jobs:
   refresh:
@@ -19,9 +23,38 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Run monitoring refresh
+      - name: Prepare previous monitoring data for history continuity
+        # If a previous monitoring-latest.json is already committed in this branch,
+        # copy it as monitoring-previous.json so the script can append to its history.
+        # On the very first run the file does not exist; the script handles that gracefully.
+        run: |
+          mkdir -p generated-data
+          if [ -f generated-data/monitoring-latest.json ]; then
+            cp generated-data/monitoring-latest.json generated-data/monitoring-previous.json
+            echo "[git] Copied existing JSON as previous for history continuity"
+          else
+            echo "[git] No existing JSON found — first run, starting fresh history"
+          fi
+
+      - name: Generate monitoring JSON
         run: node scripts/refresh-monitoring-data.mjs
         env:
-          HF_API_BASE:     ${{ secrets.HF_API_BASE }}
-          INGEST_ENDPOINT: ${{ secrets.INGEST_ENDPOINT }}
-          INGEST_SECRET:   ${{ secrets.INGEST_SECRET }}
+          HF_API_BASE: ${{ secrets.HF_API_BASE }}
+
+      - name: Commit and push updated monitoring JSON
+        # Commits generated-data/monitoring-latest.json back to the branch that
+        # triggered this workflow (GITHUB_REF_NAME).
+        # [skip ci] prevents re-triggering other push-triggered workflows.
+        # Since this workflow only runs on schedule/workflow_dispatch (not push),
+        # there is no loop risk regardless.
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add generated-data/monitoring-latest.json
+          if git diff --cached --quiet; then
+            echo "[git] No monitoring data changes to commit"
+          else
+            git commit -m "chore: refresh monitoring data [skip ci]"
+            git push origin HEAD:${GITHUB_REF_NAME}
+            echo "[git] Pushed updated monitoring JSON to ${GITHUB_REF_NAME}"
+          fi
