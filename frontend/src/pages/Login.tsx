@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { TrendingUp, LogIn } from 'lucide-react'
+import { TrendingUp, LogIn, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 type ApiErr = { response?: { data?: { detail?: string } } }
@@ -53,6 +53,29 @@ export function Login() {
           <span className="text-sm font-semibold text-white">Social Trading Risk Copilot</span>
         </div>
 
+        {/* Security disclosure */}
+        <div
+          className="rounded-xl p-4 mb-4 flex flex-col gap-2"
+          style={{ background: '#0d1425', border: '1px solid #1e3a5f' }}
+        >
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={13} color="#38bdf8" />
+            <span className="text-xs font-semibold" style={{ color: '#38bdf8' }}>安全使用說明</span>
+          </div>
+          <p className="text-xs leading-relaxed" style={{ color: '#7dd3fc' }}>
+            本網站為國立中正大學課程專題展示系統，僅提供社群交易風險分析與個人觀察清單功能。
+            本站不連結券商、銀行、Google、學校或其他第三方帳戶，也不會要求任何金融服務密碼。
+            請僅輸入您為本網站建立的專用密碼，勿使用其他平台的既有密碼。
+          </p>
+          <Link
+            to="/security-notice"
+            className="text-[11px] underline self-start"
+            style={{ color: '#38bdf8' }}
+          >
+            查看資料使用與安全說明
+          </Link>
+        </div>
+
         <div className="rounded-xl p-6" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
           <h1 className="text-lg font-semibold text-white mb-1">登入帳號</h1>
           <p className="text-xs mb-5" style={{ color: '#64748b' }}>
@@ -93,7 +116,7 @@ export function Login() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium" style={{ color: '#94a3b8' }}>密碼</label>
+              <label className="text-xs font-medium" style={{ color: '#94a3b8' }}>本站專用密碼</label>
               <input
                 type="password"
                 value={password}
