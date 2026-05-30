@@ -8,23 +8,45 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.database import engine, SessionLocal
 from app.models import Base, Ticker, Watchlist
+from app.models.user import UserWatchlistItem
 from app.ml import inference
 from app.ml.fakenews import inference_fakenews
 from app.routers import market_pulse, event_replay, alerts, scenario, screener, fake_news, model_insights, copilot
+from app.routers import auth as auth_router, me_watchlist as me_watchlist_router
 
 settings = get_settings()
 _scheduler = BackgroundScheduler()
 
 
+def _get_tracked_symbols(db: Session) -> list[str]:
+    """
+    Returns DISTINCT symbols that the scheduler should refresh — the union of:
+      1. Global Watchlist symbols (legacy; kept so existing /api/v1/watchlist routes
+         still receive scheduled price / hype data during the transition period).
+      2. Active personal UserWatchlistItem symbols (any active user's tracked symbols).
+    Symbols that appear in both sources or in multiple users' lists are deduplicated.
+    Returns an empty list only when both sources have no entries.
+    """
+    from sqlalchemy import union
+    global_q = select(Watchlist.symbol)
+    personal_q = (
+        select(UserWatchlistItem.symbol)
+        .where(UserWatchlistItem.is_active == True)
+    )
+    combined = union(global_q, personal_q).subquery()
+    rows = db.execute(select(combined.c.symbol)).scalars().all()
+    return list(rows)
+
+
 def _sync_prices():
     """
-    Fetch latest OHLCV data for every watchlist symbol.
+    Fetch latest OHLCV data for every personally-tracked symbol (any active user).
     Cascade: 1-day/5-min (intraday) → 5-day/1-hour (after-hours / weekends) → 1-month/1-day.
     Taiwan stocks (.TW) skip the 5-min interval (not available via yfinance).
     """
     db: Session = SessionLocal()
     try:
-        symbols = [w.symbol for w in db.execute(select(Watchlist)).scalars().all()]
+        symbols = _get_tracked_symbols(db)
         from app.services import yfinance_service as yf_svc
         for sym in symbols:
             is_tw = sym.endswith(".TW")
@@ -45,7 +67,7 @@ def _sync_prices():
 def _sync_reddit():
     db: Session = SessionLocal()
     try:
-        symbols = [w.symbol for w in db.execute(select(Watchlist)).scalars().all()]
+        symbols = _get_tracked_symbols(db)
         from app.services import reddit_service, sentiment_service, yfinance_service as yf_svc
         for sym in symbols:
             ticker = db.execute(select(Ticker).where(Ticker.symbol == sym)).scalar_one_or_none()
@@ -69,7 +91,12 @@ def _sync_reddit():
 def _compute_hype():
     db: Session = SessionLocal()
     try:
-        tickers = db.execute(select(Ticker).where(Ticker.is_active == True)).scalars().all()
+        tracked_symbols = set(_get_tracked_symbols(db))
+        if not tracked_symbols:
+            return
+        tickers = db.execute(
+            select(Ticker).where(Ticker.is_active == True, Ticker.symbol.in_(tracked_symbols))
+        ).scalars().all()
         from app.services import hype_calculator, alert_engine
         for ticker in tickers:
             hype = hype_calculator.compute_and_store_hype(db, ticker)
@@ -135,6 +162,8 @@ app.include_router(screener.router)
 app.include_router(fake_news.router)
 app.include_router(model_insights.router)
 app.include_router(copilot.router)
+app.include_router(auth_router.router)
+app.include_router(me_watchlist_router.router)
 
 
 @app.get("/health")
