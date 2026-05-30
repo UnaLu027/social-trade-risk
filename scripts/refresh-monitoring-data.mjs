@@ -5,7 +5,7 @@
  * Scheduled refresh script — run by GitHub Actions every 6 hours.
  * For each monitored symbol:
  *   1. Fetches social-signals, market-snapshots, market-history from HF backend
- *   2. Computes caution summary (mirrors investorCaution.ts logic exactly)
+ *   2. Computes caution summary — mirrors investorCaution.ts + newsRelevance.ts (I2-D)
  *   3. POSTs batch to InfinityFree ingest_monitoring_batch.php with X-INGEST-KEY
  *
  * Required env vars:
@@ -25,7 +25,31 @@ if (!HF_API_BASE || !INGEST_ENDPOINT || !INGEST_SECRET) {
   process.exit(1)
 }
 
-// ── Caution scoring — mirrors investorCaution.ts exactly ─────────────────────
+// ── News relevance — mirrors frontend/src/lib/newsRelevance.ts (I2-D) ─────────
+
+const COMPANY_KEYWORDS = {
+  GME:  { direct: ['gamestop', 'gme'],                           contextual: ['meme stock', 'short squeeze', 'wallstreetbets', 'wsb'] },
+  TSLA: { direct: ['tesla', 'tsla', 'cybercab', 'robotaxi'],     contextual: ['electric vehicle', 'elon musk', 'autonomous vehicle', 'ev maker'] },
+  AAPL: { direct: ['apple', 'aapl', 'iphone', 'ipad', 'airpods'], contextual: ['smartphone', 'app store', 'ios ', 'macos'] },
+  AMC:  { direct: ['amc entertainment', 'amc'],                   contextual: ['movie theater', 'cinema', 'box office', 'meme stock'] },
+  NVDA: { direct: ['nvidia', 'nvda'],                             contextual: ['gpu', 'graphics card', 'ai chip', 'semiconductor', 'cuda'] },
+  MSFT: { direct: ['microsoft', 'msft'],                         contextual: ['azure', 'office 365', 'windows os', 'copilot'] },
+  META: { direct: ['meta platforms', 'facebook', 'instagram', 'whatsapp', 'meta '], contextual: ['social media', 'social network', 'metaverse'] },
+  AMZN: { direct: ['amazon', 'amzn', 'aws'],                     contextual: ['e-commerce', 'cloud computing', 'prime video'] },
+}
+
+/** Returns 'direct' | 'contextual' | 'low'. Unknown symbols pass through as 'direct'. */
+function getNewsRelevance(symbol, headline, summary) {
+  const kw = COMPANY_KEYWORDS[symbol?.toUpperCase()]
+  if (!kw) return 'direct'
+  const text = [headline, summary].filter(Boolean).join(' ').toLowerCase()
+  if (!text) return 'low'
+  if (kw.direct.some(t => text.includes(t)))     return 'direct'
+  if (kw.contextual.some(t => text.includes(t))) return 'contextual'
+  return 'low'
+}
+
+// ── Caution scoring — mirrors investorCaution.ts (I2-D) ──────────────────────
 
 function labelScore(label) {
   switch (label) {
@@ -48,18 +72,23 @@ function avg(values) {
   return values.reduce((a, b) => a + b, 0) / values.length
 }
 
-function isHighOrCritical(label) {
-  return label === 'Critical' || label === 'High'
-}
-
 function isScoredItem(item) {
   const hasValidScore = item.ai_risk_score != null && Number.isFinite(item.ai_risk_score) && item.ai_risk_score > 0
   const hasValidLabel = ['Low', 'Medium', 'High', 'Critical'].includes(item.ai_risk_label)
   return hasValidScore || hasValidLabel
 }
 
-function scoreNews(items) {
-  if (items.length === 0) return { score: 0, rawCount: 0, scoredCount: 0 }
+/**
+ * Score news with relevance weighting — mirrors I2-D investorCaution.ts scoreNews().
+ * direct=1.0, contextual=0.5, low=excluded from scoring.
+ * Returns enriched items with `relevance` and `included_in_score` fields.
+ */
+function scoreNews(symbol, items) {
+  if (items.length === 0) {
+    return { score: 0, rawCount: 0, scoredCount: 0, directCount: 0, contextualCount: 0, lowCount: 0, enrichedItems: [] }
+  }
+
+  // Deduplicate
   const seenUrls = new Set(), seenHeadlines = new Set(), unique = []
   for (const item of items) {
     const urlKey      = item.url ?? ''
@@ -70,10 +99,42 @@ function scoreNews(items) {
     if (headlineKey) seenHeadlines.add(headlineKey)
     unique.push(item)
   }
-  const scored = unique.filter(isScoredItem)
-  if (scored.length === 0) return { score: 0, rawCount: items.length, scoredCount: 0 }
-  const scores = scored.map(i => normalizeRiskScore(i.ai_risk_score, i.ai_risk_label))
-  return { score: Math.min(100, avg(scores)), rawCount: items.length, scoredCount: scored.length }
+
+  // Assign relevance
+  let directCount = 0, contextualCount = 0, lowCount = 0
+  const enrichedItems = unique.map(item => {
+    const relevance = getNewsRelevance(symbol, item.headline, item.summary)
+    if (relevance === 'direct')          directCount++
+    else if (relevance === 'contextual') contextualCount++
+    else                                 lowCount++
+    return { ...item, relevance, included_in_score: relevance !== 'low' && isScoredItem(item) }
+  })
+
+  // Score only direct + contextual items with valid model output
+  const scoreable = enrichedItems.filter(item => item.included_in_score)
+  const scoredCount = scoreable.length
+
+  if (scoredCount === 0) {
+    return { score: 0, rawCount: items.length, scoredCount: 0, directCount, contextualCount, lowCount, enrichedItems }
+  }
+
+  // Weighted average: direct=1.0, contextual=0.5
+  let weightedSum = 0, totalWeight = 0
+  for (const item of scoreable) {
+    const w = item.relevance === 'direct' ? 1.0 : 0.5
+    weightedSum += normalizeRiskScore(item.ai_risk_score, item.ai_risk_label) * w
+    totalWeight += w
+  }
+
+  return {
+    score:          Math.min(100, weightedSum / totalWeight),
+    rawCount:       items.length,
+    scoredCount,
+    directCount,
+    contextualCount,
+    lowCount,
+    enrichedItems,
+  }
 }
 
 function scoreSnapshot(fastapiSnapshot) {
@@ -99,12 +160,13 @@ function scoreHistory(items) {
   return { score: Math.min(100, Math.round(heatAvg * 0.35 + volAvg * 0.35 + fomoAvg * 0.15 + sqAvg * 0.15)) }
 }
 
-function computeCautionSummary(newsItems, fastapiSnapshot, histItems, generatedAt) {
-  const newsR = scoreNews(newsItems)
+/** Mirrors I2-D investorCaution.ts computeInvestorCaution(), accepts symbol for relevance. */
+function computeCautionSummary(symbol, newsItems, fastapiSnapshot, histItems, generatedAt) {
+  const newsR = scoreNews(symbol, newsItems)
   const snapR = scoreSnapshot(fastapiSnapshot)
   const histR = scoreHistory(histItems)
 
-  const hasNews     = newsR.scoredCount > 0
+  const hasNews     = newsR.scoredCount > 0   // only direct/contextual with valid scores
   const hasSnapshot = !!fastapiSnapshot
   const hasHistory  = histItems.length > 0
   const sourceCount = [hasNews, hasSnapshot, hasHistory].filter(Boolean).length
@@ -121,6 +183,7 @@ function computeCautionSummary(newsItems, fastapiSnapshot, histItems, generatedA
       data_coverage: 'NONE', interpretation_status: 'insufficient_data',
       coverage_note: '資料不足，無法產生警戒摘要。',
       source_count: 0, generated_at: generatedAt,
+      _news_debug: { rawCount: newsR.rawCount, scoredCount: 0, directCount: newsR.directCount, contextualCount: newsR.contextualCount, lowCount: newsR.lowCount },
     }
   }
 
@@ -139,6 +202,10 @@ function computeCautionSummary(newsItems, fastapiSnapshot, histItems, generatedA
 
   const interpretationStatus = dataCoverage === 'FULL' ? 'comprehensive' : 'preliminary'
 
+  const coverageNote = !hasNews && newsR.lowCount > 0
+    ? '外部新聞項目均與目標標的關聯性較低，未納入主要警戒計分；本摘要依市場資料形成，僅能視為初步觀察。'
+    : dataCoverage !== 'FULL' ? '部分資料來源無法取得，摘要為初步觀察。' : ''
+
   return {
     signal_level:          signalLevel,
     combined_score:        combinedScore,
@@ -147,18 +214,52 @@ function computeCautionSummary(newsItems, fastapiSnapshot, histItems, generatedA
     market_history_score:  Math.round(histR.score),
     data_coverage:         dataCoverage,
     interpretation_status: interpretationStatus,
-    coverage_note:         dataCoverage !== 'FULL' ? '部分資料來源無法取得，摘要為初步觀察。' : '',
+    coverage_note:         coverageNote,
     source_count:          sourceCount,
     generated_at:          generatedAt,
+    _news_debug: {
+      rawCount:       newsR.rawCount,
+      scoredCount:    newsR.scoredCount,
+      directCount:    newsR.directCount,
+      contextualCount: newsR.contextualCount,
+      lowCount:       newsR.lowCount,
+    },
   }
 }
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 
+/**
+ * Safe response parser: always reads body as text first, then tries JSON.parse.
+ * On failure, includes content-type and body preview in the error so GitHub Actions
+ * logs show exactly what InfinityFree returned (e.g. HTML bot-intercept pages).
+ */
+async function parseJsonResponse(res, label) {
+  const contentType = res.headers.get('content-type') || ''
+  const text = await res.text()
+  let data
+  try {
+    data = JSON.parse(text)
+  } catch {
+    const preview = text.replace(/\s+/g, ' ').slice(0, 500)
+    throw new Error(
+      `${label} returned non-JSON: HTTP ${res.status}; content-type=${contentType}; body=${preview}`
+    )
+  }
+  if (!res.ok) {
+    throw new Error(
+      `${label} HTTP ${res.status}: ${JSON.stringify(data).slice(0, 300)}`
+    )
+  }
+  return data
+}
+
 async function fetchJson(url, label) {
-  const res = await fetch(url, { signal: AbortSignal.timeout(30_000) })
-  if (!res.ok) throw new Error(`HTTP ${res.status} from ${label}`)
-  return res.json()
+  const res = await fetch(url, {
+    headers: { 'Accept': 'application/json' },
+    signal: AbortSignal.timeout(30_000),
+  })
+  return parseJsonResponse(res, label)
 }
 
 async function postIngest(symbol, payload) {
@@ -166,16 +267,15 @@ async function postIngest(symbol, payload) {
     method: 'POST',
     headers: {
       'Content-Type':  'application/json',
+      'Accept':        'application/json',
       'X-INGEST-KEY':  INGEST_SECRET,
+      // Explicit UA helps bypass bot-intercept pages on shared hosting
+      'User-Agent': 'SocialTradeRisk-Refresh/1.0',
     },
     body: JSON.stringify(payload),
     signal: AbortSignal.timeout(30_000),
   })
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`Ingest HTTP ${res.status}: ${text.slice(0, 200)}`)
-  }
-  return res.json()
+  return parseJsonResponse(res, `ingest[${symbol}]`)
 }
 
 // ── Per-symbol refresh ────────────────────────────────────────────────────────
@@ -183,13 +283,13 @@ async function postIngest(symbol, payload) {
 async function refreshSymbol(symbol) {
   const generatedAt = new Date().toISOString()
   let newsItems = [], fastapiSnapshot = null, histItems = []
-  let fetchErrors = []
+  const fetchErrors = []
 
   // Fetch social signals (Finnhub news)
   try {
     const data = await fetchJson(
       `${HF_API_BASE}/api/v1/social-signals?symbol=${symbol}&sources=finnhub&limit=5`,
-      'social-signals'
+      `social-signals[${symbol}]`
     )
     if (data?.success && Array.isArray(data.items)) newsItems = data.items
   } catch (err) {
@@ -200,7 +300,7 @@ async function refreshSymbol(symbol) {
   try {
     const data = await fetchJson(
       `${HF_API_BASE}/api/v1/market-snapshots?symbols=${symbol}`,
-      'market-snapshots'
+      `market-snapshots[${symbol}]`
     )
     if (data?.success && Array.isArray(data?.data?.snapshots) && data.data.snapshots.length > 0) {
       fastapiSnapshot = data.data.snapshots[0]
@@ -213,25 +313,35 @@ async function refreshSymbol(symbol) {
   try {
     const data = await fetchJson(
       `${HF_API_BASE}/api/v1/market-history?symbol=${symbol}&period=1mo`,
-      'market-history'
+      `market-history[${symbol}]`
     )
     if (data?.success && Array.isArray(data.items) && data.items.length > 0) histItems = data.items
   } catch (err) {
     fetchErrors.push(`market-history: ${err.message}`)
   }
 
-  const summary = computeCautionSummary(newsItems, fastapiSnapshot, histItems, generatedAt)
+  // Compute summary with I2-D relevance filtering
+  const summary = computeCautionSummary(symbol, newsItems, fastapiSnapshot, histItems, generatedAt)
+
+  // Log relevance breakdown for diagnostics (no secrets exposed)
+  if (summary._news_debug) {
+    const d = summary._news_debug
+    console.log(`[refresh] ${symbol} news relevance: raw=${d.rawCount} direct=${d.directCount} contextual=${d.contextualCount} low=${d.lowCount} scored=${d.scoredCount}`)
+  }
 
   const refresh_status = fetchErrors.length === 0 ? 'success'
     : fetchErrors.length < 3 ? 'partial'
     : 'error'
 
+  // scoreNews already enriched items with relevance + included_in_score
+  const newsR = scoreNews(symbol, newsItems)
+
   const payload = {
     symbol,
-    fetched_at:      generatedAt,
+    fetched_at:     generatedAt,
     refresh_status,
-    error_message:   fetchErrors.length > 0 ? fetchErrors.join('; ') : null,
-    items:           newsItems,
+    error_message:  fetchErrors.length > 0 ? fetchErrors.join('; ') : null,
+    items:          newsR.enrichedItems,   // includes relevance + included_in_score
     summary,
   }
 
