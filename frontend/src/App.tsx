@@ -10,8 +10,9 @@ import { StressTest }       from './pages/StressTest'
 import { ModelLab }         from './pages/ModelLab'
 
 // Auth pages
-import { Login }    from './pages/Login'
-import { Register } from './pages/Register'
+import { Login }           from './pages/Login'
+import { Register }        from './pages/Register'
+import { SecurityNotice }  from './pages/SecurityNotice'
 
 // Legacy page imports kept to avoid breaking existing build artifacts;
 // all legacy routes below redirect to /risk-monitor.
@@ -31,7 +32,9 @@ void MarketScreener; void MarketOverview; void FakeNewsDetector; void ModelInsig
 function AppRoutes() {
   const location = useLocation()
   const { authLoading } = useAuth()
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/register'
+  const isAuthPage = location.pathname === '/login'
+    || location.pathname === '/register'
+    || location.pathname === '/security-notice'
 
   // While validating a stored token via /auth/me, render a neutral loading screen.
   // This prevents guest-mode RiskMonitor from mounting (and firing HF requests for
@@ -53,12 +56,13 @@ function AppRoutes() {
     )
   }
 
-  // Auth pages: full-screen, no sidebar
+  // Auth / public-info pages: full-screen, no sidebar
   if (isAuthPage) {
     return (
       <Routes>
-        <Route path="/login"    element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route path="/login"            element={<Login />} />
+        <Route path="/register"         element={<Register />} />
+        <Route path="/security-notice"  element={<SecurityNotice />} />
       </Routes>
     )
   }
