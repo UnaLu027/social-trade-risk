@@ -53,6 +53,8 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
     email = _validate_email(body.email)
     if len(body.password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    if len(body.password) > 128:
+        raise HTTPException(status_code=400, detail="Password must be at most 128 characters")
 
     existing = db.query(User).filter(User.email == email).first()
     if existing:

@@ -20,17 +20,22 @@ _scheduler = BackgroundScheduler()
 
 def _get_tracked_symbols(db: Session) -> list[str]:
     """
-    Returns DISTINCT symbols currently tracked by at least one active user.
-    If the same symbol is in multiple users' watchlists, it appears only once.
-    Returns an empty list if no active tracked symbols exist.
+    Returns DISTINCT symbols that the scheduler should refresh — the union of:
+      1. Global Watchlist symbols (legacy; kept so existing /api/v1/watchlist routes
+         still receive scheduled price / hype data during the transition period).
+      2. Active personal UserWatchlistItem symbols (any active user's tracked symbols).
+    Symbols that appear in both sources or in multiple users' lists are deduplicated.
+    Returns an empty list only when both sources have no entries.
     """
-    from sqlalchemy import distinct as sql_distinct
-    return list(
-        db.execute(
-            select(sql_distinct(UserWatchlistItem.symbol))
-            .where(UserWatchlistItem.is_active == True)
-        ).scalars().all()
+    from sqlalchemy import union
+    global_q = select(Watchlist.symbol)
+    personal_q = (
+        select(UserWatchlistItem.symbol)
+        .where(UserWatchlistItem.is_active == True)
     )
+    combined = union(global_q, personal_q).subquery()
+    rows = db.execute(select(combined.c.symbol)).scalars().all()
+    return list(rows)
 
 
 def _sync_prices():
@@ -86,7 +91,12 @@ def _sync_reddit():
 def _compute_hype():
     db: Session = SessionLocal()
     try:
-        tickers = db.execute(select(Ticker).where(Ticker.is_active == True)).scalars().all()
+        tracked_symbols = set(_get_tracked_symbols(db))
+        if not tracked_symbols:
+            return
+        tickers = db.execute(
+            select(Ticker).where(Ticker.is_active == True, Ticker.symbol.in_(tracked_symbols))
+        ).scalars().all()
         from app.services import hype_calculator, alert_engine
         for ticker in tickers:
             hype = hype_calculator.compute_and_store_hype(db, ticker)

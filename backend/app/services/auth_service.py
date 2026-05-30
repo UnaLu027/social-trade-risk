@@ -1,22 +1,22 @@
 from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+from pwdlib import PasswordHash
 from app.config import get_settings
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 
-# pbkdf2_sha256 avoids the passlib/bcrypt≥4.0 compatibility issue while
-# remaining cryptographically strong (PBKDF2 with SHA-256, 29000 rounds default).
-_pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+# Argon2id via pwdlib — current FastAPI-recommended password hashing.
+# PasswordHash.recommended() selects Argon2id with secure default parameters.
+_ph = PasswordHash.recommended()
 
 
 def hash_password(password: str) -> str:
-    return _pwd_context.hash(password)
+    return _ph.hash(password)
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return _pwd_context.verify(plain, hashed)
+    return _ph.verify(plain, hashed)
 
 
 def create_access_token(subject: str) -> str:

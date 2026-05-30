@@ -21,6 +21,7 @@ from fastapi.testclient import TestClient
 
 from app.database import Base, get_db
 from app.main import app, _get_tracked_symbols
+from app.models.alert import Watchlist  # legacy global watchlist model
 
 # ── Isolated in-memory SQLite DB for these tests ─────────────────────────────
 
@@ -255,6 +256,107 @@ def test_taiwan_stocks_rejected(client):
     headers = auth_header(token)
     r = client.post("/api/v1/me/watchlist", json={"symbol": "2330.TW"}, headers=headers)
     assert r.status_code == 400
+
+
+# ── Legacy Watchlist UNION tests ─────────────────────────────────────────────
+# Verifies _get_tracked_symbols includes both legacy global watchlist symbols
+# AND personal user watchlist symbols, with deduplication across both sources.
+
+_LEGACY_SYM   = "ZLEGACY"    # in legacy Watchlist only  (7 chars, passes validation)
+_PERSONAL_SYM = "ZPERSONAL"  # in personal watchlist only (9 chars, passes validation)
+_SHARED_SYM   = "ZSHARED"    # in both sources            (7 chars, passes validation)
+
+
+def _add_legacy(db, symbol: str) -> None:
+    """Insert a symbol into the global Watchlist table directly."""
+    # Check for duplicates first (the legacy model has symbol UNIQUE)
+    existing = db.query(Watchlist).filter(Watchlist.symbol == symbol).first()
+    if not existing:
+        db.add(Watchlist(symbol=symbol))
+        db.commit()
+
+
+def test_legacy_symbol_included_in_tracked(client, db):
+    """A symbol in the legacy global Watchlist must appear in tracked symbols."""
+    _add_legacy(db, _LEGACY_SYM)
+    tracked = _get_tracked_symbols(db)
+    assert _LEGACY_SYM in tracked
+
+
+def test_personal_symbol_included_in_tracked(client, db):
+    """A symbol added via personal watchlist API must appear in tracked symbols."""
+    token, _ = register_and_login(client)
+    client.post("/api/v1/me/watchlist", json={"symbol": _PERSONAL_SYM}, headers=auth_header(token))
+    tracked = _get_tracked_symbols(db)
+    assert _PERSONAL_SYM in tracked
+
+
+def test_shared_symbol_appears_only_once(client, db):
+    """A symbol present in both legacy and personal watchlists appears exactly once."""
+    _add_legacy(db, _SHARED_SYM)
+    token_a, _ = register_and_login(client)
+    token_b, _ = register_and_login(client)
+    client.post("/api/v1/me/watchlist", json={"symbol": _SHARED_SYM}, headers=auth_header(token_a))
+    client.post("/api/v1/me/watchlist", json={"symbol": _SHARED_SYM}, headers=auth_header(token_b))
+    tracked = _get_tracked_symbols(db)
+    assert tracked.count(_SHARED_SYM) == 1
+
+
+# ── Password length validation tests ─────────────────────────────────────────
+
+def test_password_too_short_rejected(client):
+    """Password shorter than 8 characters must be rejected with 400."""
+    r = client.post("/api/v1/auth/register", json={"email": unique_email(), "password": "Ab1234"})
+    assert r.status_code == 400
+    assert "8" in r.json()["detail"]
+
+
+def test_password_too_long_rejected(client):
+    """Password longer than 128 characters must be rejected with 400."""
+    r = client.post("/api/v1/auth/register", json={"email": unique_email(), "password": "A" * 129})
+    assert r.status_code == 400
+    assert "128" in r.json()["detail"]
+
+
+# ── _compute_hype filtering tests ────────────────────────────────────────────
+# Verifies _compute_hype only processes Ticker rows whose symbols are in
+# _get_tracked_symbols (legacy Watchlist UNION active UserWatchlistItem).
+# External APIs are fully mocked — no network calls are made.
+
+_HYPE_TRACKED_SYM   = "ZTRKED"   # added to legacy Watchlist → tracked
+_HYPE_UNTRACKED_SYM = "ZNOTRK"   # NOT in any watchlist → not tracked
+
+
+def test_compute_hype_only_processes_tracked_symbols(db):
+    """_compute_hype must skip Tickers whose symbols are not in _get_tracked_symbols."""
+    from app.models import Ticker
+    import app.main as main_module
+    from unittest.mock import patch
+
+    _add_legacy(db, _HYPE_TRACKED_SYM)
+
+    for sym in (_HYPE_TRACKED_SYM, _HYPE_UNTRACKED_SYM):
+        if not db.query(Ticker).filter(Ticker.symbol == sym).first():
+            db.add(Ticker(symbol=sym, is_active=True))
+    db.commit()
+
+    processed: list[str] = []
+
+    class _SessionProxy:
+        """Wraps the test session; swallows close() to keep fixture session alive."""
+        def close(self):
+            pass
+        def __getattr__(self, name):
+            return getattr(db, name)
+
+    with patch("app.main.SessionLocal", return_value=_SessionProxy()), \
+         patch("app.services.hype_calculator.compute_and_store_hype",
+               side_effect=lambda _db, ticker: processed.append(ticker.symbol) or None), \
+         patch("app.services.alert_engine.evaluate_alerts"):
+        main_module._compute_hype()
+
+    assert _HYPE_TRACKED_SYM in processed
+    assert _HYPE_UNTRACKED_SYM not in processed
 
 
 # ── Extra: invalid email rejected at register ────────────────────────────────
