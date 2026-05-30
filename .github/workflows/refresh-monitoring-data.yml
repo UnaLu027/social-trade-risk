@@ -3,12 +3,16 @@ name: Refresh Monitoring Data
 on:
   schedule:
     - cron: '0 */6 * * *'   # every 6 hours at :00 UTC
-  workflow_dispatch:          # allow manual trigger from GitHub UI
+  workflow_dispatch:          # allow manual trigger — select branch in GitHub UI
+
+# Required so the workflow can commit generated-data/monitoring-latest.json
+permissions:
+  contents: write
 
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
@@ -19,28 +23,17 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Download previous monitoring JSON (for history continuity)
-        # Downloads the current live file so the script can append to its history.
-        # Uses FTPS (explicit TLS on port 21, --ssl-reqd). If the file does not
-        # yet exist on the server (first run) or the download fails for any reason,
-        # we log a warning and continue — the script handles a missing previous file.
-        env:
-          FTP_SERVER:   ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+      - name: Prepare previous monitoring data for history continuity
+        # If a previous monitoring-latest.json is already committed in this branch,
+        # copy it as monitoring-previous.json so the script can append to its history.
+        # On the very first run the file does not exist; the script handles that gracefully.
         run: |
           mkdir -p generated-data
-          if curl \
-              --ssl-reqd \
-              --silent \
-              --fail \
-              -o generated-data/monitoring-previous.json \
-              "ftp://${FTP_SERVER}/htdocs/data/monitoring-latest.json" \
-              --user "${FTP_USERNAME}:${FTP_PASSWORD}"; then
-            echo "[ftp] Previous monitoring file downloaded for history"
+          if [ -f generated-data/monitoring-latest.json ]; then
+            cp generated-data/monitoring-latest.json generated-data/monitoring-previous.json
+            echo "[git] Copied existing JSON as previous for history continuity"
           else
-            echo "[ftp] Previous file not available (first run or transient error) — continuing without prior history"
-            rm -f generated-data/monitoring-previous.json
+            echo "[git] No existing JSON found — first run, starting fresh history"
           fi
 
       - name: Generate monitoring JSON
@@ -48,22 +41,20 @@ jobs:
         env:
           HF_API_BASE: ${{ secrets.HF_API_BASE }}
 
-      - name: Upload monitoring JSON via FTPS
-        # Uploads the generated file to InfinityFree using FTPS (explicit TLS).
-        # --ssl-reqd enforces TLS so credentials are never sent in the clear.
-        # --ftp-create-dirs creates /htdocs/data/ if it does not exist.
-        env:
-          FTP_SERVER:   ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+      - name: Commit and push updated monitoring JSON
+        # Commits generated-data/monitoring-latest.json back to the branch that
+        # triggered this workflow (GITHUB_REF_NAME).
+        # [skip ci] prevents re-triggering other push-triggered workflows.
+        # Since this workflow only runs on schedule/workflow_dispatch (not push),
+        # there is no loop risk regardless.
         run: |
-          curl \
-            --ssl-reqd \
-            --ftp-create-dirs \
-            --silent \
-            --show-error \
-            --fail \
-            -T generated-data/monitoring-latest.json \
-            "ftp://${FTP_SERVER}/htdocs/data/monitoring-latest.json" \
-            --user "${FTP_USERNAME}:${FTP_PASSWORD}"
-          echo "[ftp] Upload complete"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add generated-data/monitoring-latest.json
+          if git diff --cached --quiet; then
+            echo "[git] No monitoring data changes to commit"
+          else
+            git commit -m "chore: refresh monitoring data [skip ci]"
+            git push origin HEAD:${GITHUB_REF_NAME}
+            echo "[git] Pushed updated monitoring JSON to ${GITHUB_REF_NAME}"
+          fi

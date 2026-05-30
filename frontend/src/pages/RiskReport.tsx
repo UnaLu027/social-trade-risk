@@ -26,6 +26,7 @@ import {
   getFreshnessStatus, formatFreshnessTime,
   FRESHNESS_LABEL, FRESHNESS_COLOR,
 } from '../lib/monitoringFreshness'
+import { fetchMonitoringData } from '../api/monitoringDataClient'
 
 // ── types ────────────────────────────────────────────────────────────────────
 
@@ -340,10 +341,10 @@ export function RiskReport() {
   const cautionColor   = SIGNAL_LEVEL_COLOR[caution.signalLevel]
   const cautionLoading = fastapiLoading || signalsLoading || histLoading
 
-  // ── monitoring JSON (FTP-uploaded by GitHub Actions, served via PHP) ────────
+  // ── monitoring JSON (committed to repo by GitHub Actions, read via raw URL) ──
   const { data: monitoringJson } = useQuery({
     queryKey: ['monitoring-json'],
-    queryFn: () => phpGet<MonitoringJsonData | null>('/monitoring-data.php'),
+    queryFn: () => fetchMonitoringData<MonitoringJsonData>(),
     retry: 0,
     staleTime: 10 * 60_000,
   })

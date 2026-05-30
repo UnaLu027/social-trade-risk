@@ -10,6 +10,7 @@ import {
   getFreshnessStatus, formatFreshnessTime,
   FRESHNESS_LABEL, FRESHNESS_COLOR,
 } from '../lib/monitoringFreshness'
+import { fetchMonitoringData } from '../api/monitoringDataClient'
 
 const DEFAULT_SYMBOLS = ['GME', 'AMC', 'TSLA', 'NVDA', 'AAPL', 'MSFT', 'AMD', 'NFLX']
 const WATCHLIST_KEY   = 'social_risk_watchlist_v1'
@@ -333,7 +334,7 @@ export function RiskMonitor() {
 
   const { data: monitoringJson } = useQuery({
     queryKey: ['monitoring-json'],
-    queryFn:  () => phpGet<MonitoringJsonData | null>('/monitoring-data.php'),
+    queryFn:  () => fetchMonitoringData<MonitoringJsonData>(),
     retry:    0,
     staleTime: 10 * 60_000,
   })
@@ -345,6 +346,7 @@ export function RiskMonitor() {
   const lastFetchedAt     = symbolMonitorData?.latest?.fetched_at ?? null
   const freshness         = getFreshnessStatus(lastFetchedAt)
   const lastAttemptFailed = symbolMonitorData?.last_attempt_status === 'error'
+    || symbolMonitorData?.last_attempt_status === 'partial'
 
   // Data priority: FastAPI (non-empty) > PHP > DEMO
   // Empty array from FastAPI (all tickers rate-limited) must NOT block PHP fallback
