@@ -339,7 +339,16 @@ export function RiskMonitor() {
     staleTime: 10 * 60_000,
   })
 
-  const symbolMonitorData = monitoringJson?.symbols?.[selectedHistorySymbol] ?? null
+  // Symbols that actually have scheduled monitoring data in the JSON
+  const scheduledSymbols = Object.keys(monitoringJson?.symbols ?? {})
+
+  // If the user-selected symbol is not in the scheduled set, fall back to the
+  // first available scheduled symbol. Derived value — no useEffect needed.
+  const effectiveHistorySymbol = scheduledSymbols.length > 0 && !scheduledSymbols.includes(selectedHistorySymbol)
+    ? scheduledSymbols[0]
+    : selectedHistorySymbol
+
+  const symbolMonitorData = monitoringJson?.symbols?.[effectiveHistorySymbol] ?? null
   const historySummaries  = symbolMonitorData?.history ?? []
   const historyNews       = symbolMonitorData?.latest?.items ?? []
   // Freshness uses only the last known-good data timestamp (never a failed-attempt time)
@@ -542,7 +551,7 @@ export function RiskMonitor() {
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             <TrendingUp size={14} color="#a78bfa" />
             <span className="text-sm font-semibold text-white">歷史監控概覽</span>
-            <span className="text-[10px]" style={{ color: '#475569' }}>由排程自動更新</span>
+            <span className="text-[10px]" style={{ color: '#475569' }}>固定排程追蹤標的</span>
             <div className="flex items-center gap-2 ml-auto">
               <Clock size={11} color="#64748b" />
               {lastFetchedAt ? (
@@ -578,17 +587,19 @@ export function RiskMonitor() {
             </div>
           )}
 
-          {/* Symbol selector */}
+          {/* Symbol selector — uses scheduled symbols from JSON, not the user watchlist */}
           <div className="flex flex-wrap gap-1.5 mb-4">
-            {watchlist.slice(0, 12).map(sym => (
+            {scheduledSymbols.length === 0 ? (
+              <span className="text-[10px]" style={{ color: '#475569' }}>尚無排程資料</span>
+            ) : scheduledSymbols.map(sym => (
               <button
                 key={sym}
                 onClick={() => setSelectedHistorySymbol(sym)}
                 className="px-2.5 py-0.5 rounded text-xs font-semibold transition-colors"
                 style={{
-                  background: selectedHistorySymbol === sym ? '#1e3a5f' : '#0f1117',
-                  color:      selectedHistorySymbol === sym ? '#38bdf8' : '#64748b',
-                  border:     `1px solid ${selectedHistorySymbol === sym ? '#2d4a6f' : '#2d3148'}`,
+                  background: effectiveHistorySymbol === sym ? '#1e3a5f' : '#0f1117',
+                  color:      effectiveHistorySymbol === sym ? '#38bdf8' : '#64748b',
+                  border:     `1px solid ${effectiveHistorySymbol === sym ? '#2d4a6f' : '#2d3148'}`,
                 }}
               >
                 {sym}
@@ -600,7 +611,7 @@ export function RiskMonitor() {
             {/* Caution summary history */}
             <div className="flex flex-col gap-2">
               <div className="text-[11px] font-semibold mb-1" style={{ color: '#64748b' }}>
-                {selectedHistorySymbol} 綜合警戒摘要（近 7 筆）
+                {effectiveHistorySymbol} 綜合警戒摘要（近 7 筆）
               </div>
               {historySummaries.length === 0 ? (
                 <p className="text-xs py-4 text-center" style={{ color: '#475569' }}>
@@ -640,7 +651,7 @@ export function RiskMonitor() {
             {/* Recent external news */}
             <div className="flex flex-col gap-2">
               <div className="text-[11px] font-semibold mb-1" style={{ color: '#64748b' }}>
-                {selectedHistorySymbol} 最近外部新聞文本訊號
+                {effectiveHistorySymbol} 最近外部新聞文本訊號
               </div>
               {historyNews.length === 0 ? (
                 <p className="text-xs py-4 text-center" style={{ color: '#475569' }}>
