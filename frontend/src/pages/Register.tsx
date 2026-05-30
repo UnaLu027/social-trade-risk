@@ -69,7 +69,7 @@ export function Register() {
             <span className="text-xs font-semibold" style={{ color: '#38bdf8' }}>帳號建立說明</span>
           </div>
           <p className="text-xs leading-relaxed" style={{ color: '#7dd3fc' }}>
-            建立帳號後，系統僅保存您的電子郵件、加密後的本站專用密碼，以及個人觀察清單。
+            建立帳號後，系統僅保存您的電子郵件、以 Argon2id 密碼雜湊演算法處理後的本站專用密碼，以及個人觀察清單；系統不保存可讀取的原始密碼。
             本站不提供實際交易，也不會取得券商、銀行或其他第三方帳戶資料。
             請為本網站建立一組全新的專用密碼，勿重複使用 Google、學校信箱、銀行、券商或其他服務的密碼。
           </p>
