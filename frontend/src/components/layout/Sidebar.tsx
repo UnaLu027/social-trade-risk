@@ -1,5 +1,9 @@
-import { NavLink } from 'react-router-dom'
-import { ShieldAlert, MessageSquare, FileText, FlaskConical, Brain, TrendingUp } from 'lucide-react'
+import { NavLink, useNavigate } from 'react-router-dom'
+import {
+  ShieldAlert, MessageSquare, FileText, FlaskConical, Brain,
+  TrendingUp, LogIn, LogOut, User,
+} from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
 
 const coreNavItems = [
   { to: '/risk-monitor',    icon: ShieldAlert,   label: '風險監控中心' },
@@ -10,6 +14,9 @@ const coreNavItems = [
 ]
 
 export function Sidebar() {
+  const { user, isAuthenticated, logout } = useAuth()
+  const navigate = useNavigate()
+
   return (
     <aside
       style={{ background: '#0d0f1a', borderRight: '1px solid #1f2235' }}
@@ -60,10 +67,59 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="px-3 pt-4" style={{ borderTop: '1px solid #1f2235' }}>
+      {/* Auth section */}
+      <div className="px-3 pt-4 flex flex-col gap-2" style={{ borderTop: '1px solid #1f2235' }}>
+        {isAuthenticated ? (
+          <>
+            {/* Account indicator */}
+            <div className="flex items-center gap-2 py-1">
+              <div
+                className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: '#1e3a5f', border: '1px solid #2d4a6f' }}
+              >
+                <User size={10} color="#38bdf8" />
+              </div>
+              <span
+                className="text-[10px] truncate flex-1"
+                style={{ color: '#94a3b8' }}
+                title={user?.email}
+              >
+                {user?.email}
+              </span>
+            </div>
+            {/* Logout */}
+            <button
+              onClick={logout}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] font-medium w-full transition-colors"
+              style={{ color: '#64748b' }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLButtonElement
+                el.style.background = '#151828'
+                el.style.color = '#94a3b8'
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLButtonElement
+                el.style.background = 'transparent'
+                el.style.color = '#64748b'
+              }}
+            >
+              <LogOut size={12} />
+              登出
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => navigate('/login')}
+            className="flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] font-medium w-full transition-opacity hover:opacity-80"
+            style={{ color: '#10b981', background: '#052e16', border: '1px solid #065f46' }}
+          >
+            <LogIn size={12} />
+            登入 / 註冊
+          </button>
+        )}
+
         <div className="text-[10px]" style={{ color: '#3d4163' }}>5 模型比較優選</div>
-        <div className="text-[10px] mt-0.5" style={{ color: '#3d4163' }}>詳見「模型實驗室」</div>
+        <div className="text-[10px]" style={{ color: '#3d4163' }}>詳見「模型實驗室」</div>
       </div>
     </aside>
   )

@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ShieldAlert, TrendingUp, RefreshCw, Eye, Clock } from 'lucide-react'
+import { ShieldAlert, TrendingUp, RefreshCw, Eye, Clock, BookmarkCheck } from 'lucide-react'
 import { phpGet } from '../api/phpClient'
 import { api } from '../api/client'
+import { personalApi } from '../api/personalApiClient'
+import { useAuth } from '../context/AuthContext'
 import { TopBar } from '../components/layout/TopBar'
 import { TickerAutocomplete } from '../components/TickerAutocomplete'
 import {
@@ -16,7 +18,7 @@ const DEFAULT_SYMBOLS = ['GME', 'AMC', 'TSLA', 'NVDA', 'AAPL', 'MSFT', 'AMD', 'N
 const WATCHLIST_KEY   = 'social_risk_watchlist_v1'
 const MAX_WATCHLIST   = 20
 
-function loadWatchlist(): string[] {
+function loadLocalWatchlist(): string[] {
   try {
     const stored = localStorage.getItem(WATCHLIST_KEY)
     if (stored !== null) {
@@ -27,13 +29,12 @@ function loadWatchlist(): string[] {
   return DEFAULT_SYMBOLS
 }
 
-function saveWatchlist(list: string[]) {
+function saveLocalWatchlist(list: string[]) {
   try { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(list)) } catch { /* ignore */ }
 }
 
 // ── types ────────────────────────────────────────────────────────────────────
 
-// Scheduled news item (from monitoring JSON latest.items)
 interface ScheduledNewsItem {
   id: string
   headline: string | null
@@ -44,7 +45,6 @@ interface ScheduledNewsItem {
   ai_risk_score: number | null
 }
 
-// Compact history entry (summary only, no items, to control JSON size)
 interface ScheduledHistoryEntry {
   fetched_at: string
   refresh_status: string
@@ -90,7 +90,12 @@ interface MonitoringJsonData {
   symbols: Record<string, SymbolMonitorData>
 }
 
-
+interface PersonalWatchlistItem {
+  id: number
+  symbol: string
+  is_active: boolean
+  created_at: string
+}
 
 interface RiskSnapshot {
   symbol: string
@@ -109,7 +114,7 @@ interface RiskSnapshot {
   data_quality: string | null
 }
 
-// ── static fallback data (always shown if PHP unavailable) ──────────────────
+// ── static fallback data ──────────────────────────────────────────────────────
 
 const DEMO_SNAPSHOTS: RiskSnapshot[] = [
   { symbol: 'GME',  name: 'GameStop Corp.',             snapshot_date: '2021-01-27', price: 347.51, volume: 297000000, mention_count: 18000, bullish_ratio: 0.95, avg_sentiment: 0.85, social_hype_score: 99, manipulation_signal_score: 95, fomo_score: 98, short_squeeze_pressure: 99, ai_risk_label: 'Critical', data_quality: 'demo' },
@@ -156,6 +161,8 @@ function riskCfg(label: string | null) {
   return RISK_CFG[label as keyof typeof RISK_CFG] ?? RISK_CFG.Low
 }
 
+type ApiErr = { response?: { status?: number; data?: { detail?: string } } }
+
 function ScoreBar({ value, color }: { value: number | null; color: string }) {
   const pct = Math.min(100, Math.max(0, value ?? 0))
   return (
@@ -176,7 +183,6 @@ function RiskCard({ snap, onView, onRemove }: { snap: RiskSnapshot; onView: () =
       style={{ background: '#1a1d27', border: `1px solid ${cfg.border}` }}
       onClick={onView}
     >
-      {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <div className="text-base font-bold text-white">{snap.symbol}</div>
@@ -192,7 +198,6 @@ function RiskCard({ snap, onView, onRemove }: { snap: RiskSnapshot; onView: () =
         </span>
       </div>
 
-      {/* Price */}
       {snap.price != null && (
         <div className="font-mono text-sm font-semibold text-white">
           ${snap.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -205,18 +210,16 @@ function RiskCard({ snap, onView, onRemove }: { snap: RiskSnapshot; onView: () =
         </div>
       )}
 
-      {/* Score bars */}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between text-[10px] mb-0.5" style={{ color: '#475569' }}>
           <span>社交炒作</span><span>操縱信號</span><span>FOMO</span><span>軋空壓力</span>
         </div>
-        <ScoreBar value={snap.social_hype_score}          color={cfg.color} />
-        <ScoreBar value={snap.manipulation_signal_score}  color='#f97316'  />
-        <ScoreBar value={snap.fomo_score}                 color='#a78bfa'  />
-        <ScoreBar value={snap.short_squeeze_pressure}     color='#38bdf8'  />
+        <ScoreBar value={snap.social_hype_score}         color={cfg.color} />
+        <ScoreBar value={snap.manipulation_signal_score} color='#f97316'  />
+        <ScoreBar value={snap.fomo_score}                color='#a78bfa'  />
+        <ScoreBar value={snap.short_squeeze_pressure}    color='#38bdf8'  />
       </div>
 
-      {/* Mentions + actions */}
       <div className="flex items-center justify-between text-xs" style={{ color: '#64748b' }}>
         <span>提及數 {snap.mention_count?.toLocaleString() ?? '—'}</span>
         <div className="flex items-center gap-1.5">
@@ -244,17 +247,33 @@ function RiskCard({ snap, onView, onRemove }: { snap: RiskSnapshot; onView: () =
 
 export function RiskMonitor() {
   const navigate = useNavigate()
-  const [filter, setFilter] = useState<'All' | 'Critical' | 'High' | 'Medium' | 'Low'>('All')
+  const queryClient = useQueryClient()
+  const { isAuthenticated, user } = useAuth()
+
+  const [filter, setFilter]           = useState<'All' | 'Critical' | 'High' | 'Medium' | 'Low'>('All')
   const [searchTicker, setSearchTicker] = useState('')
   const [searchError,  setSearchError]  = useState('')
-  const [watchlist, setWatchlist]       = useState<string[]>(loadWatchlist)
 
-  function persistWatchlist(list: string[]) {
-    setWatchlist(list)
-    saveWatchlist(list)
-  }
+  // Guest-mode watchlist (localStorage)
+  const [localWatchlist, setLocalWatchlist] = useState<string[]>(loadLocalWatchlist)
 
-  function handleAddToWatchlist() {
+  // Personal watchlist (Railway, authenticated users only)
+  const { data: personalWatchlistData, isLoading: personalLoading } = useQuery({
+    queryKey: ['personal-watchlist'],
+    queryFn:  async () => {
+      const res = await personalApi.get<PersonalWatchlistItem[]>('/api/v1/me/watchlist')
+      return res.data.map(i => i.symbol)
+    },
+    enabled:   isAuthenticated,
+    staleTime: 5 * 60_000,
+  })
+
+  // Active watchlist: personal (Railway) when logged in, local otherwise
+  const watchlist = isAuthenticated
+    ? (personalLoading ? [] : (personalWatchlistData ?? []))
+    : localWatchlist
+
+  async function handleAddToWatchlist() {
     const val = searchTicker.trim().toUpperCase()
     if (!val) { setSearchError('請輸入股票代號。'); return }
     if (!/^[A-Z0-9.\-]+$/.test(val)) { setSearchError('代號格式錯誤，僅允許 A–Z、0–9、"."、"-"。'); return }
@@ -262,7 +281,30 @@ export function RiskMonitor() {
     if (watchlist.includes(val)) { setSearchError(`${val} 已在觀察清單中。`); return }
     if (watchlist.length >= MAX_WATCHLIST) { setSearchError(`觀察清單最多 ${MAX_WATCHLIST} 檔。`); return }
     setSearchError('')
-    persistWatchlist([...watchlist, val])
+
+    if (isAuthenticated) {
+      try {
+        await personalApi.post('/api/v1/me/watchlist', { symbol: val })
+        queryClient.invalidateQueries({ queryKey: ['personal-watchlist'] })
+      } catch (err) {
+        const status = (err as ApiErr)?.response?.status
+        const detail = (err as ApiErr)?.response?.data?.detail ?? ''
+        if (status === 409) {
+          setSearchError(`${val} 已在觀察清單中。`)
+        } else if (detail.toLowerCase().includes('full')) {
+          setSearchError(`觀察清單已滿（最多 ${MAX_WATCHLIST} 檔）。`)
+        } else if (detail.toLowerCase().includes('symbol')) {
+          setSearchError('代號格式不支援，請輸入美股代號（1–10 個英文字母）。')
+        } else {
+          setSearchError('加入失敗，請稍後再試。')
+        }
+        return
+      }
+    } else {
+      const next = [...localWatchlist, val]
+      setLocalWatchlist(next)
+      saveLocalWatchlist(next)
+    }
     setSearchTicker('')
   }
 
@@ -275,17 +317,29 @@ export function RiskMonitor() {
     navigate(`/risk-report/${val}`)
   }
 
-  function handleRemove(sym: string) {
-    persistWatchlist(watchlist.filter(s => s !== sym))
+  async function handleRemove(sym: string) {
+    if (isAuthenticated) {
+      try {
+        await personalApi.delete(`/api/v1/me/watchlist/${sym}`)
+        queryClient.invalidateQueries({ queryKey: ['personal-watchlist'] })
+      } catch { /* silently ignore */ }
+    } else {
+      const next = localWatchlist.filter(s => s !== sym)
+      setLocalWatchlist(next)
+      saveLocalWatchlist(next)
+    }
   }
 
   function handleReset() {
-    persistWatchlist(DEFAULT_SYMBOLS)
+    if (!isAuthenticated) {
+      setLocalWatchlist(DEFAULT_SYMBOLS)
+      saveLocalWatchlist(DEFAULT_SYMBOLS)
+    }
   }
 
   const symbolsParam = watchlist.join(',')
 
-  // FastAPI market snapshots (primary source)
+  // FastAPI market snapshots (primary — Hugging Face Space)
   const {
     data: fastapiData,
     isLoading: fastapiIsLoading,
@@ -304,6 +358,7 @@ export function RiskMonitor() {
       }>(`/api/v1/market-snapshots?symbols=${symbolsParam}`)
       return res.data
     },
+    enabled: symbolsParam.length > 0,
     retry: 1,
     staleTime: 5 * 60_000,
     refetchInterval: 10 * 60_000,
@@ -327,10 +382,11 @@ export function RiskMonitor() {
     refetchInterval: 10 * 60_000,
   })
 
-  // ── History monitoring ──────────────────────────────────────────────────────
-  const [selectedHistorySymbol, setSelectedHistorySymbol] = useState<string>(
-    watchlist.length > 0 ? watchlist[0] : 'GME'
-  )
+  // ── Public scheduled monitoring (GitHub JSON) ─────────────────────────────
+  // This section shows fixed scheduled symbols from the monitoring workflow.
+  // It is INDEPENDENT of the user's personal watchlist.
+
+  const [selectedHistorySymbol, setSelectedHistorySymbol] = useState<string>('')
 
   const { data: monitoringJson } = useQuery({
     queryKey: ['monitoring-json'],
@@ -339,17 +395,22 @@ export function RiskMonitor() {
     staleTime: 10 * 60_000,
   })
 
-  const symbolMonitorData = monitoringJson?.symbols?.[selectedHistorySymbol] ?? null
-  const historySummaries  = symbolMonitorData?.history ?? []
-  const historyNews       = symbolMonitorData?.latest?.items ?? []
-  // Freshness uses only the last known-good data timestamp (never a failed-attempt time)
-  const lastFetchedAt     = symbolMonitorData?.latest?.fetched_at ?? null
-  const freshness         = getFreshnessStatus(lastFetchedAt)
-  const lastAttemptFailed = symbolMonitorData?.last_attempt_status === 'error'
+  // Symbols available in the monitoring JSON (public scheduled set)
+  const monitoringSymbols = Object.keys(monitoringJson?.symbols ?? {})
+  // Safe fallback: if the previously-selected symbol is gone, show the first available
+  const activeHistorySymbol = (selectedHistorySymbol && monitoringSymbols.includes(selectedHistorySymbol))
+    ? selectedHistorySymbol
+    : (monitoringSymbols[0] ?? '')
+
+  const symbolMonitorData  = activeHistorySymbol ? (monitoringJson?.symbols?.[activeHistorySymbol] ?? null) : null
+  const historySummaries   = symbolMonitorData?.history ?? []
+  const historyNews        = symbolMonitorData?.latest?.items ?? []
+  const lastFetchedAt      = symbolMonitorData?.latest?.fetched_at ?? null
+  const freshness          = getFreshnessStatus(lastFetchedAt)
+  const lastAttemptFailed  = symbolMonitorData?.last_attempt_status === 'error'
     || symbolMonitorData?.last_attempt_status === 'partial'
 
-  // Data priority: FastAPI (non-empty) > PHP > DEMO
-  // Empty array from FastAPI (all tickers rate-limited) must NOT block PHP fallback
+  // Data priority: FastAPI > PHP > DEMO
   const fastapiSnapshots  = fastapiData?.data?.snapshots ?? []
   const hasFastapiData    = fastapiSnapshots.length > 0
   const hasPhpData        = !!phpData && phpData.length > 0
@@ -365,7 +426,7 @@ export function RiskMonitor() {
   const hasPartialErrors = !!fastapiData && (fastapiData.errors?.length ?? 0) > 0
   const hasDemoQuality   = usingPhpFallback && phpData!.some(s => s.data_quality === 'demo')
 
-  const isLoading     = fastapiIsLoading && phpIsLoading
+  const isLoading     = (fastapiIsLoading && phpIsLoading) || (isAuthenticated && personalLoading)
   const isFetching    = fastapiIsFetching || phpIsFetching
   const dataUpdatedAt = hasFastapiData ? fastapiUpdatedAt : phpUpdatedAt
 
@@ -415,19 +476,49 @@ export function RiskMonitor() {
             >
               加入觀察清單
             </button>
-            <button
-              onClick={handleReset}
-              className="px-2.5 py-2 rounded-md text-xs font-semibold transition-opacity hover:opacity-80"
-              style={{ background: '#1a1d27', color: '#475569', border: '1px solid #2d3148' }}
-              title="重設預設清單"
-            >
-              重設預設清單
-            </button>
+            {!isAuthenticated && (
+              <button
+                onClick={handleReset}
+                className="px-2.5 py-2 rounded-md text-xs font-semibold transition-opacity hover:opacity-80"
+                style={{ background: '#1a1d27', color: '#475569', border: '1px solid #2d3148' }}
+                title="重設預設清單"
+              >
+                重設預設清單
+              </button>
+            )}
           </div>
           {searchError && (
             <p className="text-xs" style={{ color: '#f59e0b' }}>{searchError}</p>
           )}
         </div>
+
+        {/* Logged-in notice: watchlist synced to account */}
+        {isAuthenticated && (
+          <div className="px-4 py-3 rounded-lg flex items-start gap-2"
+               style={{ background: '#0d1e10', border: '1px solid #065f46' }}>
+            <BookmarkCheck size={14} color="#10b981" className="mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold" style={{ color: '#10b981' }}>觀察清單已同步至帳號</p>
+              <p className="text-xs mt-0.5" style={{ color: '#6ee7b7' }}>
+                已登入為 {user?.email}。新增或移除的標的將儲存至 Railway 帳號，並由背景排程自動監控。
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Guest-mode notice */}
+        {!isAuthenticated && (
+          <div className="px-4 py-2 rounded-lg"
+               style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+            <p className="text-xs" style={{ color: '#475569' }}>
+              目前以訪客身分瀏覽。觀察清單僅暫存於本機瀏覽器，關閉分頁後將不保留。
+              <button onClick={() => navigate('/login')} className="ml-1.5 underline" style={{ color: '#64748b' }}>
+                登入
+              </button>
+              以使用個人帳號觀察清單。
+            </p>
+          </div>
+        )}
 
         {/* Both sources failed → demo fallback */}
         {usingDemo && (
@@ -437,7 +528,6 @@ export function RiskMonitor() {
           </div>
         )}
 
-        {/* FastAPI failed, using PHP fallback */}
         {usingPhpFallback && (
           <div className="px-4 py-3 rounded-lg" style={{ background: '#0f1a2e', border: '1px solid #1e3a5f' }}>
             <p className="text-sm font-semibold" style={{ color: '#38bdf8' }}>使用 PHP/MySQL 備援資料</p>
@@ -445,7 +535,6 @@ export function RiskMonitor() {
           </div>
         )}
 
-        {/* FastAPI returned but some tickers failed */}
         {hasPartialErrors && (
           <div className="px-4 py-3 rounded-lg" style={{ background: '#1c1205', border: '1px solid #92400e' }}>
             <p className="text-sm font-semibold" style={{ color: '#fb923c' }}>部分 ticker 暫時無法取得最新市場資料</p>
@@ -453,7 +542,6 @@ export function RiskMonitor() {
           </div>
         )}
 
-        {/* PHP data contains demo-quality rows */}
         {hasDemoQuality && (
           <div className="px-4 py-3 rounded-lg" style={{ background: '#1a1505', border: '1px solid #92400e' }}>
             <p className="text-sm font-semibold" style={{ color: '#fb923c' }}>Historical demo data</p>
@@ -508,21 +596,29 @@ export function RiskMonitor() {
         </div>
 
         {/* Risk grid */}
-        {watchlist.length === 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: Math.max(watchlist.length, 4) }).map((_, i) => (
+              <div key={i} className="h-52 rounded-lg animate-pulse" style={{ background: '#2d3148' }} />
+            ))}
+          </div>
+        ) : watchlist.length === 0 ? (
           <div className="rounded-lg p-10 flex flex-col items-center gap-3"
                style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
             <ShieldAlert size={28} color="#2d3148" />
-            <p className="text-sm" style={{ color: '#64748b' }}>尚未加入觀察清單。請搜尋美股代號並加入。</p>
-            <button onClick={handleReset} className="text-xs px-3 py-1.5 rounded font-semibold"
-                    style={{ background: '#2d3148', color: '#94a3b8', border: '1px solid #3d4163' }}>
-              重設預設清單
-            </button>
-          </div>
-        ) : isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Array.from({ length: watchlist.length }).map((_, i) => (
-              <div key={i} className="h-52 rounded-lg animate-pulse" style={{ background: '#2d3148' }} />
-            ))}
+            {isAuthenticated ? (
+              <>
+                <p className="text-sm" style={{ color: '#64748b' }}>您的觀察清單是空的。請搜尋美股代號並加入。</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm" style={{ color: '#64748b' }}>尚未加入觀察清單。請搜尋美股代號並加入。</p>
+                <button onClick={handleReset} className="text-xs px-3 py-1.5 rounded font-semibold"
+                        style={{ background: '#2d3148', color: '#94a3b8', border: '1px solid #3d4163' }}>
+                  重設預設清單
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -537,12 +633,15 @@ export function RiskMonitor() {
           </div>
         )}
 
-        {/* ── 歷史監控概覽 ──────────────────────────────────────────────────── */}
+        {/* ── 公開固定排程監控摘要 ─────────────────────────────────────────────
+            Data source: GitHub scheduled monitoring JSON (not personal watchlist).
+            Symbol selector is derived from monitoringJson.symbols keys only.
+        */}
         <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             <TrendingUp size={14} color="#a78bfa" />
-            <span className="text-sm font-semibold text-white">歷史監控概覽</span>
-            <span className="text-[10px]" style={{ color: '#475569' }}>由排程自動更新</span>
+            <span className="text-sm font-semibold text-white">公開固定排程監控摘要</span>
+            <span className="text-[10px]" style={{ color: '#475569' }}>由 GitHub 排程自動更新</span>
             <div className="flex items-center gap-2 ml-auto">
               <Clock size={11} color="#64748b" />
               {lastFetchedAt ? (
@@ -566,118 +665,130 @@ export function RiskMonitor() {
               )}
             </div>
           </div>
+
           {!lastFetchedAt && (
-            <div className="px-3 py-2 rounded mb-3 text-xs" style={{ background: '#0f1117', border: '1px solid #2d3148', color: '#475569' }}>
+            <div className="px-3 py-2 rounded mb-3 text-xs"
+                 style={{ background: '#0f1117', border: '1px solid #2d3148', color: '#475569' }}>
               尚未完成首次自動更新，歷史摘要將在 workflow 執行後顯示。
             </div>
           )}
           {lastAttemptFailed && lastFetchedAt && (
             <div className="px-3 py-1.5 rounded mb-3 text-[10px]"
-              style={{ background: '#1c0505', border: '1px solid #7f1d1d', color: '#fca5a5' }}>
+                 style={{ background: '#1c0505', border: '1px solid #7f1d1d', color: '#fca5a5' }}>
               最近一次排程嘗試失敗 · 以下顯示上次成功資料
             </div>
           )}
 
-          {/* Symbol selector */}
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {watchlist.slice(0, 12).map(sym => (
-              <button
-                key={sym}
-                onClick={() => setSelectedHistorySymbol(sym)}
-                className="px-2.5 py-0.5 rounded text-xs font-semibold transition-colors"
-                style={{
-                  background: selectedHistorySymbol === sym ? '#1e3a5f' : '#0f1117',
-                  color:      selectedHistorySymbol === sym ? '#38bdf8' : '#64748b',
-                  border:     `1px solid ${selectedHistorySymbol === sym ? '#2d4a6f' : '#2d3148'}`,
-                }}
-              >
-                {sym}
-              </button>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Caution summary history */}
-            <div className="flex flex-col gap-2">
-              <div className="text-[11px] font-semibold mb-1" style={{ color: '#64748b' }}>
-                {selectedHistorySymbol} 綜合警戒摘要（近 7 筆）
-              </div>
-              {historySummaries.length === 0 ? (
-                <p className="text-xs py-4 text-center" style={{ color: '#475569' }}>
-                  尚無排程歷史摘要，請先執行自動監控更新排程。
-                </p>
-              ) : (
-                historySummaries.map((s, i) => {
-                  const sum = s.summary
-                  if (!sum) return (
-                    <div key={i} className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
-                      <div className="text-[10px]" style={{ color: '#64748b' }}>{formatHistTime(s.fetched_at)} · {s.refresh_status}</div>
-                    </div>
-                  )
-                  const sigColor = SIG_COLOR[sum.signal_level] ?? '#64748b'
-                  const sigLabel = SIG_LABEL[sum.signal_level] ?? sum.signal_level
-                  return (
-                    <div key={i} className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-semibold" style={{ color: sigColor }}>{sigLabel}</span>
-                        <span className="text-[10px] font-mono" style={{ color: '#64748b' }}>{sum.combined_score} / 100</span>
-                      </div>
-                      <div className="text-[10px] mb-1.5" style={{ color: '#64748b' }}>
-                        {sum.data_coverage} · {INTERP_LABEL[sum.interpretation_status] ?? sum.interpretation_status}
-                      </div>
-                      <div style={{ background: '#2d3148', height: '3px', borderRadius: '2px' }}>
-                        <div style={{ background: sigColor, width: `${Math.min(sum.combined_score, 100)}%`, height: '3px', borderRadius: '2px' }} />
-                      </div>
-                      <div className="text-[10px] mt-1" style={{ color: '#475569' }}>
-                        {formatHistTime(s.fetched_at)}
-                      </div>
-                    </div>
-                  )
-                })
-              )}
+          {/* Symbol selector — from monitoring JSON only, not personal watchlist */}
+          {monitoringSymbols.length === 0 ? (
+            <p className="text-xs mb-4" style={{ color: '#475569' }}>
+              尚無排程監控資料。請等待 GitHub 排程 workflow 執行後再查看。
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {monitoringSymbols.slice(0, 12).map(sym => (
+                <button
+                  key={sym}
+                  onClick={() => setSelectedHistorySymbol(sym)}
+                  className="px-2.5 py-0.5 rounded text-xs font-semibold transition-colors"
+                  style={{
+                    background: activeHistorySymbol === sym ? '#1e3a5f' : '#0f1117',
+                    color:      activeHistorySymbol === sym ? '#38bdf8' : '#64748b',
+                    border:     `1px solid ${activeHistorySymbol === sym ? '#2d4a6f' : '#2d3148'}`,
+                  }}
+                >
+                  {sym}
+                </button>
+              ))}
             </div>
+          )}
 
-            {/* Recent external news */}
-            <div className="flex flex-col gap-2">
-              <div className="text-[11px] font-semibold mb-1" style={{ color: '#64748b' }}>
-                {selectedHistorySymbol} 最近外部新聞文本訊號
+          {activeHistorySymbol && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Caution summary history */}
+              <div className="flex flex-col gap-2">
+                <div className="text-[11px] font-semibold mb-1" style={{ color: '#64748b' }}>
+                  {activeHistorySymbol} 綜合警戒摘要（近 7 筆）
+                </div>
+                {historySummaries.length === 0 ? (
+                  <p className="text-xs py-4 text-center" style={{ color: '#475569' }}>
+                    尚無排程歷史摘要，請先執行自動監控更新排程。
+                  </p>
+                ) : (
+                  historySummaries.map((s, i) => {
+                    const sum = s.summary
+                    if (!sum) return (
+                      <div key={i} className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                        <div className="text-[10px]" style={{ color: '#64748b' }}>
+                          {formatHistTime(s.fetched_at)} · {s.refresh_status}
+                        </div>
+                      </div>
+                    )
+                    const sigColor = SIG_COLOR[sum.signal_level] ?? '#64748b'
+                    const sigLabel = SIG_LABEL[sum.signal_level] ?? sum.signal_level
+                    return (
+                      <div key={i} className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-semibold" style={{ color: sigColor }}>{sigLabel}</span>
+                          <span className="text-[10px] font-mono" style={{ color: '#64748b' }}>{sum.combined_score} / 100</span>
+                        </div>
+                        <div className="text-[10px] mb-1.5" style={{ color: '#64748b' }}>
+                          {sum.data_coverage} · {INTERP_LABEL[sum.interpretation_status] ?? sum.interpretation_status}
+                        </div>
+                        <div style={{ background: '#2d3148', height: '3px', borderRadius: '2px' }}>
+                          <div style={{ background: sigColor, width: `${Math.min(sum.combined_score, 100)}%`, height: '3px', borderRadius: '2px' }} />
+                        </div>
+                        <div className="text-[10px] mt-1" style={{ color: '#475569' }}>
+                          {formatHistTime(s.fetched_at)}
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
               </div>
-              {historyNews.length === 0 ? (
-                <p className="text-xs py-4 text-center" style={{ color: '#475569' }}>
-                  尚無排程新聞資料，請先執行自動監控更新排程。
-                </p>
-              ) : (
-                historyNews.map(item => {
-                  const rColor = item.ai_risk_label === 'Critical' ? '#ef4444'
-                    : item.ai_risk_label === 'High' ? '#f97316'
-                    : item.ai_risk_label === 'Medium' ? '#f59e0b' : '#10b981'
-                  return (
-                    <div key={item.id} className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
-                      <div className="flex items-center justify-between mb-1">
-                        {item.ai_risk_label ? (
-                          <span className="text-[10px] font-semibold" style={{ color: rColor }}>
-                            文本風險語言強度：{RISK_ZH[item.ai_risk_label] ?? item.ai_risk_label}
-                            {item.ai_risk_score != null ? ` · ${item.ai_risk_score}` : ''}
-                          </span>
-                        ) : <span />}
-                        <span className="text-[10px]" style={{ color: '#475569' }}>Finnhub</span>
+
+              {/* Recent external news */}
+              <div className="flex flex-col gap-2">
+                <div className="text-[11px] font-semibold mb-1" style={{ color: '#64748b' }}>
+                  {activeHistorySymbol} 最近外部新聞文本訊號
+                </div>
+                {historyNews.length === 0 ? (
+                  <p className="text-xs py-4 text-center" style={{ color: '#475569' }}>
+                    尚無排程新聞資料，請先執行自動監控更新排程。
+                  </p>
+                ) : (
+                  historyNews.map(item => {
+                    const rColor = item.ai_risk_label === 'Critical' ? '#ef4444'
+                      : item.ai_risk_label === 'High' ? '#f97316'
+                      : item.ai_risk_label === 'Medium' ? '#f59e0b' : '#10b981'
+                    return (
+                      <div key={item.id} className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                        <div className="flex items-center justify-between mb-1">
+                          {item.ai_risk_label ? (
+                            <span className="text-[10px] font-semibold" style={{ color: rColor }}>
+                              文本風險語言強度：{RISK_ZH[item.ai_risk_label] ?? item.ai_risk_label}
+                              {item.ai_risk_score != null ? ` · ${item.ai_risk_score}` : ''}
+                            </span>
+                          ) : <span />}
+                          <span className="text-[10px]" style={{ color: '#475569' }}>Finnhub</span>
+                        </div>
+                        <div className="text-xs text-white leading-snug mb-1">
+                          {item.url ? (
+                            <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ color: '#e2e8f0' }}>
+                              {item.headline}
+                            </a>
+                          ) : item.headline}
+                        </div>
+                        <div className="text-[10px]" style={{ color: '#475569' }}>
+                          {item.published_at ? formatHistTime(item.published_at) : '—'}
+                        </div>
                       </div>
-                      <div className="text-xs text-white leading-snug mb-1">
-                        {item.url ? (
-                          <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ color: '#e2e8f0' }}>
-                            {item.headline}
-                          </a>
-                        ) : item.headline}
-                      </div>
-                      <div className="text-[10px]" style={{ color: '#475569' }}>
-                        {item.published_at ? formatHistTime(item.published_at) : '—'}
-                      </div>
-                    </div>
-                  )
-                })
-              )}
+                    )
+                  })
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
       </div>
