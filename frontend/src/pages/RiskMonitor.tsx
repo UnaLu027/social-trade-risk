@@ -337,7 +337,7 @@ export function RiskMonitor() {
       try {
         await personalApi.delete(`/api/v1/me/watchlist/${sym}`)
         queryClient.invalidateQueries({ queryKey: ['personal-watchlist', user?.id] })
-      } catch { /* silently ignore */ }
+      } catch { setSearchError('移除失敗，請稍後再試。') }
     } else {
       const next = localWatchlist.filter(s => s !== sym)
       setLocalWatchlist(next)
@@ -425,21 +425,28 @@ export function RiskMonitor() {
   const lastAttemptFailed  = symbolMonitorData?.last_attempt_status === 'error'
     || symbolMonitorData?.last_attempt_status === 'partial'
 
-  // Data priority: FastAPI > PHP > DEMO
-  const fastapiSnapshots  = fastapiData?.data?.snapshots ?? []
-  const hasFastapiData    = fastapiSnapshots.length > 0
-  const hasPhpData        = !!phpData && phpData.length > 0
+  // Data priority: FastAPI > PHP > DEMO.
+  // PHP and DEMO fallbacks are filtered to the active watchlist symbols so no card
+  // from a symbol outside the user's watchlist is ever shown in the risk grid.
+  const watchlistSet     = new Set(watchlist)
+  const fastapiSnapshots = fastapiData?.data?.snapshots ?? []
+  const hasFastapiData   = fastapiSnapshots.length > 0
+  const phpFiltered      = (phpData ?? []).filter(s => watchlistSet.has(s.symbol))
+  const demoFiltered     = DEMO_SNAPSHOTS.filter(s => watchlistSet.has(s.symbol))
+  const hasPhpData       = phpFiltered.length > 0
 
   const snapshots = hasFastapiData
     ? fastapiSnapshots
     : hasPhpData
-      ? phpData!
-      : DEMO_SNAPSHOTS
+      ? phpFiltered
+      : demoFiltered
 
-  const usingDemo        = !hasFastapiData && !hasPhpData
-  const usingPhpFallback = !hasFastapiData && hasPhpData
-  const hasPartialErrors = !!fastapiData && (fastapiData.errors?.length ?? 0) > 0
-  const hasDemoQuality   = usingPhpFallback && phpData!.some(s => s.data_quality === 'demo')
+  const usingDemo           = !hasFastapiData && !hasPhpData && demoFiltered.length > 0
+  const usingPhpFallback    = !hasFastapiData && hasPhpData
+  const hasPartialErrors    = !!fastapiData && (fastapiData.errors?.length ?? 0) > 0
+  const hasDemoQuality      = usingPhpFallback && phpFiltered.some(s => s.data_quality === 'demo')
+  // True when the user has watchlist symbols but none of HF / PHP / DEMO has data for them
+  const hasNoDataForWatchlist = watchlist.length > 0 && snapshots.length === 0
 
   const isLoading     = (fastapiIsLoading && phpIsLoading) || (isAuthenticated && personalLoading)
   const isFetching    = fastapiIsFetching || phpIsFetching
@@ -654,6 +661,21 @@ export function RiskMonitor() {
                 </button>
               </>
             )}
+          </div>
+        ) : hasNoDataForWatchlist ? (
+          <div className="rounded-lg p-10 flex flex-col items-center gap-3"
+               style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
+            <ShieldAlert size={28} color="#2d3148" />
+            <p className="text-sm text-center" style={{ color: '#64748b' }}>
+              此觀察清單目前尚無可顯示的即時資料，系統將持續更新，請稍後重新整理。
+            </p>
+            <button
+              onClick={() => { fastapiRefetch(); phpRefetch() }}
+              className="text-xs px-3 py-1.5 rounded font-semibold"
+              style={{ background: '#2d3148', color: '#94a3b8', border: '1px solid #3d4163' }}
+            >
+              重新整理
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

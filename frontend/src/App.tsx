@@ -1,5 +1,5 @@
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { Sidebar } from './components/layout/Sidebar'
 
 // Core product pages
@@ -27,10 +27,31 @@ import { ModelInsights }    from './pages/ModelInsights'
 void MarketPulse; void EventReplay; void AlertCenter; void ScenarioLab
 void MarketScreener; void MarketOverview; void FakeNewsDetector; void ModelInsights
 
-// AppRoutes needs useLocation so it lives inside HashRouter
+// AppRoutes needs useLocation and useAuth so it lives inside HashRouter + AuthProvider
 function AppRoutes() {
   const location = useLocation()
+  const { authLoading } = useAuth()
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register'
+
+  // While validating a stored token via /auth/me, render a neutral loading screen.
+  // This prevents guest-mode RiskMonitor from mounting (and firing HF requests for
+  // localStorage symbols) before we know whether the user has an active session.
+  if (authLoading && !isAuthPage) {
+    return (
+      <div
+        className="flex items-center justify-center w-full min-h-screen"
+        style={{ background: '#0f1117' }}
+      >
+        <div className="flex flex-col items-center gap-3">
+          <div
+            className="w-7 h-7 rounded-full border-2 animate-spin"
+            style={{ borderColor: '#10b981', borderTopColor: 'transparent' }}
+          />
+          <span className="text-xs" style={{ color: '#64748b' }}>正在驗證登入狀態…</span>
+        </div>
+      </div>
+    )
+  }
 
   // Auth pages: full-screen, no sidebar
   if (isAuthPage) {
