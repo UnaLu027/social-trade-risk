@@ -76,8 +76,11 @@ interface ScheduledLatest {
 }
 
 interface SymbolMonitorData {
-  latest: ScheduledLatest
-  history: ScheduledHistoryEntry[]
+  latest:              ScheduledLatest | null
+  last_attempt_at:     string
+  last_attempt_status: string
+  last_attempt_errors: string[]
+  history:             ScheduledHistoryEntry[]
 }
 
 interface MonitoringJsonData {
@@ -338,8 +341,10 @@ export function RiskMonitor() {
   const symbolMonitorData = monitoringJson?.symbols?.[selectedHistorySymbol] ?? null
   const historySummaries  = symbolMonitorData?.history ?? []
   const historyNews       = symbolMonitorData?.latest?.items ?? []
-  const lastFetchedAt     = symbolMonitorData?.latest?.fetched_at ?? monitoringJson?.generated_at ?? null
+  // Freshness uses only the last known-good data timestamp (never a failed-attempt time)
+  const lastFetchedAt     = symbolMonitorData?.latest?.fetched_at ?? null
   const freshness         = getFreshnessStatus(lastFetchedAt)
+  const lastAttemptFailed = symbolMonitorData?.last_attempt_status === 'error'
 
   // Data priority: FastAPI (non-empty) > PHP > DEMO
   // Empty array from FastAPI (all tickers rate-limited) must NOT block PHP fallback
@@ -562,6 +567,12 @@ export function RiskMonitor() {
           {!lastFetchedAt && (
             <div className="px-3 py-2 rounded mb-3 text-xs" style={{ background: '#0f1117', border: '1px solid #2d3148', color: '#475569' }}>
               尚未完成首次自動更新，歷史摘要將在 workflow 執行後顯示。
+            </div>
+          )}
+          {lastAttemptFailed && lastFetchedAt && (
+            <div className="px-3 py-1.5 rounded mb-3 text-[10px]"
+              style={{ background: '#1c0505', border: '1px solid #7f1d1d', color: '#fca5a5' }}>
+              最近一次排程嘗試失敗 · 以下顯示上次成功資料
             </div>
           )}
 

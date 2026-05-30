@@ -62,8 +62,11 @@ interface ScheduledLatest {
 }
 
 interface SymbolMonitorData {
-  latest: ScheduledLatest
-  history: unknown[]
+  latest:              ScheduledLatest | null    // last known-good; null only before first successful run
+  last_attempt_at:     string                    // when this refresh run happened
+  last_attempt_status: string                    // 'success'|'partial'|'error'
+  last_attempt_errors: string[]
+  history:             unknown[]
 }
 
 interface MonitoringJsonData {
@@ -344,11 +347,17 @@ export function RiskReport() {
     retry: 0,
     staleTime: 10 * 60_000,
   })
-  const symbolLatest    = monitoringJson?.symbols?.[upper]?.latest ?? null
-  const lastFetchedAt   = symbolLatest?.fetched_at ?? monitoringJson?.generated_at ?? null
-  const freshness       = getFreshnessStatus(lastFetchedAt)
-  const scheduledSummary = symbolLatest?.summary ?? null
-  const scheduledItems   = symbolLatest?.items ?? []
+  const symbolMonData     = monitoringJson?.symbols?.[upper] ?? null
+  const symbolLatest      = symbolMonData?.latest ?? null
+  // Freshness is based only on last known-good data, never on a failed attempt's timestamp
+  const lastFetchedAt     = symbolLatest?.fetched_at ?? null
+  const freshness         = getFreshnessStatus(lastFetchedAt)
+  const scheduledSummary  = symbolLatest?.summary ?? null
+  const scheduledItems    = symbolLatest?.items ?? []
+  // Last-attempt info: shows whether the most recent scheduled run succeeded
+  const lastAttemptStatus = symbolMonData?.last_attempt_status ?? null
+  const lastAttemptErrors = symbolMonData?.last_attempt_errors ?? []
+  const lastAttemptFailed = lastAttemptStatus === 'error' || lastAttemptStatus === 'partial'
 
   // ── snapshot market status label (Chinese) ────────────────────────────────
   const snapshotZhLabel = latest?.ai_risk_label
@@ -566,6 +575,16 @@ export function RiskReport() {
               </>
             )}
           </div>
+
+          {/* Last-attempt failure warning — shown above the data regardless */}
+          {lastAttemptFailed && (
+            <div className="rounded px-2.5 py-1.5 mb-2 text-[10px]"
+              style={{ background: '#1c0505', border: '1px solid #7f1d1d', color: '#fca5a5' }}>
+              最近排程執行失敗（{lastAttemptStatus}）
+              {lastAttemptErrors.length > 0 && <>：{lastAttemptErrors[0].slice(0, 80)}</>}
+              {lastFetchedAt && ' · 以下顯示上次成功資料'}
+            </div>
+          )}
 
           {!lastFetchedAt ? (
             <p className="text-xs" style={{ color: '#475569' }}>尚未完成首次自動更新。</p>
