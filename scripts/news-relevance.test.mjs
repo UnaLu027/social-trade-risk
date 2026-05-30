@@ -10,7 +10,7 @@
 
 import { test } from 'node:test'
 import assert   from 'node:assert/strict'
-import { evaluateNewsRelevance, filterRelevantNews } from './news-relevance.mjs'
+import { evaluateNewsRelevance, filterRelevantNews, deduplicateNewsItems } from './news-relevance.mjs'
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -269,4 +269,120 @@ test('Unknown symbol returns no_issuer_match without throwing', () => {
   assert.strictEqual(r.is_relevant,     false)
   assert.strictEqual(r.relevance_basis, 'no_issuer_match')
   assert.deepStrictEqual(r.matched_terms, [])
+})
+
+// ── deduplicateNewsItems ──────────────────────────────────────────────────────
+
+// Helper for dedup tests: constructs a relevant-tagged item with a specific URL
+function taggedItem(headline, url, summary = '') {
+  return {
+    headline, url, summary,
+    id: 'test', source: 'finnhub', published_at: '',
+    ai_risk_label: 'Low', ai_risk_score: 15, ai_highlighted_terms: [],
+    is_relevant: true, relevance_basis: 'issuer_term_in_headline', matched_terms: ['GME'],
+  }
+}
+
+test('deduplicateNewsItems: duplicate URL items published only once, first-seen kept', () => {
+  const items = [
+    taggedItem('GameStop Raises eBay Stake',   'https://example.com/gme-1'),
+    taggedItem('GME Short Interest Update',    'https://example.com/gme-2'),
+    taggedItem('Duplicate of first by URL',    'https://example.com/gme-1'),  // dup URL
+  ]
+  const result = deduplicateNewsItems(items)
+  assert.strictEqual(result.length, 2)
+  assert.strictEqual(result[0].headline, 'GameStop Raises eBay Stake')  // first-seen preserved
+  assert.strictEqual(result[1].headline, 'GME Short Interest Update')
+})
+
+test('deduplicateNewsItems: duplicate normalized headline items published only once', () => {
+  const items = [
+    taggedItem('  GameStop Raises eBay Stake  ', 'https://example.com/a'),
+    taggedItem('GAMESTOP RAISES EBAY STAKE',     'https://example.com/b'),  // same headline, case+trim
+  ]
+  const result = deduplicateNewsItems(items)
+  assert.strictEqual(result.length, 1)
+  // First-seen (trimmed original) is preserved
+  assert.strictEqual(result[0].url, 'https://example.com/a')
+})
+
+test('deduplicateNewsItems: first-seen order is preserved for all unique items', () => {
+  const items = [
+    taggedItem('First GME article',  'https://example.com/1'),
+    taggedItem('Second GME article', 'https://example.com/2'),
+    taggedItem('Third GME article',  'https://example.com/3'),
+  ]
+  const result = deduplicateNewsItems(items)
+  assert.strictEqual(result.length, 3)
+  assert.strictEqual(result[0].headline, 'First GME article')
+  assert.strictEqual(result[1].headline, 'Second GME article')
+  assert.strictEqual(result[2].headline, 'Third GME article')
+})
+
+// ── META precision — reject generic "meta" contexts ───────────────────────────
+
+test('META: "META Shares Rise After Earnings" → relevant', () => {
+  const r = evaluateNewsRelevance(item('META Shares Rise After Earnings'), 'META')
+  assert.strictEqual(r.is_relevant, true)
+  assert.ok(r.matched_terms.includes('META'))
+})
+
+test('META: "Meta Platforms Announces New AI Product" → relevant', () => {
+  const r = evaluateNewsRelevance(item('Meta Platforms Announces New AI Product'), 'META')
+  assert.strictEqual(r.is_relevant, true)
+  assert.ok(r.matched_terms.includes('Meta Platforms'))
+})
+
+test('META: "A meta-analysis of AI investment trends" → not relevant', () => {
+  const r = evaluateNewsRelevance(
+    item('A meta-analysis of AI investment trends',
+         'Researchers reviewed 50 AI investment studies.'),
+    'META'
+  )
+  assert.strictEqual(r.is_relevant, false)
+  assert.strictEqual(r.relevance_basis, 'no_issuer_match')
+})
+
+test('META: "New metadata framework improves research" → not relevant', () => {
+  const r = evaluateNewsRelevance(
+    item('New metadata framework improves research reproducibility',
+         'Scientists propose a metadata standard for datasets.'),
+    'META'
+  )
+  assert.strictEqual(r.is_relevant, false)
+  assert.strictEqual(r.relevance_basis, 'no_issuer_match')
+})
+
+// ── AMC Networks article-wide exclusion across headline + summary ─────────────
+
+test('AMC: Networks in headline, bare AMC in summary → excluded_other_company', () => {
+  const r = evaluateNewsRelevance(
+    item(
+      'AMC Networks Reports Quarterly Results',
+      'AMC reported revenue growth of 8% this quarter, beating expectations.'
+    ),
+    'AMC'
+  )
+  assert.strictEqual(r.is_relevant,     false)
+  assert.strictEqual(r.relevance_basis, 'excluded_other_company')
+})
+
+test('AMC: "AMC Entertainment Shares Rise" headline → still relevant (takes priority)', () => {
+  const r = evaluateNewsRelevance(
+    item('AMC Entertainment Shares Rise', 'AMC Networks also had a strong week.'),
+    'AMC'
+  )
+  assert.strictEqual(r.is_relevant,    true)
+  assert.strictEqual(r.relevance_basis, 'issuer_term_in_headline')
+  assert.ok(r.matched_terms.includes('AMC Entertainment'))
+})
+
+test('AMC: "AMC Shares Rise After Box Office Weekend" with no Networks → relevant', () => {
+  const r = evaluateNewsRelevance(
+    item('AMC Shares Rise After Box Office Weekend', 'Attendance hit a 2026 high.'),
+    'AMC'
+  )
+  assert.strictEqual(r.is_relevant,    true)
+  assert.strictEqual(r.relevance_basis, 'issuer_term_in_headline')
+  assert.ok(r.matched_terms.includes('AMC'))
 })

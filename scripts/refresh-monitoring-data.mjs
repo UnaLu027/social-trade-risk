@@ -36,11 +36,13 @@
  *   (summary is excluded from the stored JSON)
  *
  * Per-symbol latest audit fields:
- *   news_count            — number of published relevant items (backward-compat)
- *   candidate_news_count  — total items returned by HF API
- *   relevant_news_count   — items passing the relevance gate
- *   published_news_count  — items written to JSON (≤ PUBLISHED_NEWS_LIMIT)
- *   excluded_news_count   — candidate items filtered out as irrelevant
+ *   news_count                — published relevant unique count (backward-compat)
+ *   candidate_news_count      — total items returned by HF API
+ *   relevant_news_count       — items passing the relevance gate (before dedup)
+ *   unique_relevant_news_count — relevant items after URL/headline deduplication
+ *   duplicate_news_count      — relevant items removed as duplicates
+ *   published_news_count      — items written to JSON (≤ PUBLISHED_NEWS_LIMIT)
+ *   excluded_news_count       — candidate items rejected for relevance only
  *
  * overallStatus rules:
  *   'error'   — all symbols failed → exit(1), DO NOT write or upload JSON
@@ -50,7 +52,7 @@
 
 import { mkdir, writeFile, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { filterRelevantNews } from './news-relevance.mjs'
+import { filterRelevantNews, deduplicateNewsItems } from './news-relevance.mjs'
 
 const SYMBOLS              = ['GME', 'TSLA', 'AAPL', 'AMC', 'NVDA', 'MSFT', 'META', 'AMZN']
 const HF_API_BASE          = process.env.HF_API_BASE ?? ''
@@ -185,12 +187,14 @@ async function fetchJson(url, label) {
 
 // ── Per-symbol fetch ──────────────────────────────────────────────────────────
 // Data flow:
-//   candidateNewsItems = raw items from HF social-signals API
-//   relevantNewsItems  = filterRelevantNews(candidateNewsItems, symbol)
-//   scoringNewsItems   = deduplicated relevant items (inside scoreNews)
-//   publishedNewsItems = relevantNewsItems.slice(0, PUBLISHED_NEWS_LIMIT)
+//   candidateNewsItems     = raw items from HF social-signals API
+//   relevantNewsItems      = filterRelevantNews(candidateNewsItems, symbol)
+//   uniqueRelevantNewsItems = deduplicateNewsItems(relevantNewsItems)
+//   computeCautionSummary(uniqueRelevantNewsItems, ...)
+//   publishedNewsItems     = uniqueRelevantNewsItems.slice(0, PUBLISHED_NEWS_LIMIT)
 //
-// Only relevant items contribute to caution scoring and the output JSON.
+// Deduplication is applied before scoring so caution scores and the published
+// item list are both free of duplicate articles.
 // If the API succeeds but zero candidates are relevant, no fetch error is
 // recorded; snapshot and history sources carry the full caution score weight.
 
@@ -216,11 +220,13 @@ async function fetchSymbol(symbol) {
     }
   } catch (e) { fetchErrors.push(`social-signals: ${e.message}`) }
 
-  // Apply relevance gate: only symbol-relevant items are scored and published.
+  // Apply relevance gate then deduplicate before scoring and publishing.
   // summary is available here (from HF API) for matching but is not stored.
-  const relevantNewsItems  = filterRelevantNews(candidateNewsItems, symbol)
-  const excludedNewsCount  = candidateNewsItems.length - relevantNewsItems.length
-  const publishedNewsItems = relevantNewsItems.slice(0, PUBLISHED_NEWS_LIMIT)
+  const relevantNewsItems      = filterRelevantNews(candidateNewsItems, symbol)
+  const uniqueRelevantNewsItems = deduplicateNewsItems(relevantNewsItems)
+  const excludedNewsCount      = candidateNewsItems.length - relevantNewsItems.length
+  const duplicateNewsCount     = relevantNewsItems.length - uniqueRelevantNewsItems.length
+  const publishedNewsItems     = uniqueRelevantNewsItems.slice(0, PUBLISHED_NEWS_LIMIT)
 
   // 2. Market snapshot
   try {
@@ -249,8 +255,8 @@ async function fetchSymbol(symbol) {
     }
   } catch (e) { fetchErrors.push(`market-history: ${e.message}`) }
 
-  // Caution score is computed from relevant news only
-  const summary = computeCautionSummary(relevantNewsItems, fastapiSnapshot, histItems, fetchedAt)
+  // Caution score is computed from unique relevant items only
+  const summary = computeCautionSummary(uniqueRelevantNewsItems, fastapiSnapshot, histItems, fetchedAt)
 
   // Status based on how many of the 3 sources failed (zero relevant news is not a failure)
   const refresh_status = fetchErrors.length === 0 ? 'success'
@@ -262,13 +268,15 @@ async function fetchSymbol(symbol) {
     refresh_status,
     fetch_errors:   fetchErrors,
     summary,
-    // news_count: published relevant count (backward-compatible field)
-    news_count:           publishedNewsItems.length,
+    // news_count: published unique relevant count (backward-compatible field)
+    news_count:                  publishedNewsItems.length,
     // Audit fields for observability
-    candidate_news_count: candidateNewsItems.length,
-    relevant_news_count:  relevantNewsItems.length,
-    published_news_count: publishedNewsItems.length,
-    excluded_news_count:  excludedNewsCount,
+    candidate_news_count:        candidateNewsItems.length,
+    relevant_news_count:         relevantNewsItems.length,
+    unique_relevant_news_count:  uniqueRelevantNewsItems.length,
+    duplicate_news_count:        duplicateNewsCount,
+    published_news_count:        publishedNewsItems.length,
+    excluded_news_count:         excludedNewsCount,
     // Published items include relevance metadata; summary is excluded from stored JSON
     items: publishedNewsItems.map(({
       id, headline, url, published_at, source,
@@ -320,7 +328,7 @@ async function main() {
     }
 
     const attempt = attemptBySymbol[symbol]
-    const relevanceInfo = `cand=${attempt.candidate_news_count} rel=${attempt.relevant_news_count} pub=${attempt.published_news_count} excl=${attempt.excluded_news_count}`
+    const relevanceInfo = `cand=${attempt.candidate_news_count} rel=${attempt.relevant_news_count} uniq=${attempt.unique_relevant_news_count} dup=${attempt.duplicate_news_count} pub=${attempt.published_news_count} excl=${attempt.excluded_news_count}`
     if (attempt.refresh_status === 'success') {
       successCount++
       console.log(`[refresh] ${symbol} ✓ score=${attempt.summary?.combined_score ?? 'N/A'} news=${attempt.news_count} (${relevanceInfo})`)

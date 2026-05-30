@@ -10,6 +10,8 @@
  * Exports:
  *   evaluateNewsRelevance(item, symbol) → { is_relevant, relevance_basis, matched_terms }
  *   filterRelevantNews(items, symbol)   → relevant items with relevance metadata merged in
+ *   deduplicateNewsItems(items)         → items deduplicated by URL and normalized headline,
+ *                                         preserving first-seen order
  */
 
 // ── Issuer term registry ────────────────────────────────────────────────────
@@ -42,7 +44,9 @@ const ISSUER_PATTERNS = {
     { pattern: /\bMicrosoft\b/i,       label: 'Microsoft' },
   ],
   META: [
-    { pattern: /\bMETA\b/i,            label: 'META' },
+    // \bMETA\b(?!-) rejects generic contexts such as "meta-analysis" (where "meta"
+    // is followed by a hyphen) while accepting the stock ticker and brand name.
+    { pattern: /\bMETA\b(?!-)/i,       label: 'META' },
     { pattern: /\bMeta\s+Platforms\b/i, label: 'Meta Platforms' },
     { pattern: /\bFacebook\b/i,        label: 'Facebook' },
     { pattern: /\bInstagram\b/i,       label: 'Instagram' },
@@ -66,44 +70,50 @@ const _RE_AMC_NETWORKS       = /\bAMC\s+Networks?\b/ig   // global for replaceAl
 const _RE_AMC_BARE           = /\bAMC\b/i
 
 /**
- * Evaluate AMC relevance with the AMC Networks exclusion rule.
+ * Evaluate AMC relevance with article-wide AMC Networks exclusion.
+ *
+ * Priority (evaluated in this order, article-wide not per-field):
+ *   1. "AMC Entertainment" in headline or summary → relevant.
+ *   2. "AMC Networks" anywhere in article → excluded_other_company.
+ *      This prevents bare "AMC" in one field from overriding "AMC Networks"
+ *      in another field (e.g. Networks headline + bare AMC summary → excluded).
+ *   3. Bare "AMC" in headline or summary → relevant.
+ *   4. No AMC reference → no_issuer_match.
+ *
  * @param {string} headline
  * @param {string} summary
  * @returns {{ is_relevant: boolean, relevance_basis: string, matched_terms: string[] }}
  */
 function _matchAmc(headline, summary) {
-  // Check headline first (strongest signal), then summary
-  for (const [text, basis] of [
-    [headline, 'issuer_term_in_headline'],
-    [summary,  'issuer_term_in_summary'],
-  ]) {
-    if (!text) continue
+  const hl   = headline ?? ''
+  const summ = summary  ?? ''
 
-    // "AMC Entertainment" is an unambiguous positive match
-    if (_RE_AMC_ENTERTAINMENT.test(text)) {
-      return { is_relevant: true, relevance_basis: basis, matched_terms: ['AMC Entertainment'] }
-    }
-
-    if (_RE_AMC_BARE.test(text)) {
-      // Strip every "AMC Networks" occurrence and check if "AMC" still appears.
-      // If yes → AMC appears in a non-Networks context → relevant.
-      // Reset lastIndex since the regex flag is /g.
-      _RE_AMC_NETWORKS.lastIndex = 0
-      const stripped = text.replace(_RE_AMC_NETWORKS, '\x00')
-      if (_RE_AMC_BARE.test(stripped)) {
-        return { is_relevant: true, relevance_basis: basis, matched_terms: ['AMC'] }
-      }
-      // AMC matched but only inside "AMC Networks" — fall through to next source
-    }
+  // Step 1: "AMC Entertainment" is an unambiguous positive match.
+  // Check headline first to prefer issuer_term_in_headline basis.
+  if (_RE_AMC_ENTERTAINMENT.test(hl)) {
+    return { is_relevant: true, relevance_basis: 'issuer_term_in_headline', matched_terms: ['AMC Entertainment'] }
+  }
+  if (_RE_AMC_ENTERTAINMENT.test(summ)) {
+    return { is_relevant: true, relevance_basis: 'issuer_term_in_summary', matched_terms: ['AMC Entertainment'] }
   }
 
-  // If we reach here, nothing above qualified as relevant.
-  // Determine the correct negative basis.
-  const both = headline + ' ' + summary
+  // Step 2: Article-wide "AMC Networks" exclusion.
+  // If "AMC Networks" appears anywhere in the article, the article is about
+  // the cable network regardless of bare "AMC" use elsewhere.
   _RE_AMC_NETWORKS.lastIndex = 0
-  if (_RE_AMC_NETWORKS.test(both)) {
+  if (_RE_AMC_NETWORKS.test(hl + ' ' + summ)) {
     return { is_relevant: false, relevance_basis: 'excluded_other_company', matched_terms: [] }
   }
+
+  // Step 3: Bare "AMC" in headline or summary (no Networks context present).
+  if (_RE_AMC_BARE.test(hl)) {
+    return { is_relevant: true, relevance_basis: 'issuer_term_in_headline', matched_terms: ['AMC'] }
+  }
+  if (_RE_AMC_BARE.test(summ)) {
+    return { is_relevant: true, relevance_basis: 'issuer_term_in_summary', matched_terms: ['AMC'] }
+  }
+
+  // Step 4: No AMC reference at all.
   return { is_relevant: false, relevance_basis: 'no_issuer_match', matched_terms: [] }
 }
 
@@ -176,4 +186,34 @@ export function filterRelevantNews(items, symbol) {
       return { ...item, ...evaluation }
     })
     .filter(item => item.is_relevant)
+}
+
+/**
+ * Deduplicate news items by URL and normalized headline, preserving first-seen order.
+ *
+ * Deduplication rules (same as scoreNews internal logic, extracted for reuse):
+ *   - A non-empty URL seen before → skip.
+ *   - A normalized headline (lowercase + trimmed) seen before → skip.
+ *   - Empty URL/headline fields do not trigger URL/headline deduplication respectively.
+ *
+ * Call this after filterRelevantNews() so the published list never contains
+ * duplicate articles even when the HF candidate pool includes repeats.
+ *
+ * @param {object[]} items - news items (may include relevance metadata)
+ * @returns {object[]} - deduplicated items in original order
+ */
+export function deduplicateNewsItems(items) {
+  const seenUrls      = new Set()
+  const seenHeadlines = new Set()
+  const unique        = []
+  for (const item of items) {
+    const urlKey      = item.url ?? ''
+    const headlineKey = (item.headline ?? '').toLowerCase().trim()
+    if (urlKey && seenUrls.has(urlKey))           continue
+    if (headlineKey && seenHeadlines.has(headlineKey)) continue
+    if (urlKey)      seenUrls.add(urlKey)
+    if (headlineKey) seenHeadlines.add(headlineKey)
+    unique.push(item)
+  }
+  return unique
 }
