@@ -2,9 +2,12 @@
 Social Trading Risk Copilot — ML inference endpoints.
 
 POST /api/v1/post-analyze       — analyse a social post for risk signals
+POST /api/v1/analyze-url        — fetch URL and analyse extracted text
+GET  /api/v1/social-signals     — latest news signals for a symbol
 POST /api/v1/stress-test        — run scenario simulation
 GET  /api/v1/model-lab/summary  — current best model metadata
 GET  /api/v1/model-lab/experiments — all logged experiments
+GET  /api/v1/health/real-ai     — deployed ML model status (used by ModelLab)
 GET  /api/v1/health/product     — product-layer health check
 """
 
@@ -15,7 +18,7 @@ import math
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 
 router = APIRouter(tags=["copilot"])
@@ -69,6 +72,53 @@ def _detect_symbol(text: str) -> Optional[str]:
         if t in US_TICKERS:
             return t
     return None
+
+
+def _analyze_text(text: str) -> tuple[dict, str]:
+    """
+    Shared inference pipeline used by post_analyze and analyze_url.
+    Returns (scores_dict, model_source).
+    scores_dict: all fields from _compute_scores() with predicted_risk_label updated by ML if available.
+    model_source: "real_model" when ML ran, "heuristic_fallback" otherwise.
+    """
+    scores = _compute_scores(text)
+    composite = scores["composite_score"]
+    model_source = "heuristic_fallback"
+
+    # Skip ML when there are zero signals — heuristic "Low" is already correct and
+    # non-zero mention_count floors would produce spurious "Medium" predictions.
+    if composite > 0:
+        try:
+            from app.ml import inference as _ml
+            from app.ml.feature_engineering import build_full_feature_row
+
+            if _ml._model is not None:
+                features = build_full_feature_row(
+                    mention_count_1h     = int(composite * 5 / 100),
+                    mention_count_24h    = int(composite),
+                    mention_growth_ratio = max(1.0, 1.0 + composite / 25.0),
+                    bullish_ratio        = float(scores["bullish_probability"]),
+                    avg_sentiment        = (float(scores["sentiment_score"]) - 0.5) * 2.0,
+                    influencer_score     = min(composite / 100.0, 1.0),
+                    price_change_pct_1h  = 0.0,
+                    price_change_pct_24h = 0.0,
+                    volume_spike_ratio   = max(1.0, 1.0 + composite * 3.0 / 100.0),
+                    short_interest_ratio = 0.3 if scores["short_squeeze_narrative_detected"] else 0.0,
+                    option_volume_spike  = min(composite * 2.0 / 100.0, 5.0),
+                    hour_of_day          = 12,
+                    post_text            = "",
+                )
+                result = _ml.predict_risk(features)
+                _lmap = {0: "Low", 1: "Medium", 2: "High"}
+                ml_label = _lmap.get(result["label"], "Low")
+                if ml_label == "High" and scores["predicted_risk_label"] == "Critical":
+                    ml_label = "Critical"
+                scores["predicted_risk_label"] = ml_label
+                model_source = "real_model"
+        except Exception as _exc:
+            print(f"[_analyze_text] ML inference skipped: {_exc}")
+
+    return scores, model_source
 
 
 def _compute_scores(text: str):
@@ -162,21 +212,24 @@ class StressTestResponse(BaseModel):
 def post_analyze(req: PostAnalyzeRequest):
     """
     Analyse a social media post for meme-stock risk signals.
-    Uses keyword heuristic baseline; extend with FinBERT embeddings in Phase 2.
+    Tries the trained ML model (app.ml.inference) first; falls back to
+    keyword heuristic when the model is unavailable.
+    model_source: "real_model" | "heuristic_fallback"
     """
     if req.symbol and req.symbol.upper().endswith(".TW"):
         from fastapi import HTTPException
         raise HTTPException(400, detail="Only US stocks are supported in this MVP.")
 
-    scores = _compute_scores(req.text)
-    symbol = req.symbol or _detect_symbol(req.text)
+    scores, model_source = _analyze_text(req.text)
+    symbol = req.symbol or _detect_symbol(req.text)  # noqa: F841 (reserved for future use)
 
+    # ── Build explanation ─────────────────────────────────────────────────────
     drivers = []
-    if scores["fomo_score"]               >= 40: drivers.append("FOMO語言")
-    if scores["hype_language_score"]      >= 40: drivers.append("炒作語言")
+    if scores["fomo_score"]                >= 40: drivers.append("FOMO語言")
+    if scores["hype_language_score"]       >= 40: drivers.append("炒作語言")
     if scores["manipulation_signal_score"] >= 40: drivers.append("操縱信號")
     if scores["short_squeeze_narrative_detected"]:  drivers.append("軋空敘事")
-    if scores["urgency_score"]            >= 40: drivers.append("緊迫感語言")
+    if scores["urgency_score"]             >= 40: drivers.append("緊迫感語言")
 
     label = scores["predicted_risk_label"]
     explanation = (
@@ -188,8 +241,8 @@ def post_analyze(req: PostAnalyzeRequest):
     return PostAnalyzeResponse(
         **scores,
         explanation=explanation,
-        model_source="keyword_heuristic_v0.2",
-        data_quality="heuristic",
+        model_source=model_source,
+        data_quality="real_reddit_yfinance_weak_label" if model_source == "real_model" else "heuristic",
     )
 
 
@@ -329,3 +382,178 @@ def health_product():
     except Exception as e:
         result["ml_backend"] = f"warn: {e}"
     return result
+
+
+# ── /api/v1/health/real-ai ─────────────────────────────────────────────────────
+
+@router.get("/api/v1/health/real-ai")
+def health_real_ai():
+    """
+    Returns the status of the ML model currently deployed in PostAnalyzer.
+    Used by ModelLab's DeployedModelCard.
+    """
+    import os
+    from app.ml import inference as _ml
+
+    meta = _ml.get_metadata()
+    model_loaded = _ml._model is not None
+
+    _models_dir = os.path.join(os.path.dirname(__file__), "..", "ml", "models")
+    if model_loaded:
+        if os.path.exists(os.path.join(_models_dir, "best_model.pkl")):
+            model_file: Optional[str] = "best_model.pkl"
+        elif os.path.exists(os.path.join(_models_dir, "hype_rf_model.pkl")):
+            model_file = "hype_rf_model.pkl"
+        else:
+            model_file = "unknown"
+    else:
+        model_file = None
+
+    return {
+        "status":         "ok" if model_loaded else "not_loaded",
+        "model_file":     model_file,
+        "model_name":     meta.get("best_model_name", "StackingClassifier"),
+        "accuracy":       meta.get("test_accuracy", meta.get("accuracy")),
+        "macro_f1":       meta.get("test_macro_f1"),
+        "weighted_f1":    meta.get("test_weighted_f1", meta.get("f1_weighted")),
+        "high_risk_recall": meta.get("high_risk_recall"),
+        "trained_at":     meta.get("trained_at"),
+        "feature_count":  len(_ml.get_active_feature_names()),
+    }
+
+
+# ── /api/v1/analyze-url ───────────────────────────────────────────────────────
+
+class AnalyzeUrlRequest(BaseModel):
+    url: str
+    symbol: Optional[str] = "GME"
+
+
+@router.post("/api/v1/analyze-url")
+def analyze_url(req: AnalyzeUrlRequest):
+    """Fetch a URL, extract text, and run post-risk analysis on it."""
+    import httpx
+
+    result: dict = {
+        "success": False,
+        "url": req.url,
+        "symbol": req.symbol or "GME",
+        "title": None,
+        "description": None,
+        "site_name": None,
+        "extracted_text": None,
+        "analysis": None,
+        "data_quality": "url_extracted_text_model1",
+        "errors": [],
+    }
+
+    try:
+        resp = httpx.get(
+            req.url,
+            headers={"User-Agent": "SocialTradeRiskBot/1.0"},
+            timeout=12,
+            follow_redirects=True,
+        )
+        if resp.status_code != 200:
+            result["errors"].append({"error": f"HTTP {resp.status_code}"})
+            return result
+
+        content = resp.text
+
+        # Extract structured text (BeautifulSoup preferred; plain regex fallback)
+        try:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(content, "html.parser")
+
+            title_tag = soup.find("title")
+            if title_tag:
+                result["title"] = title_tag.get_text().strip()[:200]
+
+            for attr in [{"property": "og:description"}, {"name": "description"}]:
+                tag = soup.find("meta", attrs=attr)
+                if tag and tag.get("content"):
+                    result["description"] = tag["content"][:500]
+                    break
+
+            og_site = soup.find("meta", attrs={"property": "og:site_name"})
+            if og_site:
+                result["site_name"] = og_site.get("content", "")
+
+            article = soup.find("article") or soup.find("main") or soup.find("body")
+            if article:
+                parts = [p.get_text().strip() for p in article.find_all(["p", "h1", "h2", "h3"])[:20]]
+                result["extracted_text"] = " ".join(t for t in parts if len(t) > 20)[:2000]
+
+        except ImportError:
+            import re as _re
+            text = _re.sub(r'<[^>]+>', ' ', content)
+            result["extracted_text"] = _re.sub(r'\s+', ' ', text).strip()[:2000]
+
+        # Analyse extracted text — same inference pipeline as post_analyze
+        analysis_text = result["extracted_text"] or result["description"] or result["title"] or ""
+        if analysis_text.strip():
+            a_scores, a_model_source = _analyze_text(analysis_text)
+            a_drivers = []
+            if a_scores["fomo_score"]                >= 40: a_drivers.append("FOMO語言")
+            if a_scores["hype_language_score"]       >= 40: a_drivers.append("炒作語言")
+            if a_scores["manipulation_signal_score"] >= 40: a_drivers.append("操縱信號")
+            if a_scores["short_squeeze_narrative_detected"]:  a_drivers.append("軋空敘事")
+            if a_scores["urgency_score"]             >= 40: a_drivers.append("緊迫感語言")
+
+            a_label = a_scores["predicted_risk_label"]
+            a_exp = (
+                f"URL content analysis: {a_label} risk. "
+                + (f"Key signals: {', '.join(a_drivers)}." if a_drivers else "No strong signals detected.")
+            )
+            result["analysis"] = {
+                **a_scores,
+                "explanation": a_exp,
+                "model_source": a_model_source,
+                "data_quality": "real_reddit_yfinance_weak_label" if a_model_source == "real_model" else "url_heuristic",
+            }
+            result["success"] = True
+
+    except Exception as e:
+        result["errors"].append({"error": "Extraction failed", "detail": str(e)})
+
+    return result
+
+
+# ── /api/v1/social-signals ────────────────────────────────────────────────────
+
+@router.get("/api/v1/social-signals")
+def social_signals(
+    symbol: str  = Query(..., description="Ticker symbol, e.g. GME"),
+    sources: str = Query("finnhub", description="Comma-separated: finnhub"),
+    limit: int   = Query(5, ge=1, le=20),
+):
+    """
+    Return recent news/social signals for a symbol, with heuristic risk labels.
+    Used by PostAnalyzer's 'Latest News' tab.
+    """
+    from app.services import finnhub_service as fh_svc
+
+    items: list[dict] = []
+    errors: list[dict] = []
+    sym = symbol.upper()
+
+    if "finnhub" in sources:
+        try:
+            news = fh_svc.get_news(sym, limit=limit)
+            for i, n in enumerate(news):
+                text = " ".join(filter(None, [n.get("headline"), n.get("summary")])).strip()
+                s = _compute_scores(text) if text else None
+                items.append({
+                    "id":            f"fh_{sym}_{i}",
+                    "source":        "finnhub",
+                    "published_at":  n.get("published_at", datetime.utcnow().isoformat()),
+                    "headline":      n.get("headline"),
+                    "summary":       n.get("summary"),
+                    "url":           n.get("url"),
+                    "ai_risk_label": s["predicted_risk_label"] if s else None,
+                    "ai_risk_score": round(s["composite_score"], 1) if s else None,
+                })
+        except Exception as e:
+            errors.append({"source": "finnhub", "error": str(e)})
+
+    return {"success": len(items) > 0, "items": items, "errors": errors}

@@ -176,7 +176,10 @@ function ScoreBar({ value, color }: { value: number | null; color: string }) {
 }
 
 function RiskCard({ snap, onView, onRemove }: { snap: RiskSnapshot; onView: () => void; onRemove: () => void }) {
-  const cfg = riskCfg(snap.ai_risk_label)
+  const isInsufficient = snap.data_quality === 'insufficient' && snap.ai_risk_label === null
+  const cfg = isInsufficient
+    ? { color: '#475569', bg: '#0f1117', border: '#2d3148' }
+    : riskCfg(snap.ai_risk_label)
   return (
     <div
       className="rounded-lg p-4 flex flex-col gap-3 cursor-pointer transition-opacity hover:opacity-90"
@@ -194,21 +197,44 @@ function RiskCard({ snap, onView, onRemove }: { snap: RiskSnapshot; onView: () =
           className="text-xs font-semibold px-2 py-0.5 rounded-full"
           style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}
         >
-          {snap.ai_risk_label ?? 'N/A'}
+          {isInsufficient ? '資料不足' : (snap.ai_risk_label ?? 'N/A')}
         </span>
       </div>
 
-      {snap.price != null && (
-        <div className="font-mono text-sm font-semibold text-white">
-          ${snap.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          {snap.data_quality === 'demo' && (
-            <span className="ml-2 text-[10px] font-normal" style={{ color: '#64748b' }}>demo</span>
-          )}
-          {snap.data_quality === 'market_snapshot_rule_based' && (
-            <span className="ml-2 text-[10px] font-normal" style={{ color: '#10b981' }}>market</span>
-          )}
-        </div>
-      )}
+      <div className="flex items-center justify-between">
+        {snap.price != null ? (
+          <div className="font-mono text-sm font-semibold text-white">
+            ${snap.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+        ) : (
+          <div className="text-sm font-semibold" style={{ color: '#64748b' }}>—</div>
+        )}
+        {/* Data-quality badge — every card */}
+        {snap.data_quality === 'market_snapshot_rule_based' && (
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                style={{ background: '#052e16', color: '#10b981', border: '1px solid #065f46' }}>
+            即時市場
+          </span>
+        )}
+        {snap.data_quality === 'partial' && (
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                style={{ background: '#1c1205', color: '#f59e0b', border: '1px solid #92400e' }}>
+            部分資料
+          </span>
+        )}
+        {snap.data_quality === 'insufficient' && (
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                style={{ background: '#0f1117', color: '#475569', border: '1px solid #2d3148' }}>
+            資料不足
+          </span>
+        )}
+        {snap.data_quality === 'demo' && (
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                style={{ background: '#1c1a05', color: '#f59e0b', border: '1px solid #78350f' }}>
+            demo
+          </span>
+        )}
+      </div>
 
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between text-[10px] mb-0.5" style={{ color: '#475569' }}>
@@ -221,7 +247,12 @@ function RiskCard({ snap, onView, onRemove }: { snap: RiskSnapshot; onView: () =
       </div>
 
       <div className="flex items-center justify-between text-xs" style={{ color: '#64748b' }}>
-        <span>提及數 {snap.mention_count?.toLocaleString() ?? '—'}</span>
+        <div className="flex flex-col gap-0.5">
+          <span>提及數 {snap.mention_count?.toLocaleString() ?? '—'}</span>
+          {snap.snapshot_date && (
+            <span className="text-[10px]" style={{ color: '#334155' }}>更新 {snap.snapshot_date}</span>
+          )}
+        </div>
         <div className="flex items-center gap-1.5">
           <button
             onClick={(e) => { e.stopPropagation(); onRemove() }}
@@ -430,7 +461,9 @@ export function RiskMonitor() {
   // from a symbol outside the user's watchlist is ever shown in the risk grid.
   const watchlistSet     = new Set(watchlist)
   const fastapiSnapshots = fastapiData?.data?.snapshots ?? []
-  const hasFastapiData   = fastapiSnapshots.length > 0
+  // A FastAPI response is only "trusted" if at least one snapshot has real data.
+  // data_quality: "insufficient" means the API returned a row but has no useful data.
+  const hasFastapiData   = fastapiSnapshots.some(s => s.data_quality !== 'insufficient')
   const phpFiltered      = (phpData ?? []).filter(s => watchlistSet.has(s.symbol))
   const demoFiltered     = DEMO_SNAPSHOTS.filter(s => watchlistSet.has(s.symbol))
   const hasPhpData       = phpFiltered.length > 0

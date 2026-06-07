@@ -1,5 +1,5 @@
 """
-Market Screener router.
+Market Screener + Market Snapshots router.
 
 預設行為（include_live=false）：
   - 純讀 DB（PriceSnapshot + HypeScore），目標 < 3 秒。
@@ -24,6 +24,7 @@ from app.services.hype_calculator import hype_label
 from app.services import yfinance_service as yf_svc
 from app.services import finnhub_service as fh_svc
 from app.services.trending_service import get_trending_tickers
+from app.services.hype_calculator import get_latest_hype
 from app.ml import inference
 from app.ml.feature_engineering import build_full_feature_row
 
@@ -340,3 +341,178 @@ async def get_trending(limit: int = 10):
     except Exception as e:
         print(f"[screener] trending error: {e}")
         return {"trending": []}
+
+
+# ─────────────────────────────────────────────────────────────────────
+#  GET /api/v1/market-snapshots
+# ─────────────────────────────────────────────────────────────────────
+
+@router.get("/api/v1/market-snapshots")
+def market_snapshots(
+    symbols: str = Query(..., description="Comma-separated ticker symbols, e.g. GME,AMC,TSLA"),
+    db: Session = Depends(get_db),
+):
+    """
+    Return risk snapshots for the given watchlist symbols.
+    Used by RiskMonitor to display real-time risk cards.
+
+    Priority for each field:
+      price/volume:   Finnhub quote → DB snapshot
+      social metrics: DB HypeScore → Finnhub social sentiment
+      risk label:     ML inference → hype-score fallback
+    data_quality:
+      market_snapshot_rule_based — price + social data both available
+      partial                    — price only
+      insufficient               — no price data
+    """
+    from datetime import datetime as _dt, date
+
+    symbol_list = [s.strip().upper() for s in symbols.split(",") if s.strip()][:20]
+    snapshots: list[dict] = []
+    errors: list[dict] = []
+    today_str = date.today().isoformat()
+    fetched_at = _dt.utcnow().isoformat()
+
+    for sym in symbol_list:
+        try:
+            if sym.endswith(".TW"):
+                errors.append({"symbol": sym, "error": "Taiwan stocks not supported for snapshots"})
+                continue
+
+            # ── ticker DB row ─────────────────────────────────────────────────
+            ticker = db.execute(select(Ticker).where(Ticker.symbol == sym)).scalar_one_or_none()
+
+            # ── price: Finnhub → DB ───────────────────────────────────────────
+            price: Optional[float] = None
+            volume: Optional[int] = None
+            fh_change_pct = 0.0
+            fh_q = fh_svc.get_quote(sym)
+            if fh_q and (fh_q.get("price") or 0) > 0:
+                price = float(fh_q["price"])
+                volume = fh_q.get("volume")
+                fh_change_pct = float(fh_q.get("change_pct") or 0.0) / 100.0
+
+            if not price and ticker:
+                db_p = yf_svc.get_latest_price(db, ticker.id)
+                if db_p and (db_p.get("close") or 0) > 0:
+                    price = float(db_p["close"])
+                    volume = db_p.get("volume")
+
+            # ── social metrics: DB HypeScore → Finnhub social ─────────────────
+            hype = get_latest_hype(db, ticker.id) if ticker else None
+            mention_count  = int(hype.mention_count_24h)  if hype and hype.mention_count_24h  else None
+            bullish_ratio  = float(hype.bullish_ratio)     if hype and hype.bullish_ratio      else None
+            avg_sentiment  = float(hype.avg_sentiment)     if hype and hype.avg_sentiment      else None
+            social_hype_score = float(hype.hype_score)    if hype and hype.hype_score         else None
+
+            # Enrich with Finnhub social when local data is sparse
+            if social_hype_score is None or (mention_count or 0) == 0:
+                try:
+                    fh_s = fh_svc.get_social_sentiment(sym)
+                    if fh_s:
+                        r = float(fh_s.get("reddit_sentiment") or 0.0)
+                        t = float(fh_s.get("twitter_sentiment") or 0.0)
+                        blended = (r + t) / 2 if (r or t) else 0.0
+                        if blended != 0.0:
+                            avg_sentiment  = avg_sentiment  if avg_sentiment  is not None else blended
+                            bullish_ratio  = bullish_ratio  if bullish_ratio  is not None else round(0.5 + blended * 0.5, 3)
+                        rm = int(fh_s.get("reddit_mentions") or 0)
+                        tm = int(fh_s.get("twitter_mentions") or 0)
+                        if rm + tm > 0:
+                            mention_count = mention_count if mention_count is not None else (rm + tm)
+                except Exception:
+                    pass
+
+            # ── data_quality (before ML so we can skip inference for missing data) ──
+            has_price  = price is not None
+            has_social = (social_hype_score or 0) > 0 or (mention_count or 0) > 0
+            if has_price and has_social:
+                dq = "market_snapshot_rule_based"
+            elif has_price:
+                dq = "partial"
+            else:
+                dq = "insufficient"
+
+            # ── ML inference → risk label + sub-scores ────────────────────────
+            # Skip entirely when data is insufficient: no real signals to feed the model.
+            ai_risk_label: Optional[str] = None
+            manipulation_signal_score: Optional[float] = None
+            fomo_score: Optional[float] = None
+            short_squeeze_pressure: Optional[float] = None
+
+            if dq != "insufficient":
+                try:
+                    mc  = mention_count or 1
+                    br  = bullish_ratio or 0.5
+                    sa  = avg_sentiment or 0.0
+                    hs  = (social_hype_score or 0.0) / 100.0
+
+                    feat = build_full_feature_row(
+                        mention_count_1h     = max(1, mc // 24),
+                        mention_count_24h    = max(1, mc),
+                        mention_growth_ratio = max(1.0, mc / 10.0),
+                        bullish_ratio        = float(br),
+                        avg_sentiment        = float(sa),
+                        influencer_score     = min(float(mc) / 200.0, 1.0),
+                        price_change_pct_1h  = fh_change_pct / 24,
+                        price_change_pct_24h = fh_change_pct,
+                        volume_spike_ratio   = 1.0,
+                        short_interest_ratio = 0.1,
+                        option_volume_spike  = min(hs * 5.0, 5.0),
+                        hour_of_day          = 12,
+                        post_text            = "",
+                    )
+                    ml_result = inference.predict_risk(feat)
+                    _lmap = {0: "Low", 1: "Medium", 2: "High"}
+                    ai_risk_label = _lmap.get(ml_result["label"], "Low")
+
+                    probs = ml_result["probabilities"]
+                    hp = probs[2] if len(probs) > 2 else 0.0
+                    mp = probs[1] if len(probs) > 1 else 0.0
+                    manipulation_signal_score = round(hp * 100 + mp * 40, 1)
+                    fomo_score                = round(hp * 90  + mp * 30, 1)
+                    short_squeeze_pressure    = round(hp * 80  + mp * 25, 1)
+
+                except Exception:
+                    hs_val = social_hype_score or 0.0
+                    ai_risk_label = (
+                        "Critical" if hs_val >= 75 else
+                        "High"     if hs_val >= 50 else
+                        "Medium"   if hs_val >= 25 else
+                        "Low"
+                    )
+                    manipulation_signal_score = round(hs_val * 0.9, 1)
+                    fomo_score                = round(hs_val * 0.8, 1)
+                    short_squeeze_pressure    = round(hs_val * 0.7, 1)
+
+            snapshots.append({
+                "symbol":                   sym,
+                "name":                     ticker.name if ticker else None,
+                "snapshot_date":            today_str,
+                "price":                    round(price, 2) if price is not None else None,
+                "volume":                   int(volume) if volume is not None else None,
+                "mention_count":            mention_count,
+                "bullish_ratio":            round(bullish_ratio, 3) if bullish_ratio is not None else None,
+                "avg_sentiment":            round(avg_sentiment, 3) if avg_sentiment is not None else None,
+                "social_hype_score":        round(social_hype_score, 1) if social_hype_score is not None else None,
+                "manipulation_signal_score": manipulation_signal_score,
+                "fomo_score":               fomo_score,
+                "short_squeeze_pressure":   short_squeeze_pressure,
+                "ai_risk_label":            ai_risk_label,
+                "data_quality":             dq,
+            })
+
+        except Exception as exc:
+            print(f"[market_snapshots] error for {sym}: {exc}")
+            errors.append({"symbol": sym, "error": str(exc)})
+
+    return {
+        "success":    len(snapshots) > 0,
+        "count":      len(snapshots),
+        "fetched_at": fetched_at,
+        "data": {
+            "count":     len(snapshots),
+            "snapshots": snapshots,
+        },
+        "errors": errors,
+    }
