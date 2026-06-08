@@ -42,3 +42,15 @@ php-api/config/config.local.php
 
 # Transient monitoring intermediate file (used only within a workflow run)
 generated-data/monitoring-previous.json
+
+# Local virtual environments (non-standard names)
+backend/.venv312/
+tools/
+
+# Annotation & training data work files (human-label pipeline)
+# annotation_queue_template.csv is intentionally committed — exclude it from the glob
+backend/app/ml/training/data/annotation_queue_*.csv
+!backend/app/ml/training/data/annotation_queue_template.csv
+backend/app/ml/training/data/*_labeled.csv
+backend/app/ml/training/data/human_labels_v*.csv
+backend/app/ml/training/data/training_social_posts_v*.csv
