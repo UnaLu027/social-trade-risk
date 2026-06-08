@@ -455,7 +455,7 @@ def analyze_url(req: AnalyzeUrlRequest):
             follow_redirects=True,
         )
         is_reddit = "reddit.com" in req.url.lower()
-        if resp.status_code == 403 and is_reddit:
+        if is_reddit and resp.status_code in (403, 429):
             result["errors"].append({
                 "error": "Reddit restricts server-side access. Please paste the post/comment text into Text Analysis mode."
             })
@@ -494,6 +494,15 @@ def analyze_url(req: AnalyzeUrlRequest):
             import re as _re
             text = _re.sub(r'<[^>]+>', ' ', content)
             result["extracted_text"] = _re.sub(r'\s+', ' ', text).strip()[:2000]
+
+        # Reddit soft-block: Cloudflare challenge page returns HTTP 200 but no real content
+        if is_reddit and not (result.get("extracted_text") or "").strip():
+            title_lower = (result.get("title") or "").lower()
+            if any(kw in title_lower for kw in ["please wait", "verification", "just a moment", "checking your"]):
+                result["errors"].append({
+                    "error": "Reddit restricts server-side access. Please paste the post/comment text into Text Analysis mode."
+                })
+                return result
 
         # Analyse extracted text — same inference pipeline as post_analyze
         analysis_text = result["extracted_text"] or result["description"] or result["title"] or ""
