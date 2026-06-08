@@ -454,6 +454,12 @@ def analyze_url(req: AnalyzeUrlRequest):
             timeout=12,
             follow_redirects=True,
         )
+        is_reddit = "reddit.com" in req.url.lower()
+        if resp.status_code == 403 and is_reddit:
+            result["errors"].append({
+                "error": "Reddit restricts server-side access. Please paste the post/comment text into Text Analysis mode."
+            })
+            return result
         if resp.status_code != 200:
             result["errors"].append({"error": f"HTTP {resp.status_code}"})
             return result
@@ -528,7 +534,8 @@ def social_signals(
     limit: int   = Query(5, ge=1, le=20),
 ):
     """
-    Return recent news/social signals for a symbol, with heuristic risk labels.
+    Return recent news + aggregated social sentiment for a symbol.
+    social_summary uses Finnhub aggregated Reddit/Twitter data (not raw post scraping).
     Used by PostAnalyzer's 'Latest News' tab.
     """
     from app.services import finnhub_service as fh_svc
@@ -537,6 +544,7 @@ def social_signals(
     errors: list[dict] = []
     sym = symbol.upper()
 
+    # ── news items (unchanged) ────────────────────────────────────────────────
     if "finnhub" in sources:
         try:
             news = fh_svc.get_news(sym, limit=limit)
@@ -556,4 +564,60 @@ def social_signals(
         except Exception as e:
             errors.append({"source": "finnhub", "error": str(e)})
 
-    return {"success": len(items) > 0, "items": items, "errors": errors}
+    # ── social sentiment summary (Finnhub aggregated — NOT raw post scraping) ─
+    social_summary: dict = {
+        "source":               "finnhub_social_sentiment",
+        "reddit_mentions":      0,
+        "twitter_mentions":     0,
+        "reddit_sentiment":     0.0,
+        "twitter_sentiment":    0.0,
+        "total_mentions":       0,
+        "avg_social_sentiment": 0.0,
+        "social_buzz_score":    0.0,
+        "risk_hint":            "Low",
+        "data_quality":         "aggregated_social_sentiment_not_raw_posts",
+    }
+    try:
+        sentiment = fh_svc.get_social_sentiment(sym)
+        if sentiment:
+            reddit_m  = int(sentiment.get("reddit_mentions",  0))
+            twitter_m = int(sentiment.get("twitter_mentions", 0))
+            reddit_s  = float(sentiment.get("reddit_sentiment",  0.0))
+            twitter_s = float(sentiment.get("twitter_sentiment", 0.0))
+            total     = reddit_m + twitter_m
+
+            # avg over sources that actually have data
+            sentiments = []
+            if reddit_m  > 0: sentiments.append(reddit_s)
+            if twitter_m > 0: sentiments.append(twitter_s)
+            avg_s = round(sum(sentiments) / len(sentiments), 4) if sentiments else 0.0
+
+            # buzz: 0–100, 200 mentions → 100; capped
+            buzz = round(min(100.0, total / 2.0), 2)
+            risk_hint = "High" if total > 100 else "Medium" if total > 20 else "Low"
+
+            social_summary.update({
+                "reddit_mentions":      reddit_m,
+                "twitter_mentions":     twitter_m,
+                "reddit_sentiment":     round(reddit_s,  4),
+                "twitter_sentiment":    round(twitter_s, 4),
+                "total_mentions":       total,
+                "avg_social_sentiment": avg_s,
+                "social_buzz_score":    buzz,
+                "risk_hint":            risk_hint,
+            })
+        else:
+            errors.append({
+                "source": "finnhub_social",
+                "error":  "Finnhub social sentiment unavailable or empty",
+            })
+    except Exception as e:
+        errors.append({"source": "finnhub_social", "error": f"Social sentiment error: {e}"})
+
+    return {
+        "success":        len(items) > 0,
+        "symbol":         sym,
+        "items":          items,
+        "social_summary": social_summary,
+        "errors":         errors,
+    }

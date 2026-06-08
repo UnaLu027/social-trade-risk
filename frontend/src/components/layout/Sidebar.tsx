@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
-  ShieldAlert, MessageSquare, FileText, FlaskConical, Brain,
+  ShieldAlert, MessageSquare, FileText, Brain,
   TrendingUp, LogIn, LogOut, User,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
@@ -9,7 +9,6 @@ const coreNavItems = [
   { to: '/risk-monitor',    icon: ShieldAlert,   label: '風險監控中心' },
   { to: '/post-analyzer',   icon: MessageSquare, label: '貼文風險分析' },
   { to: '/risk-report/GME', icon: FileText,      label: '風險報告' },
-  { to: '/stress-test',     icon: FlaskConical,  label: '情境壓力測試' },
   { to: '/model-lab',       icon: Brain,         label: '模型實驗室' },
 ]
 

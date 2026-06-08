@@ -6,7 +6,6 @@ import { Sidebar } from './components/layout/Sidebar'
 import { RiskMonitor }      from './pages/RiskMonitor'
 import { PostAnalyzer }     from './pages/PostAnalyzer'
 import { RiskReport }       from './pages/RiskReport'
-import { StressTest }       from './pages/StressTest'
 import { ModelLab }         from './pages/ModelLab'
 
 // Auth pages
@@ -81,7 +80,7 @@ function AppRoutes() {
           <Route path="/post-analyzer"       element={<PostAnalyzer />} />
           <Route path="/risk-report/:symbol" element={<RiskReport />} />
           <Route path="/risk-report"         element={<Navigate to="/risk-report/GME" replace />} />
-          <Route path="/stress-test"         element={<StressTest />} />
+          <Route path="/stress-test"         element={<Navigate to="/risk-monitor" replace />} />
           <Route path="/model-lab"           element={<ModelLab />} />
 
           {/* Legacy routes — all redirect to risk-monitor */}
