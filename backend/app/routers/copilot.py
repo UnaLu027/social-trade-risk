@@ -9,6 +9,7 @@ GET  /api/v1/model-lab/summary  — current best model metadata
 GET  /api/v1/model-lab/experiments — all logged experiments
 GET  /api/v1/health/real-ai     — deployed ML model status (used by ModelLab)
 GET  /api/v1/health/product     — product-layer health check
+POST /api/v1/event-abnormal-return — Market Model event study (post-event AR/CAR observation)
 """
 
 from __future__ import annotations
@@ -905,4 +906,194 @@ def social_signals(
         "items":          items,
         "social_summary": social_summary,
         "errors":         errors,
+    }
+
+
+# ── /api/v1/event-abnormal-return ─────────────────────────────────────────────
+
+def _fetch_daily_closes(symbol: str) -> dict:
+    """Fetch 1-year of daily adj-close prices via Yahoo Finance v8 chart API.
+    Returns {date_str: close} e.g. {"2026-01-02": 185.23}. Empty dict on failure.
+    """
+    import httpx
+    from datetime import timezone as _tz
+
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    try:
+        url = (
+            f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}"
+            f"?range=1y&interval=1d&includePrePost=false"
+        )
+        resp = httpx.get(url, headers=headers, timeout=15)
+        if resp.status_code != 200:
+            return {}
+        data = resp.json()
+        result_list = data.get("chart", {}).get("result") or []
+        if not result_list:
+            return {}
+        r = result_list[0]
+        timestamps = r.get("timestamp", [])
+        adj = r.get("indicators", {}).get("adjclose", [])
+        closes = adj[0].get("adjclose", []) if adj else []
+        if not closes:
+            closes = r.get("indicators", {}).get("quote", [{}])[0].get("close", [])
+        out: dict = {}
+        for i, ts in enumerate(timestamps):
+            c = closes[i] if i < len(closes) else None
+            if c is None or c != c:    # None or NaN
+                continue
+            d = datetime.fromtimestamp(ts, tz=_tz.utc).strftime("%Y-%m-%d")
+            out[d] = float(c)
+        return out
+    except Exception as e:
+        print(f"[event_study] _fetch_daily_closes({symbol}): {e}")
+        return {}
+
+
+class EventAbnormalReturnRequest(BaseModel):
+    symbol:            str
+    event_date:        str            # "YYYY-MM-DD"
+    benchmark:         str  = "SPY"
+    estimation_days:   int  = 120
+    event_window_days: int  = 5
+
+
+@router.post("/api/v1/event-abnormal-return")
+def event_abnormal_return(req: EventAbnormalReturnRequest):
+    """
+    Market Model event study.
+    Returns abnormal return (AR) and cumulative abnormal return (CAR) for a symbol
+    around an event date, benchmarked against SPY.
+    This is a post-event observation, not a causal claim.
+    """
+    import numpy as np
+
+    sym   = req.symbol.upper()
+    bench = req.benchmark.upper()
+
+    if not req.event_date or not req.event_date.strip():
+        return {
+            "success": False, "symbol": sym, "event_date": "",
+            "error": "event_date is required. Please provide a date in YYYY-MM-DD format.",
+        }
+
+    try:
+        ev_date = datetime.strptime(req.event_date.strip(), "%Y-%m-%d").date()
+    except ValueError:
+        return {
+            "success": False, "symbol": sym, "event_date": req.event_date,
+            "error": f"Invalid event_date (expected YYYY-MM-DD): {req.event_date}",
+        }
+
+    sym_prices   = _fetch_daily_closes(sym)
+    bench_prices = _fetch_daily_closes(bench)
+
+    if not sym_prices:
+        return {"success": False, "symbol": sym, "event_date": req.event_date,
+                "error": f"Could not fetch price data for {sym}"}
+    if not bench_prices:
+        return {"success": False, "symbol": sym, "event_date": req.event_date,
+                "error": f"Could not fetch price data for {bench}"}
+
+    common_dates = sorted(set(sym_prices) & set(bench_prices))
+    if len(common_dates) < 2:
+        return {"success": False, "symbol": sym, "event_date": req.event_date,
+                "error": "Insufficient overlapping price data"}
+
+    # Daily returns over common trading dates
+    ret_dates: list = []
+    sym_rets:  dict = {}
+    bch_rets:  dict = {}
+    for i in range(1, len(common_dates)):
+        d, prev = common_dates[i], common_dates[i - 1]
+        sp, bp = sym_prices[prev], bench_prices[prev]
+        if sp > 0 and bp > 0:
+            sym_rets[d] = (sym_prices[d]   - sp) / sp
+            bch_rets[d] = (bench_prices[d] - bp) / bp
+            ret_dates.append(d)
+
+    if not ret_dates:
+        return {"success": False, "symbol": sym, "event_date": req.event_date,
+                "error": "Could not compute daily returns from price data"}
+
+    ev_str = ev_date.strftime("%Y-%m-%d")
+
+    # Locate event window start: first trading date >= event_date
+    event_start_idx = next((i for i, d in enumerate(ret_dates) if d >= ev_str), None)
+    if event_start_idx is None:
+        return {
+            "success": False, "symbol": sym, "event_date": req.event_date,
+            "available_days": 0,
+            "error": "event_date is beyond available price data; no post-event trading data yet",
+        }
+
+    # Estimation window: up to estimation_days trading days before event
+    est_end   = event_start_idx - 1
+    est_start = max(0, est_end - req.estimation_days + 1)
+    est_dates = ret_dates[est_start : est_end + 1]
+
+    if len(est_dates) < 30:
+        return {
+            "success": False, "symbol": sym, "event_date": req.event_date,
+            "available_days": 0,
+            "error": (
+                f"Insufficient estimation window: only {len(est_dates)} trading days "
+                f"before event_date (minimum 30 required)."
+            ),
+        }
+
+    # OLS: R_sym = alpha + beta * R_bench (on estimation window)
+    X = np.array([bch_rets[d] for d in est_dates])
+    y = np.array([sym_rets[d] for d in est_dates])
+    X_mat = np.column_stack([np.ones(len(X)), X])
+    coeffs, _, _, _ = np.linalg.lstsq(X_mat, y, rcond=None)
+    alpha, beta = float(coeffs[0]), float(coeffs[1])
+
+    # Event window: event_start to event_start + event_window_days - 1
+    ev_end_idx = min(event_start_idx + req.event_window_days - 1, len(ret_dates) - 1)
+    ev_dates   = ret_dates[event_start_idx : ev_end_idx + 1]
+    available  = len(ev_dates)
+
+    ar_list = [sym_rets[d] - (alpha + beta * bch_rets[d]) for d in ev_dates]
+
+    ev_ar  = round(ar_list[0], 6)         if ar_list           else None
+    car_3d = round(sum(ar_list[:3]), 6)   if ar_list           else None
+    car_5d = round(sum(ar_list[:5]), 6)   if ar_list           else None
+
+    ref_car    = car_5d or 0.0
+    abs_ref    = abs(ref_car)
+    risk_level = "high" if abs_ref > 0.10 else "medium" if abs_ref > 0.05 else "low"
+
+    incomplete = f"（事件後僅 {available} 日資料）" if available < req.event_window_days else ""
+    pct = ref_car * 100
+    if abs_ref > 0.05:
+        direction = "正向" if ref_car > 0 else "負向"
+        interpretation = (
+            f"事件後觀察：{sym} 相對 {bench} 出現{direction}異常報酬，"
+            f"CAR_5d ≈ {pct:+.1f}%{incomplete}"
+        )
+    else:
+        interpretation = (
+            f"事件後觀察：{sym} 相對 {bench} 異常報酬幅度較小，"
+            f"CAR_5d ≈ {pct:+.1f}%{incomplete}"
+        )
+
+    return {
+        "success":               True,
+        "symbol":                sym,
+        "event_date":            req.event_date,
+        "benchmark":             bench,
+        "method":                "market_model_event_study",
+        "alpha":                 round(alpha, 6),
+        "beta":                  round(beta, 4),
+        "estimation_days":       len(est_dates),
+        "event_window_days":     req.event_window_days,
+        "event_abnormal_return": ev_ar,
+        "car_3d":                car_3d,
+        "car_5d":                car_5d,
+        "available_days":        available,
+        "risk_level":            risk_level,
+        "interpretation":        interpretation,
+        "data_quality":          "computed_from_market_model_event_window",
+        "disclaimer":            "This is a post-event abnormal return observation, not proof of causality.",
     }

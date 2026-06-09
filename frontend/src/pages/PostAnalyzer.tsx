@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   ShieldAlert, Send, Zap, CheckCircle,
-  Globe, Copy, Check, RefreshCw, Newspaper, ChevronDown, ChevronUp,
+  Globe, Copy, Check, RefreshCw, Newspaper, ChevronDown, ChevronUp, TrendingUp,
 } from 'lucide-react'
 import { phpPost } from '../api/phpClient'
 import { api } from '../api/client'
@@ -65,6 +65,27 @@ interface SocialSignalItem {
   risk_probabilities?: Record<string, number> | null
   direction_label?: string | null
   direction_confidence?: number | null
+}
+
+interface EventArResult {
+  success: boolean
+  symbol: string
+  event_date: string
+  benchmark?: string
+  method?: string
+  alpha?: number | null
+  beta?: number | null
+  estimation_days?: number
+  event_window_days?: number
+  event_abnormal_return?: number | null
+  car_3d?: number | null
+  car_5d?: number | null
+  available_days?: number
+  risk_level?: 'low' | 'medium' | 'high'
+  interpretation?: string
+  data_quality?: string
+  disclaimer?: string
+  error?: string
 }
 
 interface SocialSummary {
@@ -590,6 +611,10 @@ export function PostAnalyzer() {
   const [showIndicators, setShowIndicators] = useState(false)
   const [showTechInfo,   setShowTechInfo]   = useState(false)
 
+  // Event abnormal return (eventDate is intentionally empty — user must supply it explicitly)
+  const [eventDate,     setEventDate]     = useState('')
+  const [eventArResult, setEventArResult] = useState<EventArResult | null>(null)
+
   // ── analyzeMutation (UNCHANGED) ────────────────────────────────────────────
   const analyzeMutation = useMutation({
     mutationFn: async (req: AnalyzeRequest): Promise<AnalyzeResult> => {
@@ -603,6 +628,7 @@ export function PostAnalyzer() {
     },
     onSuccess: async (data, vars) => {
       setResult(data)
+      setEventArResult(null)
       setApiSource(data.model_source.includes('heuristic') ? 'heuristic' : 'fastapi')
       // Save to PHP / SQL Server
       try {
@@ -649,6 +675,25 @@ export function PostAnalyzer() {
         errors: [{ error: 'Network error — check URL and try again.' }],
       })
     },
+  })
+
+  // ── Event abnormal return mutation ────────────────────────────────────────
+  const eventArMutation = useMutation({
+    mutationFn: async (): Promise<EventArResult | null> => {
+      if (!eventDate) {
+        setEventArResult(null)
+        return null
+      }
+      const res = await personalApi.post<EventArResult>('/api/v1/event-abnormal-return', {
+        symbol,
+        event_date: eventDate,
+        benchmark:  'SPY',
+        estimation_days:   120,
+        event_window_days: 5,
+      })
+      return res.data
+    },
+    onSuccess: (data) => { if (data) setEventArResult(data) },
   })
 
   // ── Latest News query ──────────────────────────────────────────────────────
@@ -1355,6 +1400,102 @@ export function PostAnalyzer() {
                 </Link>
               </div>
             </div>
+
+            {/* ── Event Abnormal Return Observation ── */}
+            {symbol && (
+              <div className="rounded-lg p-4" style={{ background: '#0d1220', border: '1px solid #1a2744' }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp size={13} color="#38bdf8" />
+                  <span className="text-xs font-semibold text-white">貼文事件後異常報酬觀察</span>
+                </div>
+
+                {/* Prompt when no date filled */}
+                {!eventDate ? (
+                  <p className="text-[10px] mb-3" style={{ color: '#475569' }}>
+                    若要觀察貼文發布後的市場反應，請輸入貼文發布日期。系統會以該日期作為事件日，計算事件後異常報酬。此為市場行為觀察，不代表貼文造成股價變動。
+                  </p>
+                ) : (
+                  <p className="text-[10px] mb-3" style={{ color: '#475569' }}>
+                    以貼文日期為事件點，觀察事件後該股票相對 SPY 的異常報酬（Market Model）。此為市場行為觀察，不代表貼文造成股價變動。
+                  </p>
+                )}
+
+                {/* Date input + trigger */}
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <label className="text-[10px] flex-shrink-0" style={{ color: '#64748b' }}>
+                    貼文發布日期（選填）
+                  </label>
+                  <input
+                    type="date"
+                    value={eventDate}
+                    onChange={e => { setEventDate(e.target.value); setEventArResult(null) }}
+                    className="text-xs px-2 py-1 rounded outline-none"
+                    style={{ background: '#0d0f1a', border: '1px solid #2d3148', color: '#f1f5f9' }}
+                  />
+                  <button
+                    onClick={() => { if (eventDate) eventArMutation.mutate() }}
+                    disabled={!eventDate || eventArMutation.isPending}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded text-xs font-semibold transition-opacity disabled:opacity-40"
+                    style={{ background: '#1e3a5f', color: '#38bdf8', border: '1px solid #2d4a6f' }}
+                  >
+                    {eventArMutation.isPending
+                      ? <><RefreshCw size={11} className="animate-spin" /> 計算中…</>
+                      : <><TrendingUp size={11} /> 計算異常報酬</>
+                    }
+                  </button>
+                </div>
+                {!eventDate && (
+                  <p className="text-[9px] mb-2" style={{ color: '#334155' }}>
+                    請先選擇貼文發布日期，才能計算事件後異常報酬。
+                  </p>
+                )}
+
+                {/* Results */}
+                {eventArResult && (
+                  !eventArResult.success ? (
+                    <div className="text-[11px] mt-2 py-2 px-3 rounded" style={{ background: '#1a0f0a', color: '#f87171', border: '1px solid #7f1d1d' }}>
+                      {(eventArResult.available_days ?? 0) === 0
+                        ? '事件後交易資料不足，暫無法計算完整 CAR。可改以 RiskReport 的近期 Market Model 異常報酬作為補充觀察。'
+                        : `計算失敗：${eventArResult.error}`
+                      }
+                    </div>
+                  ) : (
+                    <>
+                      {(eventArResult.available_days ?? 5) < (eventArResult.event_window_days ?? 5) && (
+                        <div className="text-[10px] mt-2 mb-2 px-3 py-2 rounded" style={{ background: '#1c1200', color: '#fbbf24', border: '1px solid #78350f' }}>
+                          事件後交易資料不足，暫無法計算完整 CAR。可改以 RiskReport 的近期 Market Model 異常報酬作為補充觀察。
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-x-6 text-xs mt-2 mb-2">
+                        {([
+                          ['Event Date',   eventArResult.event_date],
+                          ['Benchmark',    eventArResult.benchmark ?? 'SPY'],
+                          ['Event-day AR', eventArResult.event_abnormal_return != null ? `${(eventArResult.event_abnormal_return * 100).toFixed(2)}%` : '—'],
+                          ['CAR 3d',       eventArResult.car_3d != null ? `${(eventArResult.car_3d * 100).toFixed(2)}%` : '—'],
+                          ['CAR 5d',       eventArResult.car_5d != null ? `${(eventArResult.car_5d * 100).toFixed(2)}%` : '—'],
+                          ['Alpha (α)',    eventArResult.alpha != null ? eventArResult.alpha.toFixed(5) : '—'],
+                          ['Beta (β)',     eventArResult.beta  != null ? eventArResult.beta.toFixed(3)  : '—'],
+                          ['Risk Level',  eventArResult.risk_level ?? '—'],
+                        ] as [string, string][]).map(([label, val]) => (
+                          <div key={label} className="flex justify-between py-1" style={{ borderBottom: '1px solid #1a1d27' }}>
+                            <span style={{ color: '#64748b' }}>{label}</span>
+                            <span className="font-mono text-right ml-2" style={{ color: '#f1f5f9' }}>{val}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {eventArResult.interpretation && (
+                        <p className="text-[11px] mt-2" style={{ color: '#94a3b8' }}>
+                          {eventArResult.interpretation}
+                        </p>
+                      )}
+                      <p className="text-[9px] mt-2" style={{ color: '#334155' }}>
+                        ⓘ 此指標僅觀察事件後市場異常，不代表貼文造成股價變動
+                      </p>
+                    </>
+                  )
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
