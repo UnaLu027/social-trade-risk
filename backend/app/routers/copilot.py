@@ -583,8 +583,9 @@ def social_signals(
         "total_mentions":       0,
         "avg_social_sentiment": 0.0,
         "social_buzz_score":    0.0,
-        "risk_hint":            "Low",
-        "data_quality":         "aggregated_social_sentiment_not_raw_posts",
+        "risk_hint":            "Unavailable",
+        "data_quality":         "finnhub_social_not_authorized",
+        "available":            False,
     }
     try:
         sentiment = fh_svc.get_social_sentiment(sym)
@@ -614,14 +615,16 @@ def social_signals(
                 "avg_social_sentiment": avg_s,
                 "social_buzz_score":    buzz,
                 "risk_hint":            risk_hint,
+                "data_quality":         "finnhub_aggregated_sentiment",
+                "available":            True,
             })
         else:
             errors.append({
                 "source": "finnhub_social",
-                "error":  "Finnhub social sentiment unavailable or empty",
+                "error":  "Finnhub social sentiment endpoint is not available for this API key.",
             })
     except Exception as e:
-        errors.append({"source": "finnhub_social", "error": f"Social sentiment error: {e}"})
+        errors.append({"source": "finnhub_social", "error": f"Finnhub social sentiment endpoint is not available for this API key."})
 
     return {
         "success":        len(items) > 0,

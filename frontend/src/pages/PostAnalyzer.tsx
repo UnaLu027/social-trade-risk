@@ -71,6 +71,7 @@ interface SocialSummary {
   social_buzz_score: number
   risk_hint: string
   data_quality: string
+  available?: boolean
 }
 
 type Mode = 'text' | 'url' | 'news' | 'samples'
@@ -942,43 +943,38 @@ export function PostAnalyzer() {
                 </button>
               </div>
 
-              {/* ── Social summary card ── */}
+              {/* ── Social summary: only show full card when data is available ── */}
             {!newsLoading && (() => {
               const ss = newsData?.social_summary
-              const hasData = ss && ss.total_mentions > 0
-              const buzzColor = ss?.risk_hint === 'High' ? '#ef4444' : ss?.risk_hint === 'Medium' ? '#f59e0b' : '#10b981'
+              const isAvailable = ss?.available === true && ss.total_mentions > 0 && ss.data_quality !== 'finnhub_social_not_authorized'
+              if (!isAvailable) return null
+              const buzzColor = ss!.risk_hint === 'High' ? '#ef4444' : ss!.risk_hint === 'Medium' ? '#f59e0b' : '#10b981'
               return (
                 <div className="rounded-md p-3 mb-3 text-xs" style={{ background: '#0d0f1a', border: '1px solid #2d3148' }}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-semibold" style={{ color: '#94a3b8' }}>聚合社群聲量</span>
-                    {ss && (
-                      <span
-                        className="px-2 py-0.5 rounded font-semibold"
-                        style={{ background: buzzColor + '22', color: buzzColor, border: `1px solid ${buzzColor}55` }}
-                      >
-                        {ss.risk_hint === 'High' ? '高聲量' : ss.risk_hint === 'Medium' ? '中聲量' : '低聲量'}
-                      </span>
-                    )}
+                    <span
+                      className="px-2 py-0.5 rounded font-semibold"
+                      style={{ background: buzzColor + '22', color: buzzColor, border: `1px solid ${buzzColor}55` }}
+                    >
+                      {ss!.risk_hint === 'High' ? '高聲量' : ss!.risk_hint === 'Medium' ? '中聲量' : '低聲量'}
+                    </span>
                   </div>
-                  {hasData && ss ? (
-                    <div className="grid grid-cols-3 gap-2 mb-2">
-                      {([
-                        ['Reddit 提及', ss.reddit_mentions],
-                        ['Twitter 提及', ss.twitter_mentions],
-                        ['總提及數', ss.total_mentions],
-                        ['Reddit 情緒', ss.reddit_sentiment.toFixed(3)],
-                        ['Twitter 情緒', ss.twitter_sentiment.toFixed(3)],
-                        ['社群聲量分數', ss.social_buzz_score.toFixed(1)],
-                      ] as [string, string | number][]).map(([label, val]) => (
-                        <div key={label} className="flex flex-col gap-0.5">
-                          <span style={{ color: '#475569' }}>{label}</span>
-                          <span className="font-mono font-semibold" style={{ color: '#f1f5f9' }}>{val}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p style={{ color: '#475569' }}>目前沒有可用的聚合社群資料。</p>
-                  )}
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    {([
+                      ['Reddit 提及', ss!.reddit_mentions],
+                      ['Twitter 提及', ss!.twitter_mentions],
+                      ['總提及數', ss!.total_mentions],
+                      ['Reddit 情緒', ss!.reddit_sentiment.toFixed(3)],
+                      ['Twitter 情緒', ss!.twitter_sentiment.toFixed(3)],
+                      ['社群聲量分數', ss!.social_buzz_score.toFixed(1)],
+                    ] as [string, string | number][]).map(([label, val]) => (
+                      <div key={label} className="flex flex-col gap-0.5">
+                        <span style={{ color: '#475569' }}>{label}</span>
+                        <span className="font-mono font-semibold" style={{ color: '#f1f5f9' }}>{val}</span>
+                      </div>
+                    ))}
+                  </div>
                   <p className="mt-1" style={{ color: '#334155' }}>
                     此為 Finnhub 聚合社群情緒，非即時 Reddit 原文爬取。僅作社群聲量與情緒警戒，不代表投資建議。
                   </p>
@@ -1064,6 +1060,13 @@ export function PostAnalyzer() {
                     )
                   })}
                 </div>
+              )}
+
+              {/* footnote — only shown when news loaded and social summary is not available */}
+              {!newsLoading && newsData && (newsData.social_summary?.available !== true) && (
+                <p className="mt-2 text-[10px]" style={{ color: '#334155' }}>
+                  目前顯示 Finnhub 新聞訊號；Reddit/Twitter 聚合情緒因 API 權限限制暫未顯示。
+                </p>
               )}
             </>
           )}
