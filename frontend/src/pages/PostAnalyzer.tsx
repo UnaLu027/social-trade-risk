@@ -674,7 +674,7 @@ export function PostAnalyzer() {
   // ── URL mutation ───────────────────────────────────────────────────────────
   const urlMutation = useMutation({
     mutationFn: async ({ url, sym }: { url: string; sym: string }) => {
-      const res = await api.post<UrlAnalysisResult>('/api/v1/analyze-url', { url, symbol: sym })
+      const res = await personalApi.post<UrlAnalysisResult>('/api/v1/analyze-url', { url, symbol: sym })
       return res.data
     },
     onSuccess: (data) => {
@@ -719,7 +719,7 @@ export function PostAnalyzer() {
   const { data: newsData, isLoading: newsLoading, refetch: newsRefetch } = useQuery({
     queryKey: ['post-analyzer-news', symbol],
     queryFn: async () => {
-      const res = await api.get<{
+      const res = await personalApi.get<{
         success: boolean
         symbol?: string
         items: SocialSignalItem[]
