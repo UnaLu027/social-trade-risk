@@ -49,6 +49,7 @@ interface UrlAnalysisResult {
   site_name: string | null
   extracted_text: string | null
   analyzed_text: string | null
+  extraction_quality: 'partial_article_text' | 'title_description_only' | null
   analysis: AnalyzeResult | null
   data_quality: string
   errors: { error: string; detail?: string }[]
@@ -678,7 +679,7 @@ export function PostAnalyzer() {
       setUrlResult({
         success: false, url: urlInput, source_url: urlInput, symbol,
         title: null, extracted_title: null, description: null, extracted_description: null,
-        site_name: null, extracted_text: null, analyzed_text: null, analysis: null,
+        site_name: null, extracted_text: null, analyzed_text: null, extraction_quality: null, analysis: null,
         data_quality: 'url_extracted_text_model1',
         errors: [{ error: 'Network error — check URL and try again.' }],
       })
@@ -901,6 +902,16 @@ export function PostAnalyzer() {
                         {urlResult.analyzed_text.slice(0, 300)}{urlResult.analyzed_text.length > 300 ? '…' : ''}
                       </p>
                     </div>
+                  )}
+                  {urlResult.extraction_quality === 'title_description_only' && (
+                    <p className="mt-1.5 text-[11px]" style={{ color: '#f59e0b' }}>
+                      此網站限制全文擷取，目前僅使用標題與摘要進行分析。
+                    </p>
+                  )}
+                  {urlResult.extraction_quality === 'partial_article_text' && (
+                    <p className="mt-1.5 text-[11px]" style={{ color: '#10b981' }}>
+                      已擷取部分文章文字進行分析。
+                    </p>
                   )}
                   {urlResult.extracted_text && !articleMatchesTicker(urlResult.extracted_text, symbol) && (
                     <p className="mt-1.5 text-[11px]" style={{ color: '#f59e0b' }}>

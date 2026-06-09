@@ -661,6 +661,7 @@ def analyze_url(req: AnalyzeUrlRequest):
         "site_name": None,
         "extracted_text": None,
         "analyzed_text": None,
+        "extraction_quality": None,
         "analysis": None,
         "data_quality": "url_extracted_text_model1",
         "errors": [],
@@ -726,6 +727,26 @@ def analyze_url(req: AnalyzeUrlRequest):
         # Sync extracted title/description aliases
         result["extracted_title"] = result["title"]
         result["extracted_description"] = result["description"]
+
+        # Remove common page-error noise from extracted_text
+        _NOISE_PHRASES = [
+            "oops, something went wrong",
+            "something went wrong",
+            "try again",
+            "please refresh",
+            "enable javascript",
+        ]
+        raw_body = result["extracted_text"] or ""
+        if raw_body:
+            cleaned = raw_body
+            for _phrase in _NOISE_PHRASES:
+                cleaned = re.sub(re.escape(_phrase), "", cleaned, flags=re.IGNORECASE)
+            cleaned = re.sub(r'\s{2,}', ' ', cleaned).strip()
+            result["extracted_text"] = cleaned if cleaned else None
+
+        # Determine extraction quality before choosing analysis text
+        has_body = bool((result["extracted_text"] or "").strip())
+        result["extraction_quality"] = "partial_article_text" if has_body else "title_description_only"
 
         # Determine the text to analyze — extracted body preferred, then meta description, then title
         analysis_text = result["extracted_text"] or result["description"] or result["title"] or ""
