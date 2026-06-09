@@ -40,11 +40,15 @@ interface AnalyzeResult {
 interface UrlAnalysisResult {
   success: boolean
   url: string
+  source_url: string
   symbol: string
   title: string | null
+  extracted_title: string | null
   description: string | null
+  extracted_description: string | null
   site_name: string | null
   extracted_text: string | null
+  analyzed_text: string | null
   analysis: AnalyzeResult | null
   data_quality: string
   errors: { error: string; detail?: string }[]
@@ -597,8 +601,9 @@ export function PostAnalyzer() {
   const [apiSource, setApiSource] = useState<'fastapi' | 'heuristic' | null>(null)
 
   // URL mode
-  const [urlInput, setUrlInput]   = useState('')
-  const [urlResult, setUrlResult] = useState<UrlAnalysisResult | null>(null)
+  const [urlInput, setUrlInput]           = useState('')
+  const [urlResult, setUrlResult]         = useState<UrlAnalysisResult | null>(null)
+  const [urlAnalyzedText, setUrlAnalyzedText] = useState('')
 
   // Brief
   const [copiedSummary, setCopiedSummary] = useState(false)
@@ -627,6 +632,7 @@ export function PostAnalyzer() {
       }
     },
     onSuccess: async (data, vars) => {
+      setUrlAnalyzedText('')
       setResult(data)
       setEventArResult(null)
       setApiSource(data.model_source.includes('heuristic') ? 'heuristic' : 'fastapi')
@@ -662,6 +668,7 @@ export function PostAnalyzer() {
     },
     onSuccess: (data) => {
       setUrlResult(data)
+      setUrlAnalyzedText(data.analyzed_text || data.extracted_text || data.description || data.title || '')
       if (data.analysis) {
         setResult(data.analysis)
         setApiSource('fastapi')
@@ -669,8 +676,9 @@ export function PostAnalyzer() {
     },
     onError: () => {
       setUrlResult({
-        success: false, url: urlInput, symbol, title: null, description: null,
-        site_name: null, extracted_text: null, analysis: null,
+        success: false, url: urlInput, source_url: urlInput, symbol,
+        title: null, extracted_title: null, description: null, extracted_description: null,
+        site_name: null, extracted_text: null, analyzed_text: null, analysis: null,
         data_quality: 'url_extracted_text_model1',
         errors: [{ error: 'Network error — check URL and try again.' }],
       })
@@ -757,7 +765,9 @@ export function PostAnalyzer() {
 
   const riskColor = result ? (RISK_COLOR[result.predicted_risk_label] ?? '#10b981') : '#64748b'
   const riskBg    = result ? (RISK_BG[result.predicted_risk_label]    ?? '#052e16') : '#1a1d27'
-  const textForHighlight = (inputText || urlResult?.extracted_text || '').slice(0, 600)
+  // urlAnalyzedText is set from URL analysis and cleared on text analysis,
+  // so it correctly takes priority over stale inputText left by analyzeNewsItem()
+  const textForHighlight = (urlAnalyzedText || inputText || '').slice(0, 600)
 
   // ── render ─────────────────────────────────────────────────────────────────
 
@@ -876,13 +886,21 @@ export function PostAnalyzer() {
                   {urlResult.site_name && (
                     <p className="font-semibold mb-0.5" style={{ color: '#38bdf8' }}>{urlResult.site_name}</p>
                   )}
-                  {urlResult.title && (
-                    <p className="text-white font-semibold mb-1">{urlResult.title}</p>
+                  {urlResult.extracted_title && (
+                    <p className="text-white font-semibold mb-1">{urlResult.extracted_title}</p>
                   )}
-                  {urlResult.description && (
+                  {urlResult.extracted_description && (
                     <p style={{ color: '#94a3b8' }}>
-                      {urlResult.description.slice(0, 200)}{urlResult.description.length > 200 ? '…' : ''}
+                      {urlResult.extracted_description.slice(0, 200)}{urlResult.extracted_description.length > 200 ? '…' : ''}
                     </p>
+                  )}
+                  {urlResult.analyzed_text && (
+                    <div className="mt-2 pt-2" style={{ borderTop: '1px solid #1a1d27' }}>
+                      <p className="mb-0.5" style={{ color: '#475569' }}>實際送入模型的文字：</p>
+                      <p className="font-mono leading-relaxed" style={{ color: '#64748b', wordBreak: 'break-word' }}>
+                        {urlResult.analyzed_text.slice(0, 300)}{urlResult.analyzed_text.length > 300 ? '…' : ''}
+                      </p>
+                    </div>
                   )}
                   {urlResult.extracted_text && !articleMatchesTicker(urlResult.extracted_text, symbol) && (
                     <p className="mt-1.5 text-[11px]" style={{ color: '#f59e0b' }}>
@@ -1163,6 +1181,23 @@ export function PostAnalyzer() {
                 </span>
               )}
             </div>
+
+            {/* Source URL indicator (URL mode only) */}
+            {urlAnalyzedText && urlResult && (
+              <div className="flex items-center gap-1.5 text-[10px]" style={{ color: '#475569' }}>
+                <Globe size={10} color="#38bdf8" />
+                <span>分析來源：</span>
+                <a
+                  href={urlResult.source_url || urlResult.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate max-w-sm underline"
+                  style={{ color: '#38bdf8' }}
+                >
+                  {urlResult.source_url || urlResult.url}
+                </a>
+              </div>
+            )}
 
             {/* Highlighted text */}
             <div className="p-3 rounded-md leading-6" style={{ background: '#0d0f1a', border: '1px solid #2d3148' }}>

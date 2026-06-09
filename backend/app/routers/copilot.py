@@ -652,11 +652,15 @@ def analyze_url(req: AnalyzeUrlRequest):
     result: dict = {
         "success": False,
         "url": req.url,
+        "source_url": req.url,
         "symbol": req.symbol or "GME",
         "title": None,
+        "extracted_title": None,
         "description": None,
+        "extracted_description": None,
         "site_name": None,
         "extracted_text": None,
+        "analyzed_text": None,
         "analysis": None,
         "data_quality": "url_extracted_text_model1",
         "errors": [],
@@ -719,9 +723,19 @@ def analyze_url(req: AnalyzeUrlRequest):
                 })
                 return result
 
-        # Analyse extracted text — same inference pipeline as post_analyze
+        # Sync extracted title/description aliases
+        result["extracted_title"] = result["title"]
+        result["extracted_description"] = result["description"]
+
+        # Determine the text to analyze — extracted body preferred, then meta description, then title
         analysis_text = result["extracted_text"] or result["description"] or result["title"] or ""
-        if analysis_text.strip():
+        result["analyzed_text"] = analysis_text.strip()[:2000] if analysis_text.strip() else None
+
+        if not analysis_text.strip():
+            result["errors"].append({"error": "無法擷取此連結內容，請改用直接貼上文字"})
+            return result
+
+        if True:
             a_scores, a_model_source, a_colab_extra = _analyze_text(analysis_text)
             a_drivers = []
             if a_scores["fomo_score"]                >= 40: a_drivers.append("FOMO語言")
