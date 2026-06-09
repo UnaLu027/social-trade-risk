@@ -59,6 +59,12 @@ interface SocialSignalItem {
   url: string | null
   ai_risk_label: string | null
   ai_risk_score: number | null
+  model_source?: string | null
+  data_quality?: string | null
+  risk_confidence?: number | null
+  risk_probabilities?: Record<string, number> | null
+  direction_label?: string | null
+  direction_confidence?: number | null
 }
 
 interface SocialSummary {
@@ -1019,9 +1025,16 @@ export function PostAnalyzer() {
                               <span className="text-[11px]" style={{ color: '#94a3b8' }}>{item.ai_risk_score}</span>
                             )}
                           </div>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: '#2d3148', color: '#94a3b8' }}>
-                            {item.source}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            {item.model_source === 'colab_text_model' && (
+                              <span className="text-[9px] px-1 py-0.5 rounded font-bold" style={{ background: '#1e3a2f', color: '#4ade80', border: '1px solid #166534' }}>
+                                AI
+                              </span>
+                            )}
+                            <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: '#2d3148', color: '#94a3b8' }}>
+                              {item.source}
+                            </span>
+                          </div>
                         </div>
 
                         {item.headline && (

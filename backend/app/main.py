@@ -120,6 +120,13 @@ async def lifespan(app: FastAPI):
     # Load fake news model (auto-trains if not found)
     inference_fakenews.load_fakenews_model()
 
+    # Load Colab text model (non-fatal if files are absent)
+    try:
+        from app.ml import text_inference as _text_inf
+        _text_inf.load_text_model()
+    except Exception as _e:
+        print(f"[startup] Colab text model not loaded: {_e}")
+
     # Start background scheduler
     if settings.scheduler_enabled:
         _scheduler.add_job(_sync_prices, "interval",

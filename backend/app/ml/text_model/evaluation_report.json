@@ -1,0 +1,356 @@
+{
+  "risk_candidates": [
+    {
+      "task": "risk",
+      "model": "risk_GB_tuned",
+      "feature_set": "risk",
+      "selection_score": 0.8919116804662323,
+      "accuracy": 0.979822684194436,
+      "macro_f1": 0.8494956820618146,
+      "weighted_f1": 0.9793370700612607,
+      "High_recall": 0.7419354838709677
+    },
+    {
+      "task": "risk",
+      "model": "risk_GradientBoosting",
+      "feature_set": "risk",
+      "selection_score": 0.890683256109789,
+      "accuracy": 0.9767655151329868,
+      "macro_f1": 0.8493695461303122,
+      "weighted_f1": 0.977268681468861,
+      "High_recall": 0.7419354838709677
+    },
+    {
+      "task": "risk",
+      "model": "risk_LightVoting",
+      "feature_set": "risk",
+      "selection_score": 0.8658710201892488,
+      "accuracy": 0.9819627025374503,
+      "macro_f1": 0.8305637869207526,
+      "weighted_f1": 0.9810967295780871,
+      "High_recall": 0.6129032258064516
+    },
+    {
+      "task": "risk",
+      "model": "risk_LogReg_tuned",
+      "feature_set": "risk",
+      "selection_score": 0.853032644065864,
+      "accuracy": 0.9816569856313054,
+      "macro_f1": 0.8230435281081943,
+      "weighted_f1": 0.9807146094931537,
+      "High_recall": 0.5483870967741935
+    },
+    {
+      "task": "risk",
+      "model": "risk_LogisticRegression",
+      "feature_set": "risk",
+      "selection_score": 0.8467120438979588,
+      "accuracy": 0.979822684194436,
+      "macro_f1": 0.809222070092202,
+      "weighted_f1": 0.9790474014817001,
+      "High_recall": 0.5483870967741935
+    },
+    {
+      "task": "risk",
+      "model": "risk_CalibratedLinearSVM",
+      "feature_set": "risk",
+      "selection_score": 0.8193815483309211,
+      "accuracy": 0.9746254967899725,
+      "macro_f1": 0.7595440888838749,
+      "weighted_f1": 0.972440918705842,
+      "High_recall": 0.5161290322580645
+    },
+    {
+      "task": "risk",
+      "model": "risk_SVD_LDA",
+      "feature_set": "svd_lda",
+      "selection_score": 0.7769983438372896,
+      "accuracy": 0.9737083460715378,
+      "macro_f1": 0.7277628072696786,
+      "weighted_f1": 0.9703951881867011,
+      "High_recall": 0.3225806451612903
+    },
+    {
+      "task": "risk",
+      "model": "risk_MultinomialNB",
+      "feature_set": "tfidf",
+      "selection_score": 0.6718255689642101,
+      "accuracy": 0.9678997248547845,
+      "macro_f1": 0.5816335731617062,
+      "weighted_f1": 0.9617924940420605,
+      "High_recall": 0.03225806451612903
+    }
+  ],
+  "direction_candidates": [
+    {
+      "task": "direction",
+      "model": "direction_LogReg_tuned",
+      "feature_set": "direction",
+      "selection_score": 0.800702330003651,
+      "accuracy": 0.7826352797309691,
+      "macro_f1": 0.7764595643096235,
+      "weighted_f1": 0.7802949067968077,
+      "neutral_recall": 0.9226713532513181
+    },
+    {
+      "task": "direction",
+      "model": "direction_LogisticRegression",
+      "feature_set": "direction",
+      "selection_score": 0.800525692441551,
+      "accuracy": 0.7823295628248242,
+      "macro_f1": 0.7760446895680758,
+      "weighted_f1": 0.7799645636354763,
+      "neutral_recall": 0.9235500878734623
+    },
+    {
+      "task": "direction",
+      "model": "direction_CalibratedLinearSVM",
+      "feature_set": "direction",
+      "selection_score": 0.7992121926460123,
+      "accuracy": 0.7820238459186794,
+      "macro_f1": 0.7761522998893599,
+      "weighted_f1": 0.7801544998139767,
+      "neutral_recall": 0.9147627416520211
+    },
+    {
+      "task": "direction",
+      "model": "direction_LightVoting",
+      "feature_set": "direction",
+      "selection_score": 0.7965643387803554,
+      "accuracy": 0.7749923570773464,
+      "macro_f1": 0.7675632053464473,
+      "weighted_f1": 0.7704750477585087,
+      "neutral_recall": 0.9446397188049209
+    },
+    {
+      "task": "direction",
+      "model": "direction_GradientBoosting",
+      "feature_set": "direction",
+      "selection_score": 0.7649518483265838,
+      "accuracy": 0.738917762152247,
+      "macro_f1": 0.7292111873791159,
+      "weighted_f1": 0.7315736712142555,
+      "neutral_recall": 0.9481546572934973
+    },
+    {
+      "task": "direction",
+      "model": "direction_GB_tuned",
+      "feature_set": "direction",
+      "selection_score": 0.7403811509102396,
+      "accuracy": 0.7104860898807704,
+      "macro_f1": 0.6975632544644036,
+      "weighted_f1": 0.6996470287020077,
+      "neutral_recall": 0.9586994727592267
+    },
+    {
+      "task": "direction",
+      "model": "direction_MultinomialNB",
+      "feature_set": "tfidf",
+      "selection_score": 0.7340061398986433,
+      "accuracy": 0.7083460715377561,
+      "macro_f1": 0.6972760675703706,
+      "weighted_f1": 0.7006786638582239,
+      "neutral_recall": 0.9191564147627417
+    },
+    {
+      "task": "direction",
+      "model": "direction_SVD_LDA",
+      "feature_set": "svd_lda",
+      "selection_score": 0.7326702652137882,
+      "accuracy": 0.7107918067869153,
+      "macro_f1": 0.7009840424246571,
+      "weighted_f1": 0.7052748535619937,
+      "neutral_recall": 0.8901581722319859
+    }
+  ],
+  "risk_test_metrics": {
+    "accuracy": 0.9798288508557457,
+    "macro_f1": 0.8547404813616417,
+    "weighted_f1": 0.9788228532428989,
+    "per_class": {
+      "Low": {
+        "precision": 0.9854557207498384,
+        "recall": 0.996730957829356,
+        "f1": 0.9910612709247522,
+        "support": 3059
+      },
+      "Medium": {
+        "precision": 0.8888888888888888,
+        "recall": 0.7431693989071039,
+        "f1": 0.8095238095238095,
+        "support": 183
+      },
+      "High": {
+        "precision": 0.84,
+        "recall": 0.7,
+        "f1": 0.7636363636363637,
+        "support": 30
+      }
+    },
+    "High_recall": 0.7
+  },
+  "direction_test_metrics": {
+    "accuracy": 0.7836185819070904,
+    "macro_f1": 0.7759371207547378,
+    "weighted_f1": 0.7807207672610419,
+    "per_class": {
+      "bearish": {
+        "precision": 0.7011866235167206,
+        "recall": 0.7011866235167206,
+        "f1": 0.7011866235167206,
+        "support": 927
+      },
+      "bullish": {
+        "precision": 0.7924170616113744,
+        "recall": 0.7013422818791947,
+        "f1": 0.744103248776146,
+        "support": 1192
+      },
+      "neutral": {
+        "precision": 0.8356589147286821,
+        "recall": 0.9349522983521249,
+        "f1": 0.8825214899713467,
+        "support": 1153
+      }
+    },
+    "neutral_recall": 0.9349522983521249
+  },
+  "risk_confusion_matrix": [
+    [
+      3049,
+      10,
+      0
+    ],
+    [
+      43,
+      136,
+      4
+    ],
+    [
+      2,
+      7,
+      21
+    ]
+  ],
+  "direction_confusion_matrix": [
+    [
+      650,
+      171,
+      106
+    ],
+    [
+      250,
+      836,
+      106
+    ],
+    [
+      27,
+      48,
+      1078
+    ]
+  ],
+  "risk_labels": [
+    "Low",
+    "Medium",
+    "High"
+  ],
+  "direction_labels": [
+    "bearish",
+    "bullish",
+    "neutral"
+  ],
+  "smoke_tests": [
+    {
+      "text": "brabrabra",
+      "expected_risk": "Low",
+      "pred_risk": "Low",
+      "risk_pass": true,
+      "expected_direction": "neutral",
+      "pred_direction": "neutral",
+      "direction_pass": true,
+      "overall_pass": true
+    },
+    {
+      "text": "xqzplm nnnrrr qwertasdf",
+      "expected_risk": "Low",
+      "pred_risk": "Low",
+      "risk_pass": true,
+      "expected_direction": "neutral",
+      "pred_direction": "neutral",
+      "direction_pass": true,
+      "overall_pass": true
+    },
+    {
+      "text": "This is just a normal company update.",
+      "expected_risk": "Low",
+      "pred_risk": "Low",
+      "risk_pass": true,
+      "expected_direction": "neutral",
+      "pred_direction": "neutral",
+      "direction_pass": true,
+      "overall_pass": true
+    },
+    {
+      "text": "GME to the moon buy now before the short squeeze",
+      "expected_risk": "High",
+      "pred_risk": "High",
+      "risk_pass": true,
+      "expected_direction": "bullish",
+      "pred_direction": "bullish",
+      "direction_pass": true,
+      "overall_pass": true
+    },
+    {
+      "text": "guaranteed easy money cannot lose risk free",
+      "expected_risk": "High",
+      "pred_risk": "High",
+      "risk_pass": true,
+      "expected_direction": "bullish",
+      "pred_direction": "bullish",
+      "direction_pass": true,
+      "overall_pass": true
+    },
+    {
+      "text": "NVIDIA earnings beat strong AI demand",
+      "expected_risk": "Low",
+      "pred_risk": "Low",
+      "risk_pass": true,
+      "expected_direction": "bullish",
+      "pred_direction": "bullish",
+      "direction_pass": true,
+      "overall_pass": true
+    },
+    {
+      "text": "I think this stock will crash hard",
+      "expected_risk": "Low",
+      "pred_risk": "Low",
+      "risk_pass": true,
+      "expected_direction": "bearish",
+      "pred_direction": "bearish",
+      "direction_pass": true,
+      "overall_pass": true
+    },
+    {
+      "text": "AMC last chance before it explodes, do not miss this squeeze",
+      "expected_risk": "High",
+      "pred_risk": "High",
+      "risk_pass": true,
+      "expected_direction": "bullish",
+      "pred_direction": "bullish",
+      "direction_pass": true,
+      "overall_pass": true
+    },
+    {
+      "text": "The company filed its quarterly report today",
+      "expected_risk": "Low",
+      "pred_risk": "Low",
+      "risk_pass": true,
+      "expected_direction": "neutral",
+      "pred_direction": "neutral",
+      "direction_pass": true,
+      "overall_pass": true
+    }
+  ],
+  "deploy_ready": true,
+  "gate_failures": []
+}

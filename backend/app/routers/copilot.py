@@ -74,19 +74,60 @@ def _detect_symbol(text: str) -> Optional[str]:
     return None
 
 
-def _analyze_text(text: str) -> tuple[dict, str]:
+def _analyze_text(text: str) -> tuple[dict, str, dict]:
     """
     Shared inference pipeline used by post_analyze and analyze_url.
-    Returns (scores_dict, model_source).
-    scores_dict: all fields from _compute_scores() with predicted_risk_label updated by ML if available.
-    model_source: "real_model" when ML ran, "heuristic_fallback" otherwise.
+    Returns (scores_dict, model_source, colab_extra).
+
+    Fallback chain:
+      1. Colab text model (text_inference.predict_text)
+      2. Legacy numeric model (inference.predict_risk)
+      3. Heuristic keyword scores only
+
+    model_source: "colab_text_model" | "real_model" | "heuristic_fallback"
+    colab_extra:  dict of Colab-specific fields (empty when not using Colab model)
     """
     scores = _compute_scores(text)
-    composite = scores["composite_score"]
     model_source = "heuristic_fallback"
+    extra: dict = {}
 
-    # Skip ML when there are zero signals — heuristic "Low" is already correct and
-    # non-zero mention_count floors would produce spurious "Medium" predictions.
+    # ── 1. Colab text model (preferred — text-native, no composite threshold) ─
+    try:
+        from app.ml import text_inference as _ti  # type: ignore
+        if not _ti.is_loaded():
+            _ti.load_text_model()
+        if _ti.is_loaded():
+            colab = _ti.predict_text(text)
+            if colab:
+                rl = colab["risk_label"]
+                # Preserve "Critical" when heuristic signals are extreme
+                if rl == "High" and scores["predicted_risk_label"] == "Critical":
+                    rl = "Critical"
+                scores["predicted_risk_label"] = rl
+                # Note: bullish_probability / bearish_probability / sentiment_score
+                # are NOT overridden from the direction model because the direction
+                # model's numeric features are unavailable at deployment time, causing
+                # systematically biased direction probabilities for meme-stock language.
+                # The heuristic bullish/bearish values are more reliable for this signal.
+
+                dp = colab.get("direction_probabilities")
+                model_source = "colab_text_model"
+                extra = {
+                    "risk_label":              colab.get("risk_label"),
+                    "direction_label":         colab.get("direction_label"),
+                    "risk_confidence":         colab.get("risk_confidence"),
+                    "direction_confidence":    colab.get("direction_confidence"),
+                    "risk_probabilities":      colab.get("risk_probabilities"),
+                    "direction_probabilities": dp,
+                    "model_trained_at":        colab.get("trained_at"),
+                    "model_id":                colab.get("model_id"),
+                }
+                return scores, model_source, extra
+    except Exception as _exc:
+        print(f"[_analyze_text] Colab model skipped: {_exc}")
+
+    # ── 2. Legacy numeric model (fallback; skip when no heuristic signals) ────
+    composite = scores["composite_score"]
     if composite > 0:
         try:
             from app.ml import inference as _ml
@@ -116,9 +157,9 @@ def _analyze_text(text: str) -> tuple[dict, str]:
                 scores["predicted_risk_label"] = ml_label
                 model_source = "real_model"
         except Exception as _exc:
-            print(f"[_analyze_text] ML inference skipped: {_exc}")
+            print(f"[_analyze_text] Legacy ML skipped: {_exc}")
 
-    return scores, model_source
+    return scores, model_source, extra
 
 
 def _compute_scores(text: str):
@@ -172,6 +213,7 @@ class PostAnalyzeRequest(BaseModel):
 
 
 class PostAnalyzeResponse(BaseModel):
+    # ── required (existing frontend fields) ──────────────────────────────────
     sentiment_score:                  float
     bullish_probability:              float
     bearish_probability:              float
@@ -185,6 +227,15 @@ class PostAnalyzeResponse(BaseModel):
     highlighted_terms:                list[str]
     model_source:                     str
     data_quality:                     str
+    # ── optional (added when Colab text model is active) ─────────────────────
+    risk_label:              Optional[str]   = None
+    direction_label:         Optional[str]   = None
+    risk_confidence:         Optional[float] = None
+    direction_confidence:    Optional[float] = None
+    risk_probabilities:      Optional[dict]  = None
+    direction_probabilities: Optional[dict]  = None
+    model_trained_at:        Optional[str]   = None
+    model_id:                Optional[str]   = None
 
 
 class StressTestRequest(BaseModel):
@@ -220,7 +271,7 @@ def post_analyze(req: PostAnalyzeRequest):
         from fastapi import HTTPException
         raise HTTPException(400, detail="Only US stocks are supported in this MVP.")
 
-    scores, model_source = _analyze_text(req.text)
+    scores, model_source, colab_extra = _analyze_text(req.text)
     symbol = req.symbol or _detect_symbol(req.text)  # noqa: F841 (reserved for future use)
 
     # ── Build explanation ─────────────────────────────────────────────────────
@@ -238,11 +289,18 @@ def post_analyze(req: PostAnalyzeRequest):
         + (f" Key signals: {', '.join(drivers)}." if drivers else " No strong risk signals detected.")
     )
 
+    data_quality = (
+        "colab_text_model"               if model_source == "colab_text_model" else
+        "real_reddit_yfinance_weak_label" if model_source == "real_model" else
+        "heuristic"
+    )
+
     return PostAnalyzeResponse(
         **scores,
         explanation=explanation,
         model_source=model_source,
-        data_quality="real_reddit_yfinance_weak_label" if model_source == "real_model" else "heuristic",
+        data_quality=data_quality,
+        **colab_extra,
     )
 
 
@@ -315,51 +373,184 @@ def stress_test(req: StressTestRequest):
     )
 
 
+def _load_text_model_info() -> "dict | None":
+    """
+    Read Colab text model metadata from app/ml/text_model/.
+    Returns None if files are missing or unreadable. Never crashes.
+    """
+    import json, pathlib, os as _os
+
+    text_model_dir = pathlib.Path(_os.path.dirname(__file__)).parent / "ml" / "text_model"
+    meta_path = text_model_dir / "model_metadata.json"
+    eval_path = text_model_dir / "evaluation_report.json"
+
+    if not meta_path.exists():
+        return None
+
+    try:
+        with open(meta_path) as f:
+            meta = json.load(f)
+
+        eval_data: dict = {}
+        if eval_path.exists():
+            with open(eval_path) as f:
+                eval_data = json.load(f)
+
+        # Check if text_inference module is loaded (Colab model active in production)
+        production_status = "ready_for_deployment"
+        try:
+            from app.ml import text_inference as _ti  # type: ignore
+            if _ti.is_loaded():
+                production_status = "active"
+        except Exception:
+            pass
+
+        required_files = [
+            "word_vectorizer.joblib", "char_vectorizer.joblib",
+            "risk_model.joblib", "direction_model.joblib", "numeric_scaler.joblib",
+        ]
+        files_exist = all((text_model_dir / f).exists() for f in required_files)
+
+        smoke_tests = eval_data.get("smoke_tests", [])
+        smoke_tests_pass: "bool | None" = (
+            all(t.get("overall_pass", False) for t in smoke_tests) if smoke_tests else None
+        )
+
+        risk_metrics      = meta.get("risk_metrics", {})
+        direction_metrics = meta.get("direction_metrics", {})
+
+        return {
+            "available":              files_exist,
+            "production_status":      production_status,
+            "model_id":               meta.get("model_id"),
+            "trained_at":             meta.get("trained_at"),
+            "deploy_ready":           meta.get("deploy_ready", eval_data.get("deploy_ready", False)),
+            "smoke_tests_pass":       smoke_tests_pass,
+            "risk_model":             meta.get("best_risk_model"),
+            "direction_model":        meta.get("best_direction_model"),
+            "risk_accuracy":          risk_metrics.get("accuracy"),
+            "risk_macro_f1":          risk_metrics.get("macro_f1"),
+            "risk_weighted_f1":       risk_metrics.get("weighted_f1"),
+            "high_risk_recall":       meta.get("high_risk_recall", risk_metrics.get("High_recall")),
+            "direction_accuracy":     direction_metrics.get("accuracy"),
+            "direction_macro_f1":     direction_metrics.get("macro_f1"),
+            "direction_weighted_f1":  direction_metrics.get("weighted_f1"),
+            "risk_feature_set":       "word_tfidf + char_tfidf",
+            "direction_feature_set":  "word_tfidf + char_tfidf + numeric_features",
+            "risk_confusion_matrix":  eval_data.get("risk_confusion_matrix"),
+            "dataset_size":           meta.get("dataset_size"),
+            "train_size":             meta.get("train_size"),
+        }
+    except Exception as exc:
+        print(f"[copilot] _load_text_model_info error: {exc}")
+        return None
+
+
 @router.get("/api/v1/model-lab/summary")
 def model_lab_summary():
-    """Return current best model metadata (from filesystem or demo)."""
+    """Return best model metadata — Colab text model preferred, legacy fallback."""
+    tm = _load_text_model_info()
+    if tm and tm.get("available"):
+        return {
+            "source":             "colab_text_model",
+            "production_status":  tm["production_status"],
+            "model_source":       "colab_text_model" if tm["production_status"] == "active" else "ready_for_deployment",
+            "best_model":         tm.get("risk_model", "risk_GB_tuned"),
+            "risk_model":         tm.get("risk_model"),
+            "direction_model":    tm.get("direction_model"),
+            "accuracy":           tm.get("risk_accuracy"),
+            "macro_f1":           tm.get("risk_macro_f1"),
+            "weighted_f1":        tm.get("risk_weighted_f1"),
+            "high_risk_recall":   tm.get("high_risk_recall"),
+            "direction_accuracy": tm.get("direction_accuracy"),
+            "direction_macro_f1": tm.get("direction_macro_f1"),
+            "deploy_ready":       tm.get("deploy_ready"),
+            "smoke_tests_pass":   tm.get("smoke_tests_pass"),
+            "trained_at":         tm.get("trained_at"),
+            "model_id":           tm.get("model_id"),
+        }
+
     try:
         from app.ml.inference import get_metadata
         meta = get_metadata()
         return {
-            "best_model":    meta.get("best_model_name", "GradientBoosting"),
-            "accuracy":      meta.get("test_accuracy",   0.94),
-            "weighted_f1":   meta.get("test_weighted_f1",0.94),
-            "macro_f1":      meta.get("test_macro_f1",   0.93),
+            "source":           "legacy_model",
+            "production_status": "active",
+            "model_source":     "legacy_model",
+            "best_model":       meta.get("best_model_name", "GradientBoosting"),
+            "accuracy":         meta.get("test_accuracy",    0.94),
+            "weighted_f1":      meta.get("test_weighted_f1", 0.94),
+            "macro_f1":         meta.get("test_macro_f1",    0.93),
             "high_risk_recall": meta.get("high_risk_recall", 0.95),
-            "trained_at":    meta.get("trained_at"),
-            "model_source":  "trained",
+            "trained_at":       meta.get("trained_at"),
         }
     except Exception:
         return {
-            "best_model":    "GradientBoosting",
-            "accuracy":      0.94,
-            "weighted_f1":   0.94,
-            "macro_f1":      0.93,
+            "source":           "demo",
+            "production_status": "demo",
+            "model_source":     "demo",
+            "best_model":       "GradientBoosting",
+            "accuracy":         0.94,
+            "weighted_f1":      0.94,
+            "macro_f1":         0.93,
             "high_risk_recall": 0.95,
-            "trained_at":    None,
-            "model_source":  "demo",
+            "trained_at":       None,
         }
 
 
 @router.get("/api/v1/model-lab/experiments")
 def model_lab_experiments():
-    """Return all model experiment records (from filesystem or demo fallback)."""
-    demo = [
-        {"experiment_id": "exp_gb_001",       "model_name": "Gradient Boosting",             "feature_set": "text_social_market", "accuracy": 0.94, "macro_f1": 0.93, "weighted_f1": 0.94, "high_risk_recall": 0.95},
-        {"experiment_id": "exp_mlp_001",      "model_name": "MLP Neural Network",            "feature_set": "neural_fusion",      "accuracy": 0.92, "macro_f1": 0.90, "weighted_f1": 0.92, "high_risk_recall": 0.91},
-        {"experiment_id": "exp_rf_001",       "model_name": "Random Forest",                 "feature_set": "market_social",      "accuracy": 0.90, "macro_f1": 0.87, "weighted_f1": 0.90, "high_risk_recall": 0.88},
-        {"experiment_id": "exp_baseline_001", "model_name": "Logistic Regression",           "feature_set": "market_features",    "accuracy": 0.84, "macro_f1": 0.79, "weighted_f1": 0.83, "high_risk_recall": 0.76},
-        {"experiment_id": "exp_tfidf_lr_001", "model_name": "TF-IDF + Logistic Regression", "feature_set": "tfidf_text",         "accuracy": 0.81, "macro_f1": 0.77, "weighted_f1": 0.80, "high_risk_recall": 0.74},
+    """Return model experiment records — Colab experiments first, then legacy/demo comparison."""
+    tm = _load_text_model_info()
+    experiments = []
+
+    if tm and tm.get("available"):
+        ps         = tm.get("production_status", "ready_for_deployment")
+        trained_at = tm.get("trained_at")
+
+        experiments.append({
+            "id":               1,
+            "experiment_id":    "colab_text_risk_20260608",
+            "model_name":       tm.get("risk_model", "risk_GB_tuned"),
+            "feature_set":      "word_tfidf + char_tfidf",
+            "accuracy":         tm.get("risk_accuracy",    0.9798),
+            "macro_f1":         tm.get("risk_macro_f1",    0.8547),
+            "weighted_f1":      tm.get("risk_weighted_f1", 0.9788),
+            "high_risk_recall": tm.get("high_risk_recall", 0.70),
+            "confusion_matrix": tm.get("risk_confusion_matrix"),
+            "feature_importance": None,
+            "model_path":       "app/ml/text_model/risk_model.joblib",
+            "trained_at":       trained_at,
+            "task":             "risk_classification",
+            "production_status": ps,
+        })
+
+        experiments.append({
+            "id":               2,
+            "experiment_id":    "colab_direction_20260608",
+            "model_name":       tm.get("direction_model", "direction_LogReg_tuned"),
+            "feature_set":      "word_tfidf + char_tfidf + numeric_features",
+            "accuracy":         tm.get("direction_accuracy",    0.7836),
+            "macro_f1":         tm.get("direction_macro_f1",    0.7759),
+            "weighted_f1":      tm.get("direction_weighted_f1", 0.7807),
+            "high_risk_recall": tm.get("direction_accuracy",    0.7836),
+            "confusion_matrix": None,
+            "feature_importance": None,
+            "model_path":       "app/ml/text_model/direction_model.joblib",
+            "trained_at":       trained_at,
+            "task":             "direction_classification",
+            "production_status": ps,
+        })
+
+    # Legacy/demo experiments for comparison (lower IDs so Colab sorts first)
+    experiments += [
+        {"id": 10, "experiment_id": "exp_gb_legacy",      "model_name": "Gradient Boosting (legacy numeric)", "feature_set": "text_social_market", "accuracy": 0.94, "macro_f1": 0.93, "weighted_f1": 0.94, "high_risk_recall": 0.95, "confusion_matrix": None, "feature_importance": None, "model_path": None, "trained_at": None},
+        {"id": 11, "experiment_id": "exp_rf_legacy",       "model_name": "Random Forest (legacy numeric)",     "feature_set": "market_social",      "accuracy": 0.90, "macro_f1": 0.87, "weighted_f1": 0.90, "high_risk_recall": 0.88, "confusion_matrix": None, "feature_importance": None, "model_path": None, "trained_at": None},
+        {"id": 12, "experiment_id": "exp_tfidf_lr_legacy", "model_name": "TF-IDF + LR (legacy text-only)",    "feature_set": "tfidf_text",         "accuracy": 0.81, "macro_f1": 0.77, "weighted_f1": 0.80, "high_risk_recall": 0.74, "confusion_matrix": None, "feature_importance": None, "model_path": None, "trained_at": None},
     ]
-    try:
-        import json, pathlib
-        p = pathlib.Path("app/ml/models/experiment_summary.json")
-        if p.exists():
-            return {"source": "trained", "experiments": json.loads(p.read_text())}
-    except Exception:
-        pass
-    return {"source": "demo", "experiments": demo}
+
+    source = "colab_text_model" if (tm and tm.get("available")) else "demo"
+    return {"source": source, "experiments": experiments}
 
 
 @router.get("/api/v1/health/product")
@@ -390,7 +581,8 @@ def health_product():
 def health_real_ai():
     """
     Returns the status of the ML model currently deployed in PostAnalyzer.
-    Used by ModelLab's DeployedModelCard.
+    Includes Colab text model section when files are available.
+    Used by ModelLab's DeployedModelCard and ColabModelCard.
     """
     import os
     from app.ml import inference as _ml
@@ -409,17 +601,39 @@ def health_real_ai():
     else:
         model_file = None
 
-    return {
-        "status":         "ok" if model_loaded else "not_loaded",
-        "model_file":     model_file,
-        "model_name":     meta.get("best_model_name", "StackingClassifier"),
-        "accuracy":       meta.get("test_accuracy", meta.get("accuracy")),
-        "macro_f1":       meta.get("test_macro_f1"),
-        "weighted_f1":    meta.get("test_weighted_f1", meta.get("f1_weighted")),
-        "high_risk_recall": meta.get("high_risk_recall"),
-        "trained_at":     meta.get("trained_at"),
-        "feature_count":  len(_ml.get_active_feature_names()),
+    # Determine which model is active in production
+    active_source = "heuristic_fallback"
+    if model_loaded:
+        active_source = "legacy_model"
+    try:
+        from app.ml import text_inference as _ti  # type: ignore
+        if _ti.is_loaded():
+            active_source = "colab_text_model"
+    except Exception:
+        pass
+
+    resp: dict = {
+        "status":              "ok" if model_loaded else "not_loaded",
+        "production_status":   "active",
+        "model_source":        active_source,
+        "active_model_family": "colab_text_model" if active_source == "colab_text_model" else "legacy_sklearn",
+        "model_file":          model_file,
+        "model_name":          meta.get("best_model_name", "StackingClassifier"),
+        "accuracy":            meta.get("test_accuracy", meta.get("accuracy")),
+        "macro_f1":            meta.get("test_macro_f1"),
+        "weighted_f1":         meta.get("test_weighted_f1", meta.get("f1_weighted")),
+        "high_risk_recall":    meta.get("high_risk_recall"),
+        "trained_at":          meta.get("trained_at"),
+        "feature_count":       len(_ml.get_active_feature_names()),
+        "data_quality":        "real_reddit_yfinance_weak_label" if model_loaded else "heuristic",
     }
+
+    # Attach Colab text model section (always, when files exist)
+    tm = _load_text_model_info()
+    if tm:
+        resp["text_model"] = tm
+
+    return resp
 
 
 # ── /api/v1/analyze-url ───────────────────────────────────────────────────────
@@ -507,7 +721,7 @@ def analyze_url(req: AnalyzeUrlRequest):
         # Analyse extracted text — same inference pipeline as post_analyze
         analysis_text = result["extracted_text"] or result["description"] or result["title"] or ""
         if analysis_text.strip():
-            a_scores, a_model_source = _analyze_text(analysis_text)
+            a_scores, a_model_source, a_colab_extra = _analyze_text(analysis_text)
             a_drivers = []
             if a_scores["fomo_score"]                >= 40: a_drivers.append("FOMO語言")
             if a_scores["hype_language_score"]       >= 40: a_drivers.append("炒作語言")
@@ -520,11 +734,17 @@ def analyze_url(req: AnalyzeUrlRequest):
                 f"URL content analysis: {a_label} risk. "
                 + (f"Key signals: {', '.join(a_drivers)}." if a_drivers else "No strong signals detected.")
             )
+            a_data_quality = (
+                "colab_text_model"               if a_model_source == "colab_text_model" else
+                "real_reddit_yfinance_weak_label" if a_model_source == "real_model" else
+                "url_heuristic"
+            )
             result["analysis"] = {
                 **a_scores,
-                "explanation": a_exp,
+                "explanation":  a_exp,
                 "model_source": a_model_source,
-                "data_quality": "real_reddit_yfinance_weak_label" if a_model_source == "real_model" else "url_heuristic",
+                "data_quality": a_data_quality,
+                **a_colab_extra,
             }
             result["success"] = True
 
@@ -553,22 +773,75 @@ def social_signals(
     errors: list[dict] = []
     sym = symbol.upper()
 
-    # ── news items (unchanged) ────────────────────────────────────────────────
+    # ── news items ────────────────────────────────────────────────────────────
     if "finnhub" in sources:
         try:
             news = fh_svc.get_news(sym, limit=limit)
             for i, n in enumerate(news):
                 text = " ".join(filter(None, [n.get("headline"), n.get("summary")])).strip()
-                s = _compute_scores(text) if text else None
+
+                item_risk_label:       object = None
+                item_risk_score:       object = None
+                item_model_source      = "heuristic_fallback"
+                item_data_quality      = "heuristic"
+                item_risk_confidence:  object = None
+                item_risk_probs:       object = None
+                item_dir_label:        object = None
+                item_dir_confidence:   object = None
+
+                if text:
+                    # Colab text model (preferred)
+                    try:
+                        from app.ml import text_inference as _ti
+                        if not _ti.is_loaded():
+                            _ti.load_text_model()
+                        if _ti.is_loaded():
+                            colab = _ti.predict_text(text)
+                            if colab:
+                                rl = colab["risk_label"]
+                                rp = colab["risk_probabilities"]
+                                raw = (rp.get("High", 0.0) * 85
+                                       + rp.get("Medium", 0.0) * 50
+                                       + rp.get("Low", 0.0) * 15)
+                                if rl == "High":
+                                    score = max(raw, 65.0)
+                                elif rl == "Medium":
+                                    score = max(raw, 35.0)
+                                else:
+                                    score = min(max(raw, 5.0), 30.0)
+                                item_risk_label      = rl
+                                item_risk_score      = round(score, 1)
+                                item_risk_confidence = colab.get("risk_confidence")
+                                item_risk_probs      = rp
+                                item_dir_label       = colab.get("direction_label")
+                                item_dir_confidence  = colab.get("direction_confidence")
+                                item_model_source    = "colab_text_model"
+                                item_data_quality    = "colab_text_model_news"
+                    except Exception as _exc:
+                        print(f"[social_signals] Colab model skipped for news: {_exc}")
+
+                    # Heuristic fallback when Colab unavailable
+                    if item_model_source == "heuristic_fallback":
+                        s = _compute_scores(text)
+                        if s:
+                            item_risk_label = s["predicted_risk_label"]
+                            item_risk_score = round(s["composite_score"], 1)
+
                 items.append({
-                    "id":            f"fh_{sym}_{i}",
-                    "source":        "finnhub",
-                    "published_at":  n.get("published_at", datetime.utcnow().isoformat()),
-                    "headline":      n.get("headline"),
-                    "summary":       n.get("summary"),
-                    "url":           n.get("url"),
-                    "ai_risk_label": s["predicted_risk_label"] if s else None,
-                    "ai_risk_score": round(s["composite_score"], 1) if s else None,
+                    "id":                   f"fh_{sym}_{i}",
+                    "source":               "finnhub",
+                    "published_at":         n.get("published_at", datetime.utcnow().isoformat()),
+                    "headline":             n.get("headline"),
+                    "summary":              n.get("summary"),
+                    "url":                  n.get("url"),
+                    "ai_risk_label":        item_risk_label,
+                    "ai_risk_score":        item_risk_score,
+                    "model_source":         item_model_source,
+                    "data_quality":         item_data_quality,
+                    "risk_confidence":      item_risk_confidence,
+                    "risk_probabilities":   item_risk_probs,
+                    "direction_label":      item_dir_label,
+                    "direction_confidence": item_dir_confidence,
                 })
         except Exception as e:
             errors.append({"source": "finnhub", "error": str(e)})

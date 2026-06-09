@@ -17,6 +17,9 @@ env/
 # Experiment logs (local only — too many to track, use metadata files instead)
 backend/app/ml/experiments/*.json
 
+# Colab training data — large, not needed at runtime
+backend/app/ml/text_model/training_social_posts.csv
+
 # Database files (local dev only)
 *.db
 *.sqlite
