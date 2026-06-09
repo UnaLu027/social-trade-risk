@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { phpPost } from '../api/phpClient'
 import { api } from '../api/client'
+import { personalApi } from '../api/personalApiClient'
 import { TopBar } from '../components/layout/TopBar'
 import { TickerAutocomplete } from '../components/TickerAutocomplete'
 import { SAMPLE_POSTS } from '../data/samplePosts'
@@ -94,7 +95,8 @@ function heuristicAnalyze(text: string): AnalyzeResult {
   const fomoScore  = Math.min(100, fomoHits.length  * 35)
   const manipScore = Math.min(100, manipHits.length * 30)
   const urgency    = Math.min(100, fomoHits.length  * 40 + hypeHits.length * 10)
-  const sentiment  = hypeHits.length > 0 ? 0.7 : 0.4
+  const totalHits  = hypeHits.length + fomoHits.length + manipHits.length + (squeezeHit ? 1 : 0)
+  const sentiment  = totalHits === 0 ? 0.5 : (hypeHits.length > 0 ? 0.7 : 0.4)
   const bullish    = sentiment
   const bearish    = 1 - bullish
 
@@ -586,7 +588,7 @@ export function PostAnalyzer() {
   const analyzeMutation = useMutation({
     mutationFn: async (req: AnalyzeRequest): Promise<AnalyzeResult> => {
       try {
-        const res = await api.post<AnalyzeResult>('/api/v1/post-analyze', req)
+        const res = await personalApi.post<AnalyzeResult>('/api/v1/post-analyze', req)
         return res.data
       } catch (err) {
         console.error('[Real AI API failed, fallback to heuristic]', err)

@@ -137,6 +137,60 @@ function scoreHistory(items) {
   ))}
 }
 
+// ── Abnormal return computation ────────────────────────────────────────────────
+
+function computeReturn(hist, nDays) {
+  if (!Array.isArray(hist) || hist.length < nDays + 1) return null
+  const sorted = [...hist].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+  const latest = sorted[sorted.length - 1]?.close
+  const prior  = sorted[sorted.length - 1 - nDays]?.close
+  if (latest == null || prior == null || prior === 0) return null
+  return Math.round((latest - prior) / prior * 10000) / 10000
+}
+
+function computeAbnormalReturn(stockHist, benchHist) {
+  const stockReturn1d = computeReturn(stockHist, 1)
+  const stockReturn5d = computeReturn(stockHist, 5)
+  const benchReturn1d = computeReturn(benchHist, 1)
+  const benchReturn5d = computeReturn(benchHist, 5)
+
+  const ar1d = stockReturn1d !== null && benchReturn1d !== null
+    ? Math.round((stockReturn1d - benchReturn1d) * 10000) / 10000
+    : null
+  const ar5d = stockReturn5d !== null && benchReturn5d !== null
+    ? Math.round((stockReturn5d - benchReturn5d) * 10000) / 10000
+    : null
+
+  const interpretation = ar5d === null
+    ? 'insufficient_data'
+    : ar5d >  0.05 ? 'outperforming'
+    : ar5d < -0.05 ? 'underperforming'
+    : 'neutral'
+
+  const insufficientStock = !Array.isArray(stockHist) || stockHist.length < 2
+    || (stockReturn1d === null && stockReturn5d === null)
+  const insufficientBench = !Array.isArray(benchHist) || benchHist.length < 2
+    || (benchReturn1d === null && benchReturn5d === null)
+
+  const data_quality = insufficientStock
+    ? 'insufficient_stock_data'
+    : insufficientBench
+    ? 'insufficient_benchmark_data'
+    : 'computed_from_market_history'
+
+  return {
+    benchmark_symbol:    'SPY',
+    stock_return_1d:     stockReturn1d,
+    benchmark_return_1d: benchReturn1d,
+    abnormal_return_1d:  ar1d,
+    stock_return_5d:     stockReturn5d,
+    benchmark_return_5d: benchReturn5d,
+    abnormal_return_5d:  ar5d,
+    interpretation,
+    data_quality,
+  }
+}
+
 // relevantNewsItems: already gated by filterRelevantNews; scoreNews deduplicates internally.
 function computeCautionSummary(relevantNewsItems, fastapiSnapshot, histItems, generatedAt) {
   const newsR = scoreNews(relevantNewsItems)
@@ -198,7 +252,7 @@ async function fetchJson(url, label) {
 // If the API succeeds but zero candidates are relevant, no fetch error is
 // recorded; snapshot and history sources carry the full caution score weight.
 
-async function fetchSymbol(symbol) {
+async function fetchSymbol(symbol, spyHistItems = []) {
   const fetchedAt = new Date().toISOString()
   let candidateNewsItems = [], fastapiSnapshot = null, histItems = []
   const fetchErrors = []
@@ -258,6 +312,9 @@ async function fetchSymbol(symbol) {
   // Caution score is computed from unique relevant items only
   const summary = computeCautionSummary(uniqueRelevantNewsItems, fastapiSnapshot, histItems, fetchedAt)
 
+  // Abnormal return vs SPY benchmark
+  const abnormal_return = computeAbnormalReturn(histItems, spyHistItems)
+
   // Status based on how many of the 3 sources failed (zero relevant news is not a failure)
   const refresh_status = fetchErrors.length === 0 ? 'success'
     : fetchErrors.length < 3  ? 'partial'
@@ -268,6 +325,7 @@ async function fetchSymbol(symbol) {
     refresh_status,
     fetch_errors:   fetchErrors,
     summary,
+    abnormal_return,
     // news_count: published unique relevant count (backward-compatible field)
     news_count:                  publishedNewsItems.length,
     // Audit fields for observability
@@ -309,18 +367,36 @@ async function main() {
     console.log('[refresh] No previous JSON found — starting fresh history')
   }
 
+  // Fetch SPY benchmark data once for abnormal return computation (never throws)
+  let spyHistItems = []
+  try {
+    const d = await fetchJson(
+      `${HF_API_BASE}/api/v1/market-history?symbol=SPY&period=1mo`,
+      'market-history[SPY]'
+    )
+    if (d?.success === true && Array.isArray(d.items) && d.items.length > 0) {
+      spyHistItems = d.items
+      console.log(`[refresh] SPY benchmark: ${spyHistItems.length} history items`)
+    } else {
+      console.warn('[refresh] SPY benchmark: no history items — abnormal_return will be null for all symbols')
+    }
+  } catch (e) {
+    console.warn(`[refresh] SPY benchmark fetch failed: ${e.message} — abnormal_return will be null for all symbols`)
+  }
+
   // Fetch all symbols (fetchSymbol never throws; errors are in fetch_errors)
   const attemptBySymbol = {}
   let successCount = 0, partialCount = 0, errorCount = 0
 
   for (const symbol of SYMBOLS) {
     try {
-      attemptBySymbol[symbol] = await fetchSymbol(symbol)
+      attemptBySymbol[symbol] = await fetchSymbol(symbol, spyHistItems)
     } catch (unexpectedErr) {
       attemptBySymbol[symbol] = {
         fetched_at: new Date().toISOString(), refresh_status: 'error',
         fetch_errors: [`unexpected: ${unexpectedErr.message}`],
         summary: null,
+        abnormal_return: null,
         news_count: 0, candidate_news_count: 0, relevant_news_count: 0,
         published_news_count: 0, excluded_news_count: 0,
         items: [],

@@ -53,6 +53,51 @@ interface ScheduledSummary {
   generated_at: string
 }
 
+interface AbnormalReturn {
+  benchmark_symbol: string
+  stock_return_1d: number | null
+  benchmark_return_1d: number | null
+  abnormal_return_1d: number | null
+  stock_return_5d: number | null
+  benchmark_return_5d: number | null
+  abnormal_return_5d: number | null
+  interpretation: 'outperforming' | 'underperforming' | 'neutral' | 'insufficient_data'
+  data_quality: 'computed_from_market_history' | 'insufficient_benchmark_data' | 'insufficient_stock_data'
+}
+
+interface MarketModelEntry {
+  symbol: string
+  benchmark_symbol: string
+  method: string
+  estimation_days: number
+  event_window_days: number
+  estimation_start: string
+  estimation_end: string
+  alpha: number
+  beta: number
+  train_r2: number
+  residual_std: number
+  stock_return_1d: number
+  benchmark_return_1d: number
+  expected_return_1d: number
+  abnormal_return_1d: number
+  avg_abnormal_return_5d: number
+  CAR_5d: number
+  abnormal_return_zscore: number
+  CAR_5d_zscore: number
+  interpretation: 'outperforming' | 'underperforming' | 'neutral' | 'insufficient_data'
+  risk_level: 'low' | 'medium' | 'high' | 'critical'
+  data_quality: string
+}
+
+interface MarketModelJson {
+  success: boolean
+  generated_at: string
+  method: string
+  benchmark_symbol: string
+  symbols: Record<string, MarketModelEntry>
+}
+
 interface ScheduledLatest {
   fetched_at: string
   refresh_status: string
@@ -60,6 +105,7 @@ interface ScheduledLatest {
   summary: ScheduledSummary | null
   items: ScheduledNewsItem[]
   news_count: number
+  abnormal_return?: AbnormalReturn
 }
 
 interface SymbolMonitorData {
@@ -347,6 +393,22 @@ export function RiskReport() {
     queryFn: () => fetchMonitoringData<MonitoringJsonData>(),
     retry: 0,
     staleTime: 10 * 60_000,
+  })
+
+  const { data: marketModelData } = useQuery({
+    queryKey: ['abnormal-return-market-model'],
+    queryFn: async (): Promise<MarketModelJson | null> => {
+      try {
+        const res = await fetch(
+          'https://raw.githubusercontent.com/UnaLu027/social-trade-risk/main/generated-data/abnormal-return-market-model.json',
+          { cache: 'no-store' }
+        )
+        if (!res.ok) return null
+        return (await res.json()) as MarketModelJson
+      } catch { return null }
+    },
+    retry: 0,
+    staleTime: 30 * 60_000,
   })
   const symbolMonData     = monitoringJson?.symbols?.[upper] ?? null
   const symbolLatest      = symbolMonData?.latest ?? null
@@ -651,6 +713,151 @@ export function RiskReport() {
             </div>
           )}
         </div>
+
+        {/* ── 異常報酬觀察 ──────────────────────────────────────────────────── */}
+        {(() => {
+          const mm     = marketModelData?.symbols?.[upper]
+          const simple = symbolLatest?.abnormal_return
+          const useMarketModel = mm?.data_quality === 'computed_from_market_model'
+          const hasSimple      = simple?.data_quality === 'computed_from_market_history'
+          if (!useMarketModel && !hasSimple) return null
+
+          const fmtPct = (v: number | null) =>
+            v === null ? '—' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(2)}%`
+          const arColor = (v: number | null) =>
+            v === null ? '#64748b' : v > 0 ? '#10b981' : v < 0 ? '#ef4444' : '#64748b'
+
+          // ── Market Model card (primary) ──────────────────────────────────
+          if (useMarketModel && mm) {
+            const RISK_COLORS: Record<string, string> = {
+              low: '#10b981', medium: '#f59e0b', high: '#ef4444', critical: '#ef4444',
+            }
+            const RISK_ZH: Record<string, string> = {
+              low: '低', medium: '中', high: '高', critical: '極高',
+            }
+            const riskColor = RISK_COLORS[mm.risk_level] ?? '#64748b'
+            const interpText = mm.interpretation === 'outperforming'
+              ? '此標的近期報酬明顯高於 Market Model 預期，可能存在事件或社群熱度驅動的異常表現。'
+              : mm.interpretation === 'underperforming'
+              ? '此標的近期報酬明顯低於 Market Model 預期，需留意反轉或負面事件風險。'
+              : '目前相對 Market Model 預期偏離有限。'
+            return (
+              <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <TrendingUp size={13} color="#64748b" />
+                  <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>異常報酬觀察</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: '#0f2a3f', color: '#38bdf8', border: '1px solid #2d4a6f' }}>
+                    Market Model
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: '#1e2235', color: '#64748b', border: '1px solid #2d3148' }}>
+                    基準：{mm.benchmark_symbol}
+                  </span>
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded font-semibold"
+                    style={{ background: riskColor + '22', color: riskColor, border: `1px solid ${riskColor}55` }}
+                  >
+                    {RISK_ZH[mm.risk_level] ?? mm.risk_level}風險
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                    <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>1 日異常報酬</div>
+                    <div className="text-sm font-mono font-bold" style={{ color: arColor(mm.abnormal_return_1d) }}>
+                      {fmtPct(mm.abnormal_return_1d)}
+                    </div>
+                    <div className="text-[10px] mt-0.5" style={{ color: '#475569' }}>
+                      Z = {mm.abnormal_return_zscore.toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                    <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>5 日累積異常報酬（CAR）</div>
+                    <div className="text-sm font-mono font-bold" style={{ color: arColor(mm.CAR_5d) }}>
+                      {fmtPct(mm.CAR_5d)}
+                    </div>
+                    <div className="text-[10px] mt-0.5" style={{ color: '#475569' }}>
+                      Z = {mm.CAR_5d_zscore.toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 flex-wrap mb-3">
+                  {([
+                    ['α', mm.alpha.toFixed(4)],
+                    ['β', mm.beta.toFixed(3)],
+                    ['R²', `${(mm.train_r2 * 100).toFixed(1)}%`],
+                    ['估計期', `${mm.estimation_days} 天`],
+                  ] as [string, string][]).map(([label, val]) => (
+                    <div key={label} className="flex flex-col gap-0.5">
+                      <span className="text-[10px]" style={{ color: '#475569' }}>{label}</span>
+                      <span className="text-[11px] font-mono font-semibold" style={{ color: '#94a3b8' }}>{val}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-[11px] leading-relaxed mb-2" style={{ color: '#94a3b8' }}>
+                  {interpText}
+                </p>
+                <p className="text-[10px] leading-relaxed" style={{ color: '#334155' }}>
+                  異常報酬 = 實際報酬 − 預期正常報酬；預期正常報酬由 Market Model 估計：個股報酬 = α + β × SPY 報酬。估計期：{mm.estimation_start} 至 {mm.estimation_end}。僅作輔助觀察，不代表投資建議。
+                </p>
+              </div>
+            )
+          }
+
+          // ── Fallback: simple version ─────────────────────────────────────
+          const s = simple!
+          const simpleInterpText = s.abnormal_return_5d === null ? null
+            : s.abnormal_return_5d >  0.05
+            ? '此標的近期報酬明顯高於大盤，可能存在事件或社群熱度驅動的異常表現。'
+            : s.abnormal_return_5d < -0.05
+            ? '此標的近期報酬明顯低於大盤，需留意反轉或負面事件風險。'
+            : '目前相對大盤偏離有限。'
+          return (
+            <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: '1px solid #2d3148' }}>
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <TrendingUp size={13} color="#64748b" />
+                <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>異常報酬觀察</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: '#1c1a05', color: '#f59e0b', border: '1px solid #78350f' }}>
+                  簡化版
+                </span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: '#1e2235', color: '#64748b', border: '1px solid #2d3148' }}>
+                  基準：{s.benchmark_symbol}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                  <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>1 日異常報酬</div>
+                  <div className="text-sm font-mono font-bold" style={{ color: arColor(s.abnormal_return_1d) }}>
+                    {fmtPct(s.abnormal_return_1d)}
+                  </div>
+                  <div className="text-[10px] mt-0.5 flex gap-2" style={{ color: '#475569' }}>
+                    <span>股票 {fmtPct(s.stock_return_1d)}</span>
+                    <span>SPY {fmtPct(s.benchmark_return_1d)}</span>
+                  </div>
+                </div>
+                <div className="rounded p-2.5" style={{ background: '#0f1117', border: '1px solid #2d3148' }}>
+                  <div className="text-[10px] mb-1" style={{ color: '#64748b' }}>5 日異常報酬</div>
+                  <div className="text-sm font-mono font-bold" style={{ color: arColor(s.abnormal_return_5d) }}>
+                    {fmtPct(s.abnormal_return_5d)}
+                  </div>
+                  <div className="text-[10px] mt-0.5 flex gap-2" style={{ color: '#475569' }}>
+                    <span>股票 {fmtPct(s.stock_return_5d)}</span>
+                    <span>SPY {fmtPct(s.benchmark_return_5d)}</span>
+                  </div>
+                </div>
+              </div>
+              {simpleInterpText && (
+                <p className="text-[11px] leading-relaxed mb-2" style={{ color: '#94a3b8' }}>
+                  {simpleInterpText}
+                </p>
+              )}
+              <p className="text-[10px]" style={{ color: '#334155' }}>
+                此為簡化版異常報酬：個股報酬 − SPY 報酬。僅作輔助觀察，不代表投資建議。
+              </p>
+            </div>
+          )
+        })()}
 
         {/* ── 綜合警戒摘要卡（即時） ────────────────────────────────────────── */}
         <div className="rounded-lg p-4" style={{ background: '#1a1d27', border: `1px solid ${cautionColor}44` }}>
