@@ -35,6 +35,10 @@ interface AnalyzeResult {
   risk_score?: number
   model_source: string
   data_quality: string
+  model_id?: string | null
+  model_trained_at?: string | null
+  direction_label?: string | null
+  direction_probabilities?: Record<string, number> | null
 }
 
 interface UrlAnalysisResult {
@@ -178,6 +182,9 @@ function getLocalizedModelExplanation(res: AnalyzeResult): string {
 }
 
 const MODEL_SOURCE_ZH: Record<string, string> = {
+  'colab_text_model':           'Colab Text Model',
+  'real_model':                 'Legacy ML 模型',
+  'heuristic_fallback':         '關鍵字啟發式分析',
   'real_ai_v2_post_risk_model': 'Real AI v2 貼文風險模型',
   'keyword_heuristic_v0.1':    '關鍵字啟發式分析 v0.1',
 }
@@ -281,8 +288,10 @@ function generateHtmlBrief(res: AnalyzeResult, sym: string, sourceText: string, 
   const hypeW       = clamp(res.hype_language_score)
   const manipW      = clamp(res.manipulation_signal_score)
   const urgencyW    = clamp(res.urgency_score)
-  const bullW       = clamp(res.bullish_probability * 100)
-  const bearW       = clamp(res.bearish_probability * 100)
+  const dp          = res.direction_probabilities
+  const bullW       = clamp((dp ? (dp['bullish'] ?? 0) : res.bullish_probability) * 100)
+  const bearW       = clamp((dp ? (dp['bearish'] ?? 0) : res.bearish_probability) * 100)
+  const neutralW    = dp ? clamp((dp['neutral'] ?? 0) * 100) : null
   const squeezeHtml = res.short_squeeze_narrative_detected
     ? '<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#450a0a;color:#f87171;font-size:0.75rem;border:1px solid #991b1b;">⚠ 已偵測</span>'
     : '<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#1a1d27;color:#64748b;font-size:0.75rem;border:1px solid #2d3148;">未偵測</span>'
@@ -303,6 +312,7 @@ function generateHtmlBrief(res: AnalyzeResult, sym: string, sourceText: string, 
     mkBar('緊迫感強度',     urgencyW, '#38bdf8'),
     mkBar('方向性情緒：看多', bullW,  '#10b981'),
     mkBar('方向性情緒：看空', bearW,  '#ef4444'),
+    ...(neutralW !== null ? [mkBar('方向性情緒：中性', neutralW, '#94a3b8')] : []),
   ].join('\n')
   const termsHtml = res.highlighted_terms.length > 0
     ? res.highlighted_terms.map(t => `<mark style="background:#451a03;color:#fb923c;padding:1px 4px;border-radius:3px;margin:2px;">${escapeHtml(t)}</mark>`).join(' ')
@@ -1182,8 +1192,16 @@ export function PostAnalyzer() {
                     {riskLabelZh(result.predicted_risk_label)}
                   </span>
                 </div>
-                <span className="text-xs" style={{ color: '#64748b' }}>
-                  {result.model_source} {apiSource === 'heuristic' && '(本地推論)'}
+                <span className="flex flex-col items-end gap-0.5">
+                  <span className="text-xs" style={{ color: '#64748b' }}>
+                    {getFriendlyModelSource(result.model_source)}
+                    {apiSource === 'heuristic' && ' (本地推論)'}
+                  </span>
+                  {result.model_id && (
+                    <span className="text-[10px] font-mono" style={{ color: '#334155' }}>
+                      {result.model_id}
+                    </span>
+                  )}
                 </span>
               </div>
               {savedId && (
@@ -1221,8 +1239,18 @@ export function PostAnalyzer() {
               <ScoreMeter label="炒作語言強度"    value={result.hype_language_score / 100}       color={riskColor} />
               <ScoreMeter label="操縱信號強度"    value={result.manipulation_signal_score / 100} color="#f97316" />
               <ScoreMeter label="緊迫感強度"      value={result.urgency_score / 100}             color="#38bdf8" />
-              <ScoreMeter label="方向性情緒估計：看多" value={result.bullish_probability} color="#10b981" />
-              <ScoreMeter label="方向性情緒估計：看空" value={result.bearish_probability} color="#ef4444" />
+              {result.direction_probabilities ? (
+                <>
+                  <ScoreMeter label="方向性情緒估計：看多" value={result.direction_probabilities['bullish'] ?? 0} color="#10b981" />
+                  <ScoreMeter label="方向性情緒估計：看空" value={result.direction_probabilities['bearish'] ?? 0} color="#ef4444" />
+                  <ScoreMeter label="方向性情緒估計：中性" value={result.direction_probabilities['neutral'] ?? 0} color="#94a3b8" />
+                </>
+              ) : (
+                <>
+                  <ScoreMeter label="方向性情緒估計：看多" value={result.bullish_probability} color="#10b981" />
+                  <ScoreMeter label="方向性情緒估計：看空" value={result.bearish_probability} color="#ef4444" />
+                </>
+              )}
             </div>
             <p className="text-[10px]" style={{ color: '#475569' }}>
               方向性情緒僅為文字語氣估計，不代表買賣建議。
@@ -1254,7 +1282,7 @@ export function PostAnalyzer() {
                     ['操縱訊號強度',   '是否出現保證獲利、集體拉抬、鼓吹立即買入等可疑訊號。'],
                     ['緊迫感強度',     '是否使用短時間壓力迫使讀者行動。'],
                     ['軋空敘事',       '是否強調 short squeeze、空頭被迫回補、散戶集結等敘事。'],
-                    ['方向性情緒',     '文字偏看多或看空，但不等於投資建議。'],
+                    ['方向性情緒',     '文字偏看多、看空或中性。有 Colab 模型時使用方向模型機率，否則使用關鍵字啟發式估計。不等於投資建議。'],
                   ] as [string, string][]).map(([k, v]) => (
                     <div key={k} className="flex gap-2 text-[10px]">
                       <span className="font-semibold flex-shrink-0 w-24" style={{ color: '#94a3b8' }}>{k}</span>
