@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-06-26T02:12:08.759Z",
+  "generated_at": "2026-06-26T08:49:07.669Z",
   "refresh_status": "success",
   "symbols": {
     "GME": {
       "latest": {
-        "fetched_at": "2026-06-26T02:12:10.956Z",
+        "fetched_at": "2026-06-26T08:49:09.022Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -17,7 +17,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-06-26T02:12:10.956Z"
+          "generated_at": "2026-06-26T08:49:09.022Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -171,10 +171,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-06-26T02:12:10.956Z",
+      "last_attempt_at": "2026-06-26T08:49:09.022Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-06-26T08:49:09.022Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 15,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-06-26T02:12:10.956Z",
           "refresh_status": "success",
@@ -234,22 +244,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-06-24T14:04:40.202Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 15,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "TSLA": {
       "latest": {
-        "fetched_at": "2026-06-26T02:12:13.201Z",
+        "fetched_at": "2026-06-26T08:49:11.774Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -262,7 +262,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-06-26T02:12:13.201Z"
+          "generated_at": "2026-06-26T08:49:11.774Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -277,12 +277,77 @@
         },
         "news_count": 10,
         "candidate_news_count": 20,
-        "relevant_news_count": 17,
-        "unique_relevant_news_count": 17,
+        "relevant_news_count": 13,
+        "unique_relevant_news_count": 13,
         "duplicate_news_count": 0,
         "published_news_count": 10,
-        "excluded_news_count": 3,
+        "excluded_news_count": 7,
         "items": [
+          {
+            "id": "140733574",
+            "headline": "Here's How Much You'd Have Today If You Had Invested $10,000 in Tesla the Day Before It Completed Its Last 3-for-1 Stock Split.",
+            "url": "https://finnhub.io/api/news?id=a432b1719698f8ea63dd4d4519fdd436ac59e6540489777ee67c8bfaf3f7a734",
+            "published_at": "2026-06-26T06:25:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Tesla"
+            ]
+          },
+          {
+            "id": "140732846",
+            "headline": "Dell To Officially Join Tesla, Oracle, Caterpillar In Texas As Stock Eyes Best Year Since Returning To Public Markets",
+            "url": "https://finnhub.io/api/news?id=30ab046031138e65e728961f84ef7f19dcae6f8ec8b11d0fe6aad7b2e04e7e9e",
+            "published_at": "2026-06-26T05:23:23+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Tesla"
+            ]
+          },
+          {
+            "id": "140732847",
+            "headline": "NIO Stock Eyes June Delivery Test: Deutsche Bank Tracker Shows Nio Orders Beating Tesla In China",
+            "url": "https://finnhub.io/api/news?id=7e4cc591099d482cfb2b0f28612acd940ce3c512f59684c686280f48c6771c8e",
+            "published_at": "2026-06-26T04:25:54+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Tesla"
+            ]
+          },
+          {
+            "id": "140732848",
+            "headline": "Elon Musk Should 'Consider Selling EVs Again,' Says Ross Gerber As TSLA Stock Declines",
+            "url": "https://finnhub.io/api/news?id=8eb97e1188fd149bf1a4d260acf174c63c452a45666409b752eea489d7482b89",
+            "published_at": "2026-06-26T04:22:26+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "TSLA"
+            ]
+          },
+          {
+            "id": "140732170",
+            "headline": "TSLA, SPCX Slip Overnight: Elon Musk Warns AI Production Shortfall Is ‘Insane’ As Apple Price Shock Hits Tech",
+            "url": "https://finnhub.io/api/news?id=d5ce46c97a95a1a1a0849f6eca2ea217c4bc35ece0b17d0a6e87f74572676be1",
+            "published_at": "2026-06-26T02:04:03+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "TSLA"
+            ]
+          },
           {
             "id": "140729385",
             "headline": "Down 14%, Is Tesla a Good Buy Now?",
@@ -349,78 +414,23 @@
             "matched_terms": [
               "Tesla"
             ]
-          },
-          {
-            "id": "140728380",
-            "headline": "Tesla faces lawsuit from family of victim killed in Texas home crash",
-            "url": "https://finnhub.io/api/news?id=eb54dd6f5a1d330c01c86122364a55d5e6fb06219deb9a0ff7599d837649f31d",
-            "published_at": "2026-06-25T18:33:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Tesla"
-            ]
-          },
-          {
-            "id": "140728381",
-            "headline": "Tesla Stock Price Prediction: Why The EV Maker Is Sitting Right at Fair Value",
-            "url": "https://finnhub.io/api/news?id=a821e8749323917d8505db9c4640a1ea0f4105dc46be65016257fa63699c86b4",
-            "published_at": "2026-06-25T18:26:47+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Tesla"
-            ]
-          },
-          {
-            "id": "140728361",
-            "headline": "Micron overtakes Meta, Tesla in market value amid AI-driven demand",
-            "url": "https://finnhub.io/api/news?id=94d24a7b6fd0f9c5879d99adbc0ad48c1dfafb98be4d7b2fa878508b4f60a06d",
-            "published_at": "2026-06-25T18:20:12+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Tesla"
-            ]
-          },
-          {
-            "id": "140728383",
-            "headline": "601W’s bad week gets worse with $43M foreclosure on Tesla-leased Chicago building",
-            "url": "https://finnhub.io/api/news?id=66ff32a492f3d4052956508606854b2948201ce9a4f0c36fefcb8e7a23ca9e48",
-            "published_at": "2026-06-25T17:57:14+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Tesla"
-            ]
-          },
-          {
-            "id": "140727313",
-            "headline": "Tesla, Waymo Get Robotaxi Rule Boost",
-            "url": "https://finnhub.io/api/news?id=c8fc4f26488b978ca66083658234f33315930dfa4d2d26f0afa653d7d71c129d",
-            "published_at": "2026-06-25T16:57:22+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Tesla"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-06-26T02:12:13.201Z",
+      "last_attempt_at": "2026-06-26T08:49:11.774Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-06-26T08:49:11.774Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 17,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-06-26T02:12:13.201Z",
           "refresh_status": "success",
@@ -480,22 +490,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-06-24T14:04:42.339Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 17,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AAPL": {
       "latest": {
-        "fetched_at": "2026-06-26T02:12:14.324Z",
+        "fetched_at": "2026-06-26T08:49:12.807Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -508,7 +508,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-06-26T02:12:14.324Z"
+          "generated_at": "2026-06-26T08:49:12.807Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -523,17 +523,17 @@
         },
         "news_count": 10,
         "candidate_news_count": 20,
-        "relevant_news_count": 15,
-        "unique_relevant_news_count": 15,
+        "relevant_news_count": 17,
+        "unique_relevant_news_count": 17,
         "duplicate_news_count": 0,
         "published_news_count": 10,
-        "excluded_news_count": 5,
+        "excluded_news_count": 3,
         "items": [
           {
-            "id": "140731202",
-            "headline": "Dow Jones Futures: What To Do Amid Mixed Market Signals; Micron's Gain Is Apple's Pain",
-            "url": "https://finnhub.io/api/news?id=736b118e3bddb2b6a16418ee29ce93bc0faf6dcbf94b3380ba2cea141f27bcc8",
-            "published_at": "2026-06-26T01:50:56+00:00",
+            "id": "140733573",
+            "headline": "Apple hikes prices as memory chip costs skyrocket",
+            "url": "https://finnhub.io/api/news?id=c2a9ed91de3f85336912644b1d53d8209296ca4869469622229f0a43b08ca7e5",
+            "published_at": "2026-06-26T07:04:29+00:00",
             "source": "finnhub",
             "ai_risk_label": "Low",
             "ai_risk_score": 15,
@@ -543,10 +543,10 @@
             ]
           },
           {
-            "id": "140731203",
-            "headline": "Decibel brings Apple, Meta and Microsoft to onchain trading with no market hours",
-            "url": "https://finnhub.io/api/news?id=e5cb41540dc6876f034b5e51149ff61f623fb9ad20f5527e35b64c0e9704c8be",
-            "published_at": "2026-06-26T00:15:00+00:00",
+            "id": "140733575",
+            "headline": "Apple Is Rolling Out Huge Price Increases. Here's What Investors Need to Know.",
+            "url": "https://finnhub.io/api/news?id=5e33a4fb4d36e2a9a05cc5facb8419f0c8dbafbab8131528bd5d6d82d7647228",
+            "published_at": "2026-06-26T06:20:00+00:00",
             "source": "finnhub",
             "ai_risk_label": "Low",
             "ai_risk_score": 15,
@@ -556,36 +556,23 @@
             ]
           },
           {
-            "id": "140731204",
-            "headline": "Review & Preview: Even Apple Has a Budget",
-            "url": "https://finnhub.io/api/news?id=b660ad41527a960686e8d5f928a829092155bf74875a998f08e7bb49297f91a4",
-            "published_at": "2026-06-25T23:55:00+00:00",
+            "id": "140733589",
+            "headline": "Lululemon Went From Darling Stock to Disaster. How to Fix It.",
+            "url": "https://finnhub.io/api/news?id=37c97d3b4360fce795b1b6f2180951b168afdce41967c4f9f2184410e16073d1",
+            "published_at": "2026-06-26T06:00:00+00:00",
             "source": "finnhub",
             "ai_risk_label": "Low",
             "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
+            "relevance_basis": "issuer_term_in_summary",
             "matched_terms": [
               "Apple"
             ]
           },
           {
-            "id": "140730352",
-            "headline": "Apple raises iPad and MacBook prices, blaming cost of chips amid AI boom",
-            "url": "https://finnhub.io/api/news?id=ba1a53a179e6fe1453638c3f28899acc4ad9ede080da50d823b9b916e0f7e96b",
-            "published_at": "2026-06-25T23:46:17+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Apple"
-            ]
-          },
-          {
-            "id": "140730362",
-            "headline": "Apple (AAPL) Stock Trades Down, Here Is Why",
-            "url": "https://finnhub.io/api/news?id=e1b5e9e28554c4c6c84e15604bd7e3dc0b3685624c33561cac94ce60b692725a",
-            "published_at": "2026-06-25T23:37:50+00:00",
+            "id": "140732826",
+            "headline": "Apple (AAPL) Faces £3 Billion UK iCloud Lawsuit As Class Action Moves Ahead",
+            "url": "https://finnhub.io/api/news?id=87df9cd8e2d595dac5cee1188929feec2794a0afc2d40ae1dd24407a2df31bda",
+            "published_at": "2026-06-26T05:05:49+00:00",
             "source": "finnhub",
             "ai_risk_label": "Low",
             "ai_risk_score": 15,
@@ -596,10 +583,10 @@
             ]
           },
           {
-            "id": "140730363",
-            "headline": "Stock Market Today, June 25: Apple Drops After Raising Device Prices to Offset Higher Memory Costs",
-            "url": "https://finnhub.io/api/news?id=5a6fc8b30df7a9885f548a8b0cf272bb75902ab6e74acc46abf7281e5d8ce55d",
-            "published_at": "2026-06-25T22:10:35+00:00",
+            "id": "140732828",
+            "headline": "Microsoft and Apple raise prices as AI-driven chip shortages hit Xbox, Macs and iPads",
+            "url": "https://finnhub.io/api/news?id=81e89e3d94f8c54fa38a893738f9d91831b38539584f2d0a17956f5cd8b00f73",
+            "published_at": "2026-06-26T04:15:23+00:00",
             "source": "finnhub",
             "ai_risk_label": "Low",
             "ai_risk_score": 15,
@@ -609,50 +596,63 @@
             ]
           },
           {
-            "id": "140730364",
-            "headline": "S&P 500 Ends Flat As Apple Weakness Offsets Micron Gains, Nasdaq 100 And Dow Post Modest Gains — MSFT, QCOM, SPCX, BMBL, SONO In Focus",
-            "url": "https://finnhub.io/api/news?id=3a7b1279ff5920a78bf77a2a4506e50d4a179bd02b04a7c955961da69d80a73f",
-            "published_at": "2026-06-25T21:54:13+00:00",
+            "id": "140732829",
+            "headline": "Bernie Sanders Says MacBook, iPad Price Rise An Example Of Tim Cook's 'Corporate Greed: Here's How Much You'll Pay Now",
+            "url": "https://finnhub.io/api/news?id=a10a4d172641349bb00b548399d5ee64c1b209a8488f1613a63651fe792fa1d5",
+            "published_at": "2026-06-26T03:17:12+00:00",
             "source": "finnhub",
             "ai_risk_label": "Low",
             "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Apple"
-            ]
-          },
-          {
-            "id": "140729338",
-            "headline": "Dow Jones Futures: Mixed Market Signals As Micron's Gain Is Apple's Pain",
-            "url": "https://finnhub.io/api/news?id=8f0ea89e5ffb21ff7580afbb7d42b5bc56647c16987198ac6197cc685eb50219",
-            "published_at": "2026-06-25T21:50:24+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Apple"
-            ]
-          },
-          {
-            "id": "140730365",
-            "headline": "Apple (AAPL) Sees a More Significant Dip Than Broader Market: Some Facts to Know",
-            "url": "https://finnhub.io/api/news?id=51445d2fcc9040f91c357218fad7330584569b061680003ba65d0b86ed2664d9",
-            "published_at": "2026-06-25T21:45:05+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
+            "relevance_basis": "issuer_term_in_summary",
             "matched_terms": [
               "AAPL",
               "Apple"
             ]
           },
           {
-            "id": "140729339",
-            "headline": "Update: US Equity Indexes Mixed as Micron Rally Fails to Lift Tech, Apple Drops After Product Price-Hike Reports",
-            "url": "https://finnhub.io/api/news?id=b4613df39675f9bbeeb17e358dfc2040220c0392f8f79ed649661aaa6ddb66af",
-            "published_at": "2026-06-25T21:43:40+00:00",
+            "id": "140732167",
+            "headline": "Dow Jones Futures Fall, Techs Tumble After Mixed Market Signals; What To Do Now",
+            "url": "https://finnhub.io/api/news?id=710cda02d8c746b8b45a1ec54213e38a68834e9e199ef58784735d524cb43296",
+            "published_at": "2026-06-26T03:11:56+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "Apple"
+            ]
+          },
+          {
+            "id": "140732168",
+            "headline": "Asia’s Tech Stocks Take the Hit as Apple and Microsoft Push Chip Costs to Consumers",
+            "url": "https://finnhub.io/api/news?id=aa6b9c19916f88cc56f85ade2f6f795edbf07adf0665ecf8b9696731d4e31c7c",
+            "published_at": "2026-06-26T02:47:43+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Apple"
+            ]
+          },
+          {
+            "id": "140732163",
+            "headline": "Why Apple Stock Fell Today",
+            "url": "https://finnhub.io/api/news?id=c537f61f148bc7359e7802f7e842774a386fa4ab835dcc95ae2f2632568335d0",
+            "published_at": "2026-06-26T02:26:01+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Apple"
+            ]
+          },
+          {
+            "id": "140732170",
+            "headline": "TSLA, SPCX Slip Overnight: Elon Musk Warns AI Production Shortfall Is ‘Insane’ As Apple Price Shock Hits Tech",
+            "url": "https://finnhub.io/api/news?id=d5ce46c97a95a1a1a0849f6eca2ea217c4bc35ece0b17d0a6e87f74572676be1",
+            "published_at": "2026-06-26T02:04:03+00:00",
             "source": "finnhub",
             "ai_risk_label": "Low",
             "ai_risk_score": 15,
@@ -663,10 +663,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-06-26T02:12:14.324Z",
+      "last_attempt_at": "2026-06-26T08:49:12.807Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-06-26T08:49:12.807Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 25,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-06-26T02:12:14.324Z",
           "refresh_status": "success",
@@ -726,35 +736,25 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-06-24T14:04:43.332Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 16,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AMC": {
       "latest": {
-        "fetched_at": "2026-06-26T02:12:15.545Z",
+        "fetched_at": "2026-06-26T08:49:13.926Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
           "signal_level": "low",
           "combined_score": 33,
           "external_news_score": 15,
-          "latest_snapshot_score": 40,
+          "latest_snapshot_score": 41,
           "market_history_score": 40,
           "data_coverage": "FULL",
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-06-26T02:12:15.545Z"
+          "generated_at": "2026-06-26T08:49:13.926Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -868,10 +868,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-06-26T02:12:15.545Z",
+      "last_attempt_at": "2026-06-26T08:49:13.926Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-06-26T08:49:13.926Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 33,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-06-26T02:12:15.545Z",
           "refresh_status": "success",
@@ -931,22 +941,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-06-24T14:04:44.143Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 26,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "NVDA": {
       "latest": {
-        "fetched_at": "2026-06-26T02:12:16.378Z",
+        "fetched_at": "2026-06-26T08:49:14.619Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -959,7 +959,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-06-26T02:12:16.378Z"
+          "generated_at": "2026-06-26T08:49:14.619Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -972,45 +972,19 @@
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 4,
+        "news_count": 3,
         "candidate_news_count": 20,
-        "relevant_news_count": 4,
-        "unique_relevant_news_count": 4,
+        "relevant_news_count": 3,
+        "unique_relevant_news_count": 3,
         "duplicate_news_count": 0,
-        "published_news_count": 4,
-        "excluded_news_count": 16,
+        "published_news_count": 3,
+        "excluded_news_count": 17,
         "items": [
           {
-            "id": "140730356",
-            "headline": "Micron's Blowout Earnings Could Be Great News for Nvidia Investors",
-            "url": "https://finnhub.io/api/news?id=377368ac310fe7c4b3c4a35ba37c61db77464def3516e65b30ecdcb3d72315e4",
-            "published_at": "2026-06-25T23:03:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "NVIDIA"
-            ]
-          },
-          {
-            "id": "140729319",
-            "headline": "OpenAI just built a chip to cut Nvidia out of one job",
-            "url": "https://finnhub.io/api/news?id=fe00882c07a29d797a7e1144edefde78429cf3ece5d87e734030c8a722c2591b",
-            "published_at": "2026-06-25T21:47:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "NVIDIA"
-            ]
-          },
-          {
-            "id": "140729323",
-            "headline": "AI boom keeps memory chip makers in sweet spot, says expert",
-            "url": "https://finnhub.io/api/news?id=83f579c98258ef8f6999941b3227364c4d014b9cc9cfd5300374568a2fb3e0c7",
-            "published_at": "2026-06-25T21:15:40+00:00",
+            "id": "140733573",
+            "headline": "Apple hikes prices as memory chip costs skyrocket",
+            "url": "https://finnhub.io/api/news?id=c2a9ed91de3f85336912644b1d53d8209296ca4869469622229f0a43b08ca7e5",
+            "published_at": "2026-06-26T07:04:29+00:00",
             "source": "finnhub",
             "ai_risk_label": "Low",
             "ai_risk_score": 15,
@@ -1020,10 +994,10 @@
             ]
           },
           {
-            "id": "140729329",
-            "headline": "Battle of the Artificial Intelligence (AI) Computing Companies: Is AMD, Broadcom, Nvidia, or Marvell the Best Stock to Buy Now?",
-            "url": "https://finnhub.io/api/news?id=1c3376e097f498e52d074c12e827b0ae0645b9eaa541f0ac377f3e0fcf112208",
-            "published_at": "2026-06-25T20:37:00+00:00",
+            "id": "140733576",
+            "headline": "Micron Beats Meta in Market Cap: Can It Catch Nvidia Next?",
+            "url": "https://finnhub.io/api/news?id=cb1dcd497d3b446ea6257597a9f5e7e77b9e05167c107d25764d10aa655a51f2",
+            "published_at": "2026-06-26T05:59:06+00:00",
             "source": "finnhub",
             "ai_risk_label": "Low",
             "ai_risk_score": 15,
@@ -1031,13 +1005,36 @@
             "matched_terms": [
               "NVIDIA"
             ]
+          },
+          {
+            "id": "140732158",
+            "headline": "Arm (ARM) Wants To Be The Next Full Stack AI Infrastructure Provider",
+            "url": "https://finnhub.io/api/news?id=3030f18ec6f437fd76a3d826ddb762cc4ac2c36f876edc984163373a1f8ff608",
+            "published_at": "2026-06-26T03:18:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "NVIDIA"
+            ]
           }
         ]
       },
-      "last_attempt_at": "2026-06-26T02:12:16.378Z",
+      "last_attempt_at": "2026-06-26T08:49:14.619Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-06-26T08:49:14.619Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 19,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-06-26T02:12:16.378Z",
           "refresh_status": "success",
@@ -1097,22 +1094,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-06-24T14:04:44.781Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 17,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "MSFT": {
       "latest": {
-        "fetched_at": "2026-06-26T02:12:17.447Z",
+        "fetched_at": "2026-06-26T08:49:15.558Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -1125,7 +1112,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-06-26T02:12:17.447Z"
+          "generated_at": "2026-06-26T08:49:15.558Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -1147,6 +1134,123 @@
         "excluded_news_count": 10,
         "items": [
           {
+            "id": "140733591",
+            "headline": "QCOM Stock Eyes Worst Month In 7 Years: Analyst Says MSFT, GOOG May Be Behind Qualcomm’s AI Momentum",
+            "url": "https://finnhub.io/api/news?id=0bb6034fb8c6143ab75a9c508afaa5d2c2b83173b62a8c5274d4c77d8109a7a1",
+            "published_at": "2026-06-26T07:14:02+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "MSFT"
+            ]
+          },
+          {
+            "id": "140732831",
+            "headline": "WinWire Earns Microsoft Frontier Partner Status, Strengthening Its Position as a Leader in Enterprise AI Adoption",
+            "url": "https://finnhub.io/api/news?id=98cc10afee173359b7e45dfc2cd7eb90b04a6ce43b2423d71dba05e52f9daa67",
+            "published_at": "2026-06-26T04:30:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Microsoft"
+            ]
+          },
+          {
+            "id": "140732828",
+            "headline": "Microsoft and Apple raise prices as AI-driven chip shortages hit Xbox, Macs and iPads",
+            "url": "https://finnhub.io/api/news?id=81e89e3d94f8c54fa38a893738f9d91831b38539584f2d0a17956f5cd8b00f73",
+            "published_at": "2026-06-26T04:15:23+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Microsoft"
+            ]
+          },
+          {
+            "id": "140732174",
+            "headline": "A new AI bottleneck is starting to worry investors",
+            "url": "https://finnhub.io/api/news?id=ef228ba605a777189ebae1e3652b46a3b0b62a848454b6a1fb81e2573e81e729",
+            "published_at": "2026-06-26T03:33:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "Microsoft"
+            ]
+          },
+          {
+            "id": "140732176",
+            "headline": "Why Did MSFT, PLTR, MSTR Stocks Plunge To 52-Week Lows Today?",
+            "url": "https://finnhub.io/api/news?id=58fe46c075a0369ad2d9dcc00c40e47bf830108318ca4a16a794653e9d8bb81a",
+            "published_at": "2026-06-26T03:05:19+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "MSFT"
+            ]
+          },
+          {
+            "id": "140732168",
+            "headline": "Asia’s Tech Stocks Take the Hit as Apple and Microsoft Push Chip Costs to Consumers",
+            "url": "https://finnhub.io/api/news?id=aa6b9c19916f88cc56f85ade2f6f795edbf07adf0665ecf8b9696731d4e31c7c",
+            "published_at": "2026-06-26T02:47:43+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Microsoft"
+            ]
+          },
+          {
+            "id": "140731470",
+            "headline": "S&P 500, Dow Futures Climb As Markets Look Past Big Tech Declines, Hotter-Than-Expected Inflation: AAPL, MSFT, BABA, MSTR, SNDK, FIG In Focus",
+            "url": "https://finnhub.io/api/news?id=a5312916fc293a413250f245ebc120acc3b3841f5e3361edd2bd0769e9d3b0ee",
+            "published_at": "2026-06-26T01:58:49+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "MSFT"
+            ]
+          },
+          {
+            "id": "140731203",
+            "headline": "Decibel brings Apple, Meta and Microsoft to onchain trading with no market hours",
+            "url": "https://finnhub.io/api/news?id=e5cb41540dc6876f034b5e51149ff61f623fb9ad20f5527e35b64c0e9704c8be",
+            "published_at": "2026-06-26T00:15:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Microsoft"
+            ]
+          },
+          {
+            "id": "140731208",
+            "headline": "Michael Burry Buys Long-Dated Microsoft Calls, Adds To JD And Adobe — Trims Palantir Short",
+            "url": "https://finnhub.io/api/news?id=c3845e8f81aea609f7c8f8a4c1019195919a986c15ad8d42368e5915000fd2d0",
+            "published_at": "2026-06-26T00:06:10+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Microsoft"
+            ]
+          },
+          {
             "id": "140730368",
             "headline": "Stock Market Today, June 25: Microsoft Falls as AI Spending Concerns Pressure Cloud Margin Outlook",
             "url": "https://finnhub.io/api/news?id=f2f82add4077a549ad8782bedc206db60529b065b11d3b9c2d1d0242eabc5f76",
@@ -1158,131 +1262,23 @@
             "matched_terms": [
               "Microsoft"
             ]
-          },
-          {
-            "id": "140730364",
-            "headline": "S&P 500 Ends Flat As Apple Weakness Offsets Micron Gains, Nasdaq 100 And Dow Post Modest Gains — MSFT, QCOM, SPCX, BMBL, SONO In Focus",
-            "url": "https://finnhub.io/api/news?id=3a7b1279ff5920a78bf77a2a4506e50d4a179bd02b04a7c955961da69d80a73f",
-            "published_at": "2026-06-25T21:54:13+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "MSFT"
-            ]
-          },
-          {
-            "id": "140729353",
-            "headline": "MSFT Stock Slides 4.5% — Microsoft Price Target Revision By Stifel And Xbox Pricing Changes In Focus",
-            "url": "https://finnhub.io/api/news?id=eac08112e415912f7610592bc7db034aaaaccf371e46cf230e7573ff4c64245f",
-            "published_at": "2026-06-25T20:09:36+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "MSFT",
-              "Microsoft"
-            ]
-          },
-          {
-            "id": "140729354",
-            "headline": "Chevron, Microsoft deal fuels West Texas data center expansion",
-            "url": "https://finnhub.io/api/news?id=24f262f579fd5a78f4fcb90f1512e32bee4cc78eb194334ab97c39cac78ba424",
-            "published_at": "2026-06-25T20:03:32+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Microsoft"
-            ]
-          },
-          {
-            "id": "140728305",
-            "headline": "Apple and Microsoft are raising their prices as chip costs soar",
-            "url": "https://finnhub.io/api/news?id=2bf12780798375821014f657aa05cc4a8fe39f9d81ad7725912cccc74f6efe29",
-            "published_at": "2026-06-25T19:48:44+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Microsoft"
-            ]
-          },
-          {
-            "id": "140730282",
-            "headline": "Microsoft Is Paying Too Much In Capex To Drive Revenue Growth",
-            "url": "https://finnhub.io/api/news?id=c01497912f8e266cb206591bcec66fc6afee78d85ed64d9938eb58eedc1045fd",
-            "published_at": "2026-06-25T19:38:17+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Microsoft"
-            ]
-          },
-          {
-            "id": "140728324",
-            "headline": "Microsoft stock tumbles, Micron sparks memory chip rally, Qualcomm's data center venture",
-            "url": "https://finnhub.io/api/news?id=420efa81785b31cbfeb2b4e334b6996f403223c2c3b669a35a7d01d66d024f78",
-            "published_at": "2026-06-25T19:27:54+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Microsoft"
-            ]
-          },
-          {
-            "id": "140728295",
-            "headline": "Why Microsoft Stock Just Dropped",
-            "url": "https://finnhub.io/api/news?id=238276d181e13e7c57e1dd2e98adb3e71bcd3f5fbd0cf18bb173b8a86877e1b6",
-            "published_at": "2026-06-25T19:05:20+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Microsoft"
-            ]
-          },
-          {
-            "id": "140728299",
-            "headline": "Linux Foundation and Industry Leaders Launch Akrites to Defend Critical Open Source Software Against AI-Enabled Cyber Threats",
-            "url": "https://finnhub.io/api/news?id=6499e14df1a0fdbbdc1b510f5786bcf239539925a1e227dfc11efd89129bdf62",
-            "published_at": "2026-06-25T19:05:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_summary",
-            "matched_terms": [
-              "Microsoft"
-            ]
-          },
-          {
-            "id": "140729356",
-            "headline": "A Quantum Stock Gaining Ground Amid Microsoft's Majorana Controversy",
-            "url": "https://finnhub.io/api/news?id=382eff0fc835d257d73eff8da1a41a81866db2e9acd1df4576aa30d04580ac58",
-            "published_at": "2026-06-25T19:00:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Microsoft"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-06-26T02:12:17.447Z",
+      "last_attempt_at": "2026-06-26T08:49:15.558Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-06-26T08:49:15.558Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 21,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-06-26T02:12:17.447Z",
           "refresh_status": "success",
@@ -1342,22 +1338,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-06-24T14:04:45.496Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 18,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "META": {
       "latest": {
-        "fetched_at": "2026-06-26T02:12:18.436Z",
+        "fetched_at": "2026-06-26T08:49:16.466Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -1370,7 +1356,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-06-26T02:12:18.436Z"
+          "generated_at": "2026-06-26T08:49:16.466Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -1391,6 +1377,32 @@
         "published_news_count": 6,
         "excluded_news_count": 14,
         "items": [
+          {
+            "id": "140733576",
+            "headline": "Micron Beats Meta in Market Cap: Can It Catch Nvidia Next?",
+            "url": "https://finnhub.io/api/news?id=cb1dcd497d3b446ea6257597a9f5e7e77b9e05167c107d25764d10aa655a51f2",
+            "published_at": "2026-06-26T05:59:06+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Meta"
+            ]
+          },
+          {
+            "id": "140731203",
+            "headline": "Decibel brings Apple, Meta and Microsoft to onchain trading with no market hours",
+            "url": "https://finnhub.io/api/news?id=e5cb41540dc6876f034b5e51149ff61f623fb9ad20f5527e35b64c0e9704c8be",
+            "published_at": "2026-06-26T00:15:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Meta"
+            ]
+          },
           {
             "id": "140729357",
             "headline": "Mag 7 Stocks Shed Nearly $3 Trillion This Month",
@@ -1445,40 +1457,23 @@
               "Meta Platforms",
               "Meta"
             ]
-          },
-          {
-            "id": "140725556",
-            "headline": "This Might Be the Cheapest Meta Platforms Trades in Years. Here's Why.",
-            "url": "https://finnhub.io/api/news?id=672ce4cb73be2bea7649eb1b52cd52d65d2f96876b187892a24fef2f8faf0408",
-            "published_at": "2026-06-25T15:35:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Meta Platforms",
-              "Meta"
-            ]
-          },
-          {
-            "id": "140725619",
-            "headline": "Meta Stock: 'Bulls Are Frustrated' But Analyst Sees Big Potential For AI Business Push",
-            "url": "https://finnhub.io/api/news?id=2835320d273b8ef055212a2f2f45f9985bfd16658a6b29ce18daa528584c7228",
-            "published_at": "2026-06-25T15:22:55+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Meta"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-06-26T02:12:18.436Z",
+      "last_attempt_at": "2026-06-26T08:49:16.466Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-06-26T08:49:16.466Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 19,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-06-26T02:12:18.436Z",
           "refresh_status": "success",
@@ -1538,35 +1533,25 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-06-24T14:04:46.328Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 19,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AMZN": {
       "latest": {
-        "fetched_at": "2026-06-26T02:12:19.384Z",
+        "fetched_at": "2026-06-26T08:49:17.384Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
           "signal_level": "low",
           "combined_score": 23,
           "external_news_score": 15,
-          "latest_snapshot_score": 19,
+          "latest_snapshot_score": 20,
           "market_history_score": 34,
           "data_coverage": "FULL",
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-06-26T02:12:19.384Z"
+          "generated_at": "2026-06-26T08:49:17.384Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -1579,14 +1564,66 @@
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 9,
+        "news_count": 10,
         "candidate_news_count": 20,
-        "relevant_news_count": 9,
-        "unique_relevant_news_count": 9,
+        "relevant_news_count": 10,
+        "unique_relevant_news_count": 10,
         "duplicate_news_count": 0,
-        "published_news_count": 9,
-        "excluded_news_count": 11,
+        "published_news_count": 10,
+        "excluded_news_count": 10,
         "items": [
+          {
+            "id": "140733589",
+            "headline": "Lululemon Went From Darling Stock to Disaster. How to Fix It.",
+            "url": "https://finnhub.io/api/news?id=37c97d3b4360fce795b1b6f2180951b168afdce41967c4f9f2184410e16073d1",
+            "published_at": "2026-06-26T06:00:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "Amazon"
+            ]
+          },
+          {
+            "id": "140732822",
+            "headline": "Could This Be Amazon's Next Big Opportunity?",
+            "url": "https://finnhub.io/api/news?id=3b35ccec77cd969ed8fb7c7ea67639283fd4c4f10efe3ccffc38e2eb97ac7e46",
+            "published_at": "2026-06-26T04:50:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Amazon"
+            ]
+          },
+          {
+            "id": "140732833",
+            "headline": "AMZN Stock Heads For H1 Drop, First Since 2022 — Retail Traders Smell Buying Opportunity",
+            "url": "https://finnhub.io/api/news?id=bedb5245a3d88239da4d6846bc55392b4777e5f1739042cf88d335e57ee5f03c",
+            "published_at": "2026-06-26T04:13:40+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "AMZN"
+            ]
+          },
+          {
+            "id": "140732156",
+            "headline": "Forget Amazon Prime Days: Here's the Real Reason to Buy the Stock",
+            "url": "https://finnhub.io/api/news?id=0cf8602ed85a1d35bdde656b1f7eb4dafd4cea3be7b729da1d73b33d4a239149",
+            "published_at": "2026-06-26T03:50:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Amazon"
+            ]
+          },
           {
             "id": "140731210",
             "headline": "Amazon dropped a finished Altman movie amid a $50B OpenAI deal",
@@ -1665,52 +1702,23 @@
             "matched_terms": [
               "Amazon"
             ]
-          },
-          {
-            "id": "140727300",
-            "headline": "Amazon Stock Slips Below Key Level. Why It's A Rough Day For Cloud Hyperscaler Stocks.",
-            "url": "https://finnhub.io/api/news?id=f277aa4479daae2e566e11e0fd3a1e70d9788bef1b0675800bf8787874ba480c",
-            "published_at": "2026-06-25T17:46:09+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Amazon"
-            ]
-          },
-          {
-            "id": "140730374",
-            "headline": "A U.S. Cloud Giant Lands at SWI Group’s European Hyperscale Campus — and the Paper Trail Reads Amazon",
-            "url": "https://finnhub.io/api/news?id=743c1b616425c473ce5ca6e5fcae7c9838efa6dfa9b6d2b2ee4b7dd8b2191f8f",
-            "published_at": "2026-06-25T17:13:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Amazon"
-            ]
-          },
-          {
-            "id": "140727312",
-            "headline": "Amazon Expands Cloud and Logistics in India",
-            "url": "https://finnhub.io/api/news?id=3b61b137146646d4d83b9ad719bc524480e34cc9bdb198caf86c65dfecf19a00",
-            "published_at": "2026-06-25T16:58:24+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Amazon"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-06-26T02:12:19.384Z",
+      "last_attempt_at": "2026-06-26T08:49:17.384Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-06-26T08:49:17.384Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 23,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-06-26T02:12:19.384Z",
           "refresh_status": "success",
@@ -1767,16 +1775,6 @@
           "summary": {
             "signal_level": "low",
             "combined_score": 22,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
-        },
-        {
-          "fetched_at": "2026-06-24T14:04:47.104Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 21,
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
