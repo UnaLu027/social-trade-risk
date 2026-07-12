@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-07-12T01:42:54.855Z",
+  "generated_at": "2026-07-12T07:57:43.454Z",
   "refresh_status": "success",
   "symbols": {
     "GME": {
       "latest": {
-        "fetched_at": "2026-07-12T01:42:56.306Z",
+        "fetched_at": "2026-07-12T07:57:44.866Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -17,7 +17,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-07-12T01:42:56.306Z"
+          "generated_at": "2026-07-12T07:57:44.866Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -93,10 +93,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-07-12T01:42:56.306Z",
+      "last_attempt_at": "2026-07-12T07:57:44.866Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-07-12T07:57:44.866Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 19,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-07-12T01:42:56.306Z",
           "refresh_status": "success",
@@ -156,22 +166,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-07-10T13:56:29.579Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 19,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "TSLA": {
       "latest": {
-        "fetched_at": "2026-07-12T01:42:58.472Z",
+        "fetched_at": "2026-07-12T07:57:47.077Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -184,7 +184,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-07-12T01:42:58.472Z"
+          "generated_at": "2026-07-12T07:57:47.077Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -199,11 +199,11 @@
         },
         "news_count": 10,
         "candidate_news_count": 20,
-        "relevant_news_count": 11,
-        "unique_relevant_news_count": 11,
+        "relevant_news_count": 10,
+        "unique_relevant_news_count": 10,
         "duplicate_news_count": 0,
         "published_news_count": 10,
-        "excluded_news_count": 9,
+        "excluded_news_count": 10,
         "items": [
           {
             "id": "140872440",
@@ -337,10 +337,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-07-12T01:42:58.472Z",
+      "last_attempt_at": "2026-07-12T07:57:47.077Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-07-12T07:57:47.077Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 24,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-07-12T01:42:58.472Z",
           "refresh_status": "success",
@@ -400,22 +410,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-07-10T13:56:30.901Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 22,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AAPL": {
       "latest": {
-        "fetched_at": "2026-07-12T01:42:59.761Z",
+        "fetched_at": "2026-07-12T07:57:48.421Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -428,7 +428,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-07-12T01:42:59.761Z"
+          "generated_at": "2026-07-12T07:57:48.421Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -449,6 +449,19 @@
         "published_news_count": 10,
         "excluded_news_count": 9,
         "items": [
+          {
+            "id": "140874400",
+            "headline": "Google vs Apple: Which of the 2 Biggest AI Stocks Is the Better Buy Right Now?",
+            "url": "https://finnhub.io/api/news?id=1deaf95b6458a19e10fd239a7270bdfa11e20e748915d129a029746d92f675f3",
+            "published_at": "2026-07-12T00:21:22+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Apple"
+            ]
+          },
           {
             "id": "140873929",
             "headline": "Broadcom Lands $30 Billion Chip Deal With Apple. Why It’s a Win-Win for AAPL and AVGO.",
@@ -566,26 +579,23 @@
             "matched_terms": [
               "Apple"
             ]
-          },
-          {
-            "id": "140872272",
-            "headline": "Apple shares gain 14% in two weeks despite softer iPhone demand",
-            "url": "https://finnhub.io/api/news?id=83a79f3516729be8312fc27fd8d6dd44e4b671230a53196780383562130c891c",
-            "published_at": "2026-07-11T00:01:47+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Apple"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-07-12T01:42:59.761Z",
+      "last_attempt_at": "2026-07-12T07:57:48.421Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-07-12T07:57:48.421Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 20,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-07-12T01:42:59.761Z",
           "refresh_status": "success",
@@ -645,22 +655,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-07-10T13:56:31.776Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 19,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AMC": {
       "latest": {
-        "fetched_at": "2026-07-12T01:43:00.857Z",
+        "fetched_at": "2026-07-12T07:57:49.578Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -673,7 +673,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-07-12T01:43:00.857Z"
+          "generated_at": "2026-07-12T07:57:49.578Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -761,10 +761,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-07-12T01:43:00.857Z",
+      "last_attempt_at": "2026-07-12T07:57:49.578Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-07-12T07:57:49.578Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 17,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-07-12T01:43:00.857Z",
           "refresh_status": "success",
@@ -824,22 +834,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-07-10T13:56:32.661Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 17,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "NVDA": {
       "latest": {
-        "fetched_at": "2026-07-12T01:43:01.466Z",
+        "fetched_at": "2026-07-12T07:57:50.355Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -852,7 +852,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-07-12T01:43:01.466Z"
+          "generated_at": "2026-07-12T07:57:50.355Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -874,10 +874,10 @@
         "excluded_news_count": 19,
         "items": [
           {
-            "id": "140873483",
-            "headline": "Dow Jones Futures: Market Ready To Go? Nvidia, Micron, Sandisk Near Buy Points With Big Earnings Due",
-            "url": "https://finnhub.io/api/news?id=f0cd72579578342a3b822663dc7c762ec7496fa7e0b373a8e0f449a2256a310e",
-            "published_at": "2026-07-11T20:05:42+00:00",
+            "id": "140874398",
+            "headline": "Nvidia's Forward P/E Has Actually Fallen as Its Stock Price Rose. Here's How That's Possible.",
+            "url": "https://finnhub.io/api/news?id=0c37efa4c1357312aa2de8de981af076824a83dda0ddae8e7aa882a62d1481f0",
+            "published_at": "2026-07-12T01:22:00+00:00",
             "source": "finnhub",
             "ai_risk_label": "Low",
             "ai_risk_score": 15,
@@ -888,10 +888,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-07-12T01:43:01.466Z",
+      "last_attempt_at": "2026-07-12T07:57:50.355Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-07-12T07:57:50.355Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 21,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-07-12T01:43:01.466Z",
           "refresh_status": "success",
@@ -951,22 +961,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-07-10T13:56:33.202Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 19,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "MSFT": {
       "latest": {
-        "fetched_at": "2026-07-12T01:43:02.423Z",
+        "fetched_at": "2026-07-12T07:57:51.430Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -979,7 +979,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-07-12T01:43:02.423Z"
+          "generated_at": "2026-07-12T07:57:51.430Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -1000,6 +1000,20 @@
         "published_news_count": 4,
         "excluded_news_count": 16,
         "items": [
+          {
+            "id": "140874402",
+            "headline": "Microsoft (MSFT) Faces A 25% Emissions Jump As AI Data Centers Test ESG Goals",
+            "url": "https://finnhub.io/api/news?id=23108290660ed451ad786e9e0312ceb47ee8a5d06ec5352b852c11025cb918d4",
+            "published_at": "2026-07-12T01:08:02+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "MSFT",
+              "Microsoft"
+            ]
+          },
           {
             "id": "140871823",
             "headline": "Why Today’s Small Dividend Could Become Tomorrow’s Retirement Engine",
@@ -1039,26 +1053,23 @@
             "matched_terms": [
               "Microsoft"
             ]
-          },
-          {
-            "id": "140867567",
-            "headline": "Arista Networks (ANET) Could Be 2% Undervalued Following Its AI Switching Push",
-            "url": "https://finnhub.io/api/news?id=af2603cc91dd55de72adb15028eb08b224dc109488772fba45adcf9ac16b3df9",
-            "published_at": "2026-07-11T00:19:21+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_summary",
-            "matched_terms": [
-              "Microsoft"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-07-12T01:43:02.423Z",
+      "last_attempt_at": "2026-07-12T07:57:51.430Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-07-12T07:57:51.430Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 16,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-07-12T01:43:02.423Z",
           "refresh_status": "success",
@@ -1118,22 +1129,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-07-10T13:56:34.018Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 15,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "META": {
       "latest": {
-        "fetched_at": "2026-07-12T01:43:03.476Z",
+        "fetched_at": "2026-07-12T07:57:52.513Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -1146,7 +1147,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-07-12T01:43:03.476Z"
+          "generated_at": "2026-07-12T07:57:52.513Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -1167,6 +1168,20 @@
         "published_news_count": 10,
         "excluded_news_count": 10,
         "items": [
+          {
+            "id": "140874781",
+            "headline": "Meta Platforms Just Unveiled a Shocking New Artificial Intelligence (AI) Strategy",
+            "url": "https://finnhub.io/api/news?id=1d24c83d41d5f3ad8678df9d98b56f893c0a49270437bdd7f957df397846fd0c",
+            "published_at": "2026-07-12T03:50:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Meta Platforms",
+              "Meta"
+            ]
+          },
           {
             "id": "140872458",
             "headline": "Meta's Most Important AI Customer Might Be Meta",
@@ -1287,27 +1302,23 @@
               "Meta Platforms",
               "Meta"
             ]
-          },
-          {
-            "id": "140866121",
-            "headline": "Why Is Meta (META) Stock Soaring Today",
-            "url": "https://finnhub.io/api/news?id=545fe77acc6a9ed0102180cee2c38adfd9c39fd8d4f5e4acf6be9c92d930b7b2",
-            "published_at": "2026-07-10T21:03:20+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "META",
-              "Meta"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-07-12T01:43:03.476Z",
+      "last_attempt_at": "2026-07-12T07:57:52.513Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-07-12T07:57:52.513Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 33,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-07-12T01:43:03.476Z",
           "refresh_status": "success",
@@ -1367,22 +1378,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-07-10T13:56:34.745Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 31,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AMZN": {
       "latest": {
-        "fetched_at": "2026-07-12T01:43:04.423Z",
+        "fetched_at": "2026-07-12T07:57:53.460Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -1395,7 +1396,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-07-12T01:43:04.423Z"
+          "generated_at": "2026-07-12T07:57:53.460Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -1537,10 +1538,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-07-12T01:43:04.423Z",
+      "last_attempt_at": "2026-07-12T07:57:53.460Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-07-12T07:57:53.460Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 15,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-07-12T01:43:04.423Z",
           "refresh_status": "success",
@@ -1593,16 +1604,6 @@
         },
         {
           "fetched_at": "2026-07-10T19:14:20.592Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 15,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
-        },
-        {
-          "fetched_at": "2026-07-10T13:56:35.412Z",
           "refresh_status": "success",
           "summary": {
             "signal_level": "low",
