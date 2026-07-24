@@ -1,15 +1,16 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   ShieldAlert, MessageSquare, FileText, Brain,
-  TrendingUp, LogIn, LogOut, User,
+  TrendingUp, LogIn, LogOut, User, BarChart3,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
 const coreNavItems = [
-  { to: '/risk-monitor',    icon: ShieldAlert,   label: '風險監控中心' },
-  { to: '/post-analyzer',   icon: MessageSquare, label: '貼文風險分析' },
-  { to: '/risk-report/GME', icon: FileText,      label: '風險報告' },
-  { to: '/model-lab',       icon: Brain,         label: '模型實驗室' },
+  { to: '/risk-monitor',             icon: ShieldAlert,   label: '風險監控中心' },
+  { to: '/post-analyzer',            icon: MessageSquare, label: '貼文風險分析' },
+  { to: '/financial-verification',   icon: BarChart3,     label: '半導體財報查證' },
+  { to: '/risk-report/GME',          icon: FileText,      label: '風險報告' },
+  { to: '/model-lab',                icon: Brain,         label: '模型實驗室' },
 ]
 
 export function Sidebar() {
@@ -117,8 +118,8 @@ export function Sidebar() {
           </button>
         )}
 
-        <div className="text-[10px]" style={{ color: '#3d4163' }}>5 模型比較優選</div>
-        <div className="text-[10px]" style={{ color: '#3d4163' }}>詳見「模型實驗室」</div>
+        <div className="text-[10px]" style={{ color: '#3d4163' }}>官方財報量化證據</div>
+        <div className="text-[10px]" style={{ color: '#3d4163' }}>僅供可信度風險查證</div>
       </div>
     </aside>
   )
