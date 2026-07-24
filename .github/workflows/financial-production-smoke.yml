@@ -1,0 +1,60 @@
+name: Financial production smoke test
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/financial-production-smoke.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '15 2 * * 1'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Railway and verify financial endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://social-trade-risk-production.up.railway.app'
+
+          request_with_retry() {
+            local url="$1"
+            local output="$2"
+            for attempt in 1 2 3 4 5; do
+              code=$(curl -sS -L --max-time 30 -o "$output" -w '%{http_code}' "$url" || true)
+              if [ "$code" = '200' ]; then
+                return 0
+              fi
+              echo "Attempt $attempt failed for $url (HTTP $code)"
+              sleep 12
+            done
+            echo "Endpoint failed after retries: $url"
+            cat "$output" || true
+            return 1
+          }
+
+          request_with_retry "$BASE/api/v1/financial/health" /tmp/financial-health.json
+          request_with_retry "$BASE/api/v1/financial/snapshot/2330" /tmp/financial-snapshot.json
+
+          python - <<'PY'
+          import json
+
+          with open('/tmp/financial-health.json', encoding='utf-8') as fh:
+              health = json.load(fh)
+          assert health['status'] == 'ok', health
+          assert '2330' in health['supported_companies'], health
+
+          with open('/tmp/financial-snapshot.json', encoding='utf-8') as fh:
+              snapshot = json.load(fh)
+          assert snapshot['company_code'] == '2330', snapshot
+          assert snapshot['data_quality'] == 'official_live', snapshot
+          assert snapshot['sources'], snapshot
+          assert any(
+              value is not None
+              for section in ('income_statement', 'balance_sheet', 'monthly_revenue')
+              for value in snapshot[section].values()
+          ), snapshot
+          print('Financial production smoke test passed.')
+          PY
