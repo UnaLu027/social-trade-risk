@@ -1,4 +1,17 @@
-import { api } from './client'
+import axios from 'axios'
+import { BASE_URL } from './client'
+
+// The existing AI endpoints are deployed separately from the full FastAPI app.
+// Keep the financial-evidence backend configurable so enabling a Railway public
+// domain never redirects or breaks the existing post-analysis API.
+export const FINANCIAL_BASE_URL: string =
+  import.meta.env.VITE_FINANCIAL_API_BASE_URL?.trim() || BASE_URL
+
+const financialApi = axios.create({
+  baseURL: FINANCIAL_BASE_URL,
+  timeout: 30000,
+  headers: { 'Content-Type': 'application/json' },
+})
 
 export type FinancialVerdict =
   | 'supported'
@@ -81,12 +94,12 @@ export interface VerificationResult {
 }
 
 export async function getFinancialCompanies(): Promise<CompanyOption[]> {
-  const { data } = await api.get('/api/v1/financial/companies')
+  const { data } = await financialApi.get('/api/v1/financial/companies')
   return data.companies
 }
 
 export async function getFinancialPeers(): Promise<FinancialSnapshot[]> {
-  const { data } = await api.get('/api/v1/financial/peers')
+  const { data } = await financialApi.get('/api/v1/financial/peers')
   return data.companies
 }
 
@@ -94,6 +107,6 @@ export async function verifyFinancialClaim(payload: {
   text: string
   company_code?: string
 }): Promise<VerificationResult> {
-  const { data } = await api.post('/api/v1/financial/verify-claim', payload)
+  const { data } = await financialApi.post('/api/v1/financial/verify-claim', payload)
   return data
 }
