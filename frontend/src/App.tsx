@@ -3,10 +3,11 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { Sidebar } from './components/layout/Sidebar'
 
 // Core product pages
-import { RiskMonitor }      from './pages/RiskMonitor'
-import { PostAnalyzer }     from './pages/PostAnalyzer'
-import { RiskReport }       from './pages/RiskReport'
-import { ModelLab }         from './pages/ModelLab'
+import { RiskMonitor }          from './pages/RiskMonitor'
+import { PostAnalyzer }         from './pages/PostAnalyzer'
+import { RiskReport }           from './pages/RiskReport'
+import { ModelLab }             from './pages/ModelLab'
+import { FinancialVerification } from './pages/FinancialVerification'
 
 // Auth pages
 import { Login }           from './pages/Login'
@@ -78,6 +79,7 @@ function AppRoutes() {
           {/* Core product pages */}
           <Route path="/risk-monitor"        element={<RiskMonitor />} />
           <Route path="/post-analyzer"       element={<PostAnalyzer />} />
+          <Route path="/financial-verification" element={<FinancialVerification />} />
           <Route path="/risk-report/:symbol" element={<RiskReport />} />
           <Route path="/risk-report"         element={<Navigate to="/risk-report/GME" replace />} />
           <Route path="/stress-test"         element={<Navigate to="/risk-monitor" replace />} />
