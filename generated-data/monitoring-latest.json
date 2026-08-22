@@ -1,23 +1,23 @@
 {
-  "generated_at": "2026-08-22T12:17:01.360Z",
+  "generated_at": "2026-08-22T18:13:15.267Z",
   "refresh_status": "success",
   "symbols": {
     "GME": {
       "latest": {
-        "fetched_at": "2026-08-22T12:17:02.584Z",
+        "fetched_at": "2026-08-22T18:13:16.453Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
           "signal_level": "low",
           "combined_score": 15,
-          "external_news_score": 0,
+          "external_news_score": 15,
           "latest_snapshot_score": 16,
           "market_history_score": 13,
-          "data_coverage": "PARTIAL",
-          "interpretation_status": "preliminary",
-          "coverage_note": "部分資料來源無法取得，摘要為初步觀察。",
-          "source_count": 2,
-          "generated_at": "2026-08-22T12:17:02.584Z"
+          "data_coverage": "FULL",
+          "interpretation_status": "comprehensive",
+          "coverage_note": "",
+          "source_count": 3,
+          "generated_at": "2026-08-22T18:13:16.453Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -30,19 +30,56 @@
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 0,
-        "candidate_news_count": 0,
-        "relevant_news_count": 0,
-        "unique_relevant_news_count": 0,
+        "news_count": 2,
+        "candidate_news_count": 4,
+        "relevant_news_count": 2,
+        "unique_relevant_news_count": 2,
         "duplicate_news_count": 0,
-        "published_news_count": 0,
-        "excluded_news_count": 0,
-        "items": []
+        "published_news_count": 2,
+        "excluded_news_count": 2,
+        "items": [
+          {
+            "id": "141282081",
+            "headline": "Why Did GME, MVIS, CPRI Stocks Hit 52-Week Lows Today?",
+            "url": "https://finnhub.io/api/news?id=dfd80b600d0e09c1034026d0f2926a47094818853350b2671eed44c902b91fed",
+            "published_at": "2026-08-20T04:04:06+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "GME"
+            ]
+          },
+          {
+            "id": "141290210",
+            "headline": "Why Did STLA, GME, ENVX Shares Plunge To 52-Week Lows?",
+            "url": "https://finnhub.io/api/news?id=884994443758935b6833f24a2bf09470a189be5859fec6cd73db48b616fc92b1",
+            "published_at": "2026-08-19T07:12:45+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "GME"
+            ]
+          }
+        ]
       },
-      "last_attempt_at": "2026-08-22T12:17:02.584Z",
+      "last_attempt_at": "2026-08-22T18:13:16.453Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-08-22T18:13:16.453Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 15,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-08-22T12:17:02.584Z",
           "refresh_status": "success",
@@ -102,22 +139,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-21T00:38:29.710Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 15,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "TSLA": {
       "latest": {
-        "fetched_at": "2026-08-22T12:17:03.273Z",
+        "fetched_at": "2026-08-22T18:13:18.116Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -130,7 +157,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-08-22T12:17:03.273Z"
+          "generated_at": "2026-08-22T18:13:18.116Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -145,11 +172,11 @@
         },
         "news_count": 10,
         "candidate_news_count": 20,
-        "relevant_news_count": 12,
-        "unique_relevant_news_count": 12,
+        "relevant_news_count": 11,
+        "unique_relevant_news_count": 11,
         "duplicate_news_count": 0,
         "published_news_count": 10,
-        "excluded_news_count": 8,
+        "excluded_news_count": 9,
         "items": [
           {
             "id": "141278045",
@@ -283,10 +310,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-22T12:17:03.273Z",
+      "last_attempt_at": "2026-08-22T18:13:18.116Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-08-22T18:13:18.116Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 25,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-08-22T12:17:03.273Z",
           "refresh_status": "success",
@@ -346,22 +383,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-21T00:38:31.449Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 17,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AAPL": {
       "latest": {
-        "fetched_at": "2026-08-22T12:17:05.032Z",
+        "fetched_at": "2026-08-22T18:13:19.050Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -374,7 +401,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-08-22T12:17:05.032Z"
+          "generated_at": "2026-08-22T18:13:19.050Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -529,10 +556,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-22T12:17:05.032Z",
+      "last_attempt_at": "2026-08-22T18:13:19.050Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-08-22T18:13:19.050Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 16,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-08-22T12:17:05.032Z",
           "refresh_status": "success",
@@ -592,22 +629,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-21T00:38:32.771Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 16,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AMC": {
       "latest": {
-        "fetched_at": "2026-08-22T12:17:06.109Z",
+        "fetched_at": "2026-08-22T18:13:19.972Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -620,7 +647,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-08-22T12:17:06.109Z"
+          "generated_at": "2026-08-22T18:13:19.972Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -669,10 +696,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-22T12:17:06.109Z",
+      "last_attempt_at": "2026-08-22T18:13:19.972Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-08-22T18:13:19.972Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 19,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-08-22T12:17:06.109Z",
           "refresh_status": "success",
@@ -732,22 +769,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-21T00:38:33.810Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 20,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "NVDA": {
       "latest": {
-        "fetched_at": "2026-08-22T12:17:06.630Z",
+        "fetched_at": "2026-08-22T18:13:20.356Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -760,7 +787,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-08-22T12:17:06.630Z"
+          "generated_at": "2026-08-22T18:13:20.356Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -773,13 +800,13 @@
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 1,
+        "news_count": 4,
         "candidate_news_count": 20,
-        "relevant_news_count": 1,
-        "unique_relevant_news_count": 1,
+        "relevant_news_count": 4,
+        "unique_relevant_news_count": 4,
         "duplicate_news_count": 0,
-        "published_news_count": 1,
-        "excluded_news_count": 19,
+        "published_news_count": 4,
+        "excluded_news_count": 16,
         "items": [
           {
             "id": "141273224",
@@ -793,13 +820,62 @@
             "matched_terms": [
               "NVIDIA"
             ]
+          },
+          {
+            "id": "141280591",
+            "headline": "Data Center and Cloud Infrastructure Earnings Face a High-Stakes AI Demand Test",
+            "url": "https://finnhub.io/api/news?id=e5f829afa2f6175b149487545832e8aa7e002e52df98231000d53e26fd1155fa",
+            "published_at": "2026-08-22T12:07:08+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "NVDA"
+            ]
+          },
+          {
+            "id": "141293928",
+            "headline": "Nvidia Earnings Report To Keep Next Week Busy",
+            "url": "https://finnhub.io/api/news?id=942876dc175ea29c858a82fdcbd974cd778b10d64012ed7a210d252cbf8b1602",
+            "published_at": "2026-08-22T11:00:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "NVIDIA"
+            ]
+          },
+          {
+            "id": "141293867",
+            "headline": "Nvidia's Real Test Comes After Earnings",
+            "url": "https://finnhub.io/api/news?id=105623d50c7d18d3e8cc13018dc2a0c1f9e722a061634a4cd338cb4da60b3e65",
+            "published_at": "2026-08-22T10:47:15+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "NVIDIA"
+            ]
           }
         ]
       },
-      "last_attempt_at": "2026-08-22T12:17:06.630Z",
+      "last_attempt_at": "2026-08-22T18:13:20.356Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-08-22T18:13:20.356Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 16,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-08-22T12:17:06.630Z",
           "refresh_status": "success",
@@ -859,22 +935,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-21T00:38:34.446Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 16,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "MSFT": {
       "latest": {
-        "fetched_at": "2026-08-22T12:17:07.469Z",
+        "fetched_at": "2026-08-22T18:13:21.019Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -887,7 +953,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-08-22T12:17:07.469Z"
+          "generated_at": "2026-08-22T18:13:21.019Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -900,14 +966,27 @@
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 6,
+        "news_count": 7,
         "candidate_news_count": 20,
-        "relevant_news_count": 6,
-        "unique_relevant_news_count": 6,
+        "relevant_news_count": 7,
+        "unique_relevant_news_count": 7,
         "duplicate_news_count": 0,
-        "published_news_count": 6,
-        "excluded_news_count": 14,
+        "published_news_count": 7,
+        "excluded_news_count": 13,
         "items": [
+          {
+            "id": "141280591",
+            "headline": "Data Center and Cloud Infrastructure Earnings Face a High-Stakes AI Demand Test",
+            "url": "https://finnhub.io/api/news?id=e5f829afa2f6175b149487545832e8aa7e002e52df98231000d53e26fd1155fa",
+            "published_at": "2026-08-22T12:07:08+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "MSFT"
+            ]
+          },
           {
             "id": "141277628",
             "headline": "Microsoft: Higher Revenue Visibility Met Measured Capex",
@@ -989,10 +1068,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-22T12:17:07.469Z",
+      "last_attempt_at": "2026-08-22T18:13:21.019Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-08-22T18:13:21.019Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 14,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-08-22T12:17:07.469Z",
           "refresh_status": "success",
@@ -1052,22 +1141,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-21T00:38:35.323Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 14,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "META": {
       "latest": {
-        "fetched_at": "2026-08-22T12:17:08.328Z",
+        "fetched_at": "2026-08-22T18:13:21.755Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -1080,7 +1159,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-08-22T12:17:08.328Z"
+          "generated_at": "2026-08-22T18:13:21.755Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -1093,14 +1172,40 @@
           "interpretation": "underperforming",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 6,
+        "news_count": 7,
         "candidate_news_count": 20,
-        "relevant_news_count": 6,
-        "unique_relevant_news_count": 6,
+        "relevant_news_count": 7,
+        "unique_relevant_news_count": 7,
         "duplicate_news_count": 0,
-        "published_news_count": 6,
-        "excluded_news_count": 14,
+        "published_news_count": 7,
+        "excluded_news_count": 13,
         "items": [
+          {
+            "id": "141283998",
+            "headline": "Meta: We've Seen This Situation Before (Rating Upgrade)",
+            "url": "https://finnhub.io/api/news?id=ae7b8de08aa2e1923c854462aad4d7a236ddd84cf640268226a5120b025d2a95",
+            "published_at": "2026-08-22T08:30:43+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Meta"
+            ]
+          },
+          {
+            "id": "141294603",
+            "headline": "Meta is the latest tech giant to land in her courtroom. Meet Judge Yvonne Gonzalez Rogers",
+            "url": "https://finnhub.io/api/news?id=0c3e4671d412eba59683f5b4fd378521ca4434e4b991bed8d8da4491d9fa3690",
+            "published_at": "2026-08-22T08:00:01+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Meta"
+            ]
+          },
           {
             "id": "141277997",
             "headline": "Billionaire David Tepper Piled Into a Debt-Laden Artificial Intelligence (AI) Neocloud Stock in Q2 While Also Increasing His Stake in Its Newest Rival",
@@ -1168,28 +1273,23 @@
             "matched_terms": [
               "Meta"
             ]
-          },
-          {
-            "id": "141277894",
-            "headline": "Meta Platforms (META) Pitches AI for Everyone While Apple (AAPL) Quietly Turns to China",
-            "url": "https://finnhub.io/api/news?id=9ff6f598f74a12509e628d764cf1c573b9a6f552a7df239038065cda1045eb15",
-            "published_at": "2026-08-21T20:54:54+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "META",
-              "Meta Platforms",
-              "Meta"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-08-22T12:17:08.328Z",
+      "last_attempt_at": "2026-08-22T18:13:21.755Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-08-22T18:13:21.755Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 19,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-08-22T12:17:08.328Z",
           "refresh_status": "success",
@@ -1249,22 +1349,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-21T00:38:36.236Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 19,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AMZN": {
       "latest": {
-        "fetched_at": "2026-08-22T12:17:09.191Z",
+        "fetched_at": "2026-08-22T18:13:22.459Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -1277,7 +1367,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-08-22T12:17:09.191Z"
+          "generated_at": "2026-08-22T18:13:22.459Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -1290,14 +1380,27 @@
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 6,
+        "news_count": 7,
         "candidate_news_count": 20,
-        "relevant_news_count": 6,
-        "unique_relevant_news_count": 6,
+        "relevant_news_count": 7,
+        "unique_relevant_news_count": 7,
         "duplicate_news_count": 0,
-        "published_news_count": 6,
-        "excluded_news_count": 14,
+        "published_news_count": 7,
+        "excluded_news_count": 13,
         "items": [
+          {
+            "id": "141280591",
+            "headline": "Data Center and Cloud Infrastructure Earnings Face a High-Stakes AI Demand Test",
+            "url": "https://finnhub.io/api/news?id=e5f829afa2f6175b149487545832e8aa7e002e52df98231000d53e26fd1155fa",
+            "published_at": "2026-08-22T12:07:08+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "AMZN"
+            ]
+          },
           {
             "id": "141277868",
             "headline": "Alphabet and Amazon Are Investing $420 Billion in Artificial Intelligence (AI) Infrastructure: 4 Hardware Stocks Set to Profit",
@@ -1378,10 +1481,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-22T12:17:09.191Z",
+      "last_attempt_at": "2026-08-22T18:13:22.459Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-08-22T18:13:22.459Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 14,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-08-22T12:17:09.191Z",
           "refresh_status": "success",
@@ -1434,16 +1547,6 @@
         },
         {
           "fetched_at": "2026-08-21T06:26:07.499Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 14,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
-        },
-        {
-          "fetched_at": "2026-08-21T00:38:37.134Z",
           "refresh_status": "success",
           "summary": {
             "signal_level": "low",
