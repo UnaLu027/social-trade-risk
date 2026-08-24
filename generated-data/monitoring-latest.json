@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-08-24T12:24:12.685Z",
+  "generated_at": "2026-08-24T18:23:13.631Z",
   "refresh_status": "success",
   "symbols": {
     "GME": {
       "latest": {
-        "fetched_at": "2026-08-24T12:24:13.871Z",
+        "fetched_at": "2026-08-24T18:23:14.928Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -12,21 +12,21 @@
           "combined_score": 15,
           "external_news_score": 15,
           "latest_snapshot_score": 16,
-          "market_history_score": 13,
+          "market_history_score": 14,
           "data_coverage": "FULL",
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-08-24T12:24:13.871Z"
+          "generated_at": "2026-08-24T18:23:14.928Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
-          "stock_return_1d": 0.0094,
-          "benchmark_return_1d": 0.0041,
-          "abnormal_return_1d": 0.0053,
-          "stock_return_5d": -0.0241,
-          "benchmark_return_5d": -0.0137,
-          "abnormal_return_5d": -0.0104,
+          "stock_return_1d": -0.0132,
+          "benchmark_return_1d": -0.0015,
+          "abnormal_return_1d": -0.0117,
+          "stock_return_5d": -0.0234,
+          "benchmark_return_5d": -0.0105,
+          "abnormal_return_5d": -0.0129,
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
@@ -66,10 +66,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-24T12:24:13.871Z",
+      "last_attempt_at": "2026-08-24T18:23:14.928Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-08-24T18:23:14.928Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 15,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-08-24T12:24:13.871Z",
           "refresh_status": "success",
@@ -129,55 +139,123 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-23T00:39:11.027Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 15,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "TSLA": {
       "latest": {
-        "fetched_at": "2026-08-24T12:24:15.534Z",
+        "fetched_at": "2026-08-24T18:23:16.905Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
           "signal_level": "low",
-          "combined_score": 25,
+          "combined_score": 22,
           "external_news_score": 15,
-          "latest_snapshot_score": 36,
-          "market_history_score": 23,
+          "latest_snapshot_score": 18,
+          "market_history_score": 33,
           "data_coverage": "FULL",
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-08-24T12:24:15.534Z"
+          "generated_at": "2026-08-24T18:23:16.905Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
-          "stock_return_1d": 0.0514,
-          "benchmark_return_1d": 0.0041,
-          "abnormal_return_1d": 0.0473,
-          "stock_return_5d": 0.0602,
-          "benchmark_return_5d": -0.0137,
-          "abnormal_return_5d": 0.0739,
+          "stock_return_1d": -0.0264,
+          "benchmark_return_1d": -0.0015,
+          "abnormal_return_1d": -0.0249,
+          "stock_return_5d": 0.0412,
+          "benchmark_return_5d": -0.0105,
+          "abnormal_return_5d": 0.0517,
           "interpretation": "outperforming",
           "data_quality": "computed_from_market_history"
         },
         "news_count": 10,
         "candidate_news_count": 20,
-        "relevant_news_count": 11,
-        "unique_relevant_news_count": 11,
+        "relevant_news_count": 12,
+        "unique_relevant_news_count": 12,
         "duplicate_news_count": 0,
         "published_news_count": 10,
-        "excluded_news_count": 9,
+        "excluded_news_count": 8,
         "items": [
+          {
+            "id": "141309774",
+            "headline": "Tesla: SpaceX Is The Only Hope",
+            "url": "https://finnhub.io/api/news?id=6cda9280ff0d8b18a0b37e2fb9355148d2c4ca08ec9b14be1d27ad880b3a0581",
+            "published_at": "2026-08-24T13:28:51+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Tesla"
+            ]
+          },
+          {
+            "id": "141308191",
+            "headline": "Solar Stocks’ Weighted Gains Mask a Broad Selloff in the Average Name",
+            "url": "https://finnhub.io/api/news?id=91332a4036ce17030a26be9ec5ccaab0a38cff400940fabdcf5bb371b3b07f3b",
+            "published_at": "2026-08-24T12:08:54+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "Tesla"
+            ]
+          },
+          {
+            "id": "141310003",
+            "headline": "If You Invested $1000 In Tesla Stock 10 Years Ago, You Would Have This Much Today",
+            "url": "https://finnhub.io/api/news?id=71dd19b929180917afe438ad294822879d745fb5c2412397caaeb0afc051ee11",
+            "published_at": "2026-08-24T12:00:43+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Tesla"
+            ]
+          },
+          {
+            "id": "141308936",
+            "headline": "Tesla Sets Cybercab Launch Event for September 3 but Prediction Markets Doubt It'll Impress",
+            "url": "https://finnhub.io/api/news?id=c333a64426bf605ba0855d0a844244f91a3f1083a16f70cd90bb25f968d0ecbd",
+            "published_at": "2026-08-24T10:10:27+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Tesla"
+            ]
+          },
+          {
+            "id": "141308934",
+            "headline": "TSLA Competitor? Xiaomi Joins NIO in Race to Build In-House Chips for Self-Driving Cars",
+            "url": "https://finnhub.io/api/news?id=6ab1c7962d91710079f7dd3a76f0e68630e1692b673bf5b0e0dbfc766b509a19",
+            "published_at": "2026-08-24T06:31:11+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "TSLA"
+            ]
+          },
+          {
+            "id": "141310007",
+            "headline": "Elon Musk's Tesla Has 'Massive Advantage' Before Selling Optimus in the Market, Says This Analyst — Crypto Prediction Market Weighs 2026 Launch Odds",
+            "url": "https://finnhub.io/api/news?id=a06f8addb183cc024a87aecb0d8068e083479c0e67fe193f8740c85340982ead",
+            "published_at": "2026-08-24T01:29:28+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Tesla"
+            ]
+          },
           {
             "id": "141302635",
             "headline": "Tesla Stock in 2027: Why I Think It Still Has Room to Run",
@@ -229,92 +307,23 @@
             "matched_terms": [
               "Tesla"
             ]
-          },
-          {
-            "id": "141302638",
-            "headline": "Tesla (TSLA) Is Recalling Nearly 3 Million Vehicles In China",
-            "url": "https://finnhub.io/api/news?id=ddaccacc83cfd150a6e088afdd26a67714b9fe24394fff8c75d0bdb60b03efe5",
-            "published_at": "2026-08-22T18:08:09+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "TSLA",
-              "Tesla"
-            ]
-          },
-          {
-            "id": "141302639",
-            "headline": "Tesla's Model Y L Is Coming to America. Will It Reignite Sales Growth?",
-            "url": "https://finnhub.io/api/news?id=8b4df62cf2f33363eb93b48bd3de2f1c3c6b8ce6db46e073fadb1f40d00d4855",
-            "published_at": "2026-08-22T16:35:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Tesla"
-            ]
-          },
-          {
-            "id": "141278045",
-            "headline": "Tesla Controls 59% of the U.S. EV Market -- Its Highest Share Since 2023",
-            "url": "https://finnhub.io/api/news?id=d94d5d7768f6d196308c7192a1d8861c061ac9abe46015e7f7e77523468953e6",
-            "published_at": "2026-08-21T23:25:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Tesla"
-            ]
-          },
-          {
-            "id": "141278062",
-            "headline": "US Stock Indices End Week Lower On Pressure From Elevated Long-Duration Treasury Yields — PSKY, MSTR, WMT, TSLA, NVDA In Focus",
-            "url": "https://finnhub.io/api/news?id=c391ed03d42e61632a99f98d9ca8ec0f32a5195b33a7b6127966b427202f7024",
-            "published_at": "2026-08-21T22:48:44+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "TSLA"
-            ]
-          },
-          {
-            "id": "141277985",
-            "headline": "Why Is Tesla Stock Up Today?",
-            "url": "https://finnhub.io/api/news?id=35769f69f4249a483668bdd894b64fe7d0819f4c8301a87e9b02909a5e25c51d",
-            "published_at": "2026-08-21T22:46:33+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Tesla"
-            ]
-          },
-          {
-            "id": "141278047",
-            "headline": "Stock Market Today, Aug. 21: Tesla Gains on Nevada Robotaxi Permit Approval",
-            "url": "https://finnhub.io/api/news?id=16d300b99dde38d0a3e9818f8b5c205b271d8784351d0fd1fdb5810862f4022a",
-            "published_at": "2026-08-21T22:22:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Tesla"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-08-24T12:24:15.534Z",
+      "last_attempt_at": "2026-08-24T18:23:16.905Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-08-24T18:23:16.905Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 22,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-08-24T12:24:15.534Z",
           "refresh_status": "success",
@@ -374,54 +383,44 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-23T00:39:12.409Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 25,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AAPL": {
       "latest": {
-        "fetched_at": "2026-08-24T12:24:16.754Z",
+        "fetched_at": "2026-08-24T18:23:18.163Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
           "signal_level": "low",
-          "combined_score": 16,
+          "combined_score": 17,
           "external_news_score": 15,
-          "latest_snapshot_score": 17,
-          "market_history_score": 17,
+          "latest_snapshot_score": 15,
+          "market_history_score": 21,
           "data_coverage": "FULL",
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-08-24T12:24:16.754Z"
+          "generated_at": "2026-08-24T18:23:18.163Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
-          "stock_return_1d": -0.0063,
-          "benchmark_return_1d": 0.0041,
-          "abnormal_return_1d": -0.0104,
-          "stock_return_5d": 0.0112,
-          "benchmark_return_5d": -0.0137,
-          "abnormal_return_5d": 0.0249,
+          "stock_return_1d": 0.0077,
+          "benchmark_return_1d": -0.0015,
+          "abnormal_return_1d": 0.0092,
+          "stock_return_5d": 0.0201,
+          "benchmark_return_5d": -0.0105,
+          "abnormal_return_5d": 0.0306,
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 9,
+        "news_count": 6,
         "candidate_news_count": 20,
-        "relevant_news_count": 9,
-        "unique_relevant_news_count": 9,
+        "relevant_news_count": 6,
+        "unique_relevant_news_count": 6,
         "duplicate_news_count": 0,
-        "published_news_count": 9,
-        "excluded_news_count": 11,
+        "published_news_count": 6,
+        "excluded_news_count": 14,
         "items": [
           {
             "id": "141302537",
@@ -501,53 +500,23 @@
             "matched_terms": [
               "Apple"
             ]
-          },
-          {
-            "id": "141277885",
-            "headline": "Apple Reportedly Shifts Focus To AI And Smart Glasses With Job Cuts In Siri And Vision Pro Teams",
-            "url": "https://finnhub.io/api/news?id=09e53b50ed5e0a2a9cbc83b8763d8c89305307a7897a706e836c8e4db69a32fa",
-            "published_at": "2026-08-22T00:15:01+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Apple"
-            ]
-          },
-          {
-            "id": "141277887",
-            "headline": "Jefferies Just Said Sell Apple (AAPL). Here’s the iPhone Feature That Got Canceled",
-            "url": "https://finnhub.io/api/news?id=7a27d4932280edd74105212507b4ca2a24c08964511e2a0565f296009b2437e4",
-            "published_at": "2026-08-21T22:11:57+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "AAPL",
-              "Apple"
-            ]
-          },
-          {
-            "id": "141277888",
-            "headline": "Apple is reportedly cutting hundreds of jobs from Siri, Vision Pro teams",
-            "url": "https://finnhub.io/api/news?id=225f702ee917563a04c9194374ffef0312d68babd6a356173ee477fa5806f559",
-            "published_at": "2026-08-21T21:58:07+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Apple"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-08-24T12:24:16.754Z",
+      "last_attempt_at": "2026-08-24T18:23:18.163Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-08-24T18:23:18.163Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 17,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-08-24T12:24:16.754Z",
           "refresh_status": "success",
@@ -607,54 +576,44 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-23T00:39:13.395Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 16,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AMC": {
       "latest": {
-        "fetched_at": "2026-08-24T12:24:17.838Z",
+        "fetched_at": "2026-08-24T18:23:19.226Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
           "signal_level": "low",
-          "combined_score": 19,
+          "combined_score": 28,
           "external_news_score": 15,
-          "latest_snapshot_score": 17,
-          "market_history_score": 25,
+          "latest_snapshot_score": 38,
+          "market_history_score": 28,
           "data_coverage": "FULL",
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-08-24T12:24:17.838Z"
+          "generated_at": "2026-08-24T18:23:19.226Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
-          "stock_return_1d": 0.0324,
-          "benchmark_return_1d": 0.0041,
-          "abnormal_return_1d": 0.0283,
-          "stock_return_5d": 0.02,
-          "benchmark_return_5d": -0.0137,
-          "abnormal_return_5d": 0.0337,
-          "interpretation": "neutral",
+          "stock_return_1d": 0.0667,
+          "benchmark_return_1d": -0.0015,
+          "abnormal_return_1d": 0.0682,
+          "stock_return_5d": 0.1148,
+          "benchmark_return_5d": -0.0105,
+          "abnormal_return_5d": 0.1253,
+          "interpretation": "outperforming",
           "data_quality": "computed_from_market_history"
         },
         "news_count": 2,
-        "candidate_news_count": 2,
+        "candidate_news_count": 3,
         "relevant_news_count": 2,
         "unique_relevant_news_count": 2,
         "duplicate_news_count": 0,
         "published_news_count": 2,
-        "excluded_news_count": 0,
+        "excluded_news_count": 1,
         "items": [
           {
             "id": "141266473",
@@ -684,10 +643,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-24T12:24:17.838Z",
+      "last_attempt_at": "2026-08-24T18:23:19.226Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-08-24T18:23:19.226Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 28,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-08-24T12:24:17.838Z",
           "refresh_status": "success",
@@ -747,55 +716,136 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-23T00:39:14.420Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 19,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "NVDA": {
       "latest": {
-        "fetched_at": "2026-08-24T12:24:18.284Z",
+        "fetched_at": "2026-08-24T18:23:19.801Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
           "signal_level": "low",
-          "combined_score": 16,
+          "combined_score": 15,
           "external_news_score": 15,
           "latest_snapshot_score": 16,
-          "market_history_score": 17,
+          "market_history_score": 15,
           "data_coverage": "FULL",
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-08-24T12:24:18.284Z"
+          "generated_at": "2026-08-24T18:23:19.801Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
-          "stock_return_1d": -0.0098,
-          "benchmark_return_1d": 0.0041,
-          "abnormal_return_1d": -0.0139,
-          "stock_return_5d": -0.0464,
-          "benchmark_return_5d": -0.0137,
-          "abnormal_return_5d": -0.0327,
-          "interpretation": "neutral",
+          "stock_return_1d": -0.0211,
+          "benchmark_return_1d": -0.0015,
+          "abnormal_return_1d": -0.0196,
+          "stock_return_5d": -0.0658,
+          "benchmark_return_5d": -0.0105,
+          "abnormal_return_5d": -0.0553,
+          "interpretation": "underperforming",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 7,
+        "news_count": 10,
         "candidate_news_count": 20,
-        "relevant_news_count": 7,
-        "unique_relevant_news_count": 7,
+        "relevant_news_count": 13,
+        "unique_relevant_news_count": 13,
         "duplicate_news_count": 0,
-        "published_news_count": 7,
-        "excluded_news_count": 13,
+        "published_news_count": 10,
+        "excluded_news_count": 7,
         "items": [
+          {
+            "id": "141309773",
+            "headline": "Nvidia Q2 Preview: The Beat Is Priced In, But I Have Questions About Their AI Investments",
+            "url": "https://finnhub.io/api/news?id=2e89ef21adffa834d2233b744bf1c031a94c4326cda283b7f8d865627254cd23",
+            "published_at": "2026-08-24T13:29:35+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "NVIDIA"
+            ]
+          },
+          {
+            "id": "141309654",
+            "headline": "Why Nvidia Is A Broken Stock",
+            "url": "https://finnhub.io/api/news?id=d37019d68f23137395beb94121c4b9e6f6555b7f0efacc5ec55984526fa81a15",
+            "published_at": "2026-08-24T13:10:39+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "NVIDIA"
+            ]
+          },
+          {
+            "id": "141309986",
+            "headline": "Samsung Crash Brings Semi Selling; Nvidia Earnings Ahead; $1T Treasury Firepower To Buy Bonds",
+            "url": "https://finnhub.io/api/news?id=f7f93a4f108a80e0a29d0f56809afcb0f6385c443b224895dad20328bc16045f",
+            "published_at": "2026-08-24T12:57:20+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "NVIDIA"
+            ]
+          },
+          {
+            "id": "141309003",
+            "headline": "Nvidia: A Disruptor, Both With AI Chips And Its Financialization Strategy",
+            "url": "https://finnhub.io/api/news?id=e0665b2f98336b15334e7573b52b4a913863de3d52074a520fe3e0acca62154f",
+            "published_at": "2026-08-24T11:09:51+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "NVIDIA"
+            ]
+          },
+          {
+            "id": "141309693",
+            "headline": "Nvidia says Groq racks will be online this year following $20 billion purchase",
+            "url": "https://finnhub.io/api/news?id=a3c55cd4560851a970c8f54311f764aa7b65bca8c390dce18e126a9e618d0a0d",
+            "published_at": "2026-08-24T11:00:01+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "NVIDIA"
+            ]
+          },
+          {
+            "id": "141309441",
+            "headline": "'Taiwan Indicts Nvidia Manager Following Chip Smuggling Probe' - Bloomberg",
+            "url": "https://finnhub.io/api/news?id=329594ee5e4834e1962e0985f2a096225eb46978d70524f166ccecb5afcf3187",
+            "published_at": "2026-08-24T10:32:29+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "NVIDIA"
+            ]
+          },
+          {
+            "id": "141309694",
+            "headline": "Nvidia exploring price hikes for some of its largest customers: Report",
+            "url": "https://finnhub.io/api/news?id=93951a96fa1a2f71773cc0a6537d43e31e03b0cafe0b336cc79f6dd1e46fbd06",
+            "published_at": "2026-08-24T10:23:10+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "NVIDIA"
+            ]
+          },
           {
             "id": "141307842",
             "headline": "NVIDIA (NASDAQ:NVDA) Pairs High Growth Momentum with a Breakout Setup",
@@ -811,6 +861,19 @@
             ]
           },
           {
+            "id": "141308466",
+            "headline": "Nvidia: The Next AI Upgrade Supercycle Is Exclusive - And Bigger Than GPUs",
+            "url": "https://finnhub.io/api/news?id=2b119cb948dbc9e29f9e032f928f4b695c25d81281e877ecbe16b7d4de27e69d",
+            "published_at": "2026-08-24T09:30:34+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "NVIDIA"
+            ]
+          },
+          {
             "id": "141307647",
             "headline": "Bessent's Toolbox Gets a Rest as Gold Prints $4,600 and Ross Stores Cleans Up",
             "url": "https://finnhub.io/api/news?id=7787e77d790c82615e1e824a41688465d5bf2c4d110e7c42c19de2bdd668833b",
@@ -822,78 +885,23 @@
             "matched_terms": [
               "NVIDIA"
             ]
-          },
-          {
-            "id": "141307905",
-            "headline": "Wall Street Breakfast Podcast: AI Plans Weigh On BABA",
-            "url": "https://finnhub.io/api/news?id=ab6d1590524b5da4309826a4357c914dcd5218c5f878fc8e6c2fc95cb4973297",
-            "published_at": "2026-08-24T06:45:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_summary",
-            "matched_terms": [
-              "NVIDIA"
-            ]
-          },
-          {
-            "id": "141307876",
-            "headline": "CoreWeave: Nvidia Is Quietly Repricing The Neocloud Window",
-            "url": "https://finnhub.io/api/news?id=c07ec4c6fee848b1117a561047563edcd44cf6a33c4773678710c7e441a6c832",
-            "published_at": "2026-08-24T06:29:43+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "NVIDIA"
-            ]
-          },
-          {
-            "id": "141302515",
-            "headline": "Dow Jones Futures Due With Nvidia Earnings, Tariffs, Warsh In Focus",
-            "url": "https://finnhub.io/api/news?id=577c8a3d6038618e28ec5afaa43dec0226d48d1817f11f0686ae6a2bdee952d9",
-            "published_at": "2026-08-23T18:30:17+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "NVIDIA"
-            ]
-          },
-          {
-            "id": "141302516",
-            "headline": "Your Last Chance to Buy Nvidia Stock for Cheap in 2026 May Be Near",
-            "url": "https://finnhub.io/api/news?id=90c7731d4906771d10b101e47fc4f0898a333aa5c04fb1d0cf39598864421b71",
-            "published_at": "2026-08-23T17:55:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "NVIDIA"
-            ]
-          },
-          {
-            "id": "141302517",
-            "headline": "NVIDIA, Cloverleaf Partnering to Advance Data Center Development",
-            "url": "https://finnhub.io/api/news?id=4f1513663152e58106526751dba1deddb9f809f8ba6b9d18cbc805e7ccb0b3e5",
-            "published_at": "2026-08-23T16:25:23+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "NVIDIA"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-08-24T12:24:18.284Z",
+      "last_attempt_at": "2026-08-24T18:23:19.801Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-08-24T18:23:19.801Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 15,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-08-24T12:24:18.284Z",
           "refresh_status": "success",
@@ -953,22 +961,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-23T00:39:14.748Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 16,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "MSFT": {
       "latest": {
-        "fetched_at": "2026-08-24T12:24:18.964Z",
+        "fetched_at": "2026-08-24T18:23:20.849Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -976,31 +974,31 @@
           "combined_score": 14,
           "external_news_score": 15,
           "latest_snapshot_score": 15,
-          "market_history_score": 13,
+          "market_history_score": 12,
           "data_coverage": "FULL",
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-08-24T12:24:18.964Z"
+          "generated_at": "2026-08-24T18:23:20.849Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
-          "stock_return_1d": 0.0043,
-          "benchmark_return_1d": 0.0041,
-          "abnormal_return_1d": 0.0002,
-          "stock_return_5d": -0.0227,
-          "benchmark_return_5d": -0.0137,
-          "abnormal_return_5d": -0.009,
+          "stock_return_1d": 0.0097,
+          "benchmark_return_1d": -0.0015,
+          "abnormal_return_1d": 0.0112,
+          "stock_return_5d": 0.0177,
+          "benchmark_return_5d": -0.0105,
+          "abnormal_return_5d": 0.0282,
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 8,
+        "news_count": 5,
         "candidate_news_count": 20,
-        "relevant_news_count": 8,
-        "unique_relevant_news_count": 8,
+        "relevant_news_count": 5,
+        "unique_relevant_news_count": 5,
         "duplicate_news_count": 0,
-        "published_news_count": 8,
-        "excluded_news_count": 12,
+        "published_news_count": 5,
+        "excluded_news_count": 15,
         "items": [
           {
             "id": "141308004",
@@ -1069,52 +1067,23 @@
               "MSFT",
               "Microsoft"
             ]
-          },
-          {
-            "id": "141302551",
-            "headline": "I've Held Microsoft for 10 Years. Here's Why I'm Not Selling a Single Share.",
-            "url": "https://finnhub.io/api/news?id=b8dfd59b4ce37681feb96c03e6ad1d7b74917e5fcc28a894defd945320b998aa",
-            "published_at": "2026-08-22T19:33:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Microsoft"
-            ]
-          },
-          {
-            "id": "141302552",
-            "headline": "Microsoft Has Something Nvidia Doesn’t and Here’s Why it Matters",
-            "url": "https://finnhub.io/api/news?id=f7a3e5fdacd14e4ddd902355276d69e74779842065f6f1076ef9296438ff1286",
-            "published_at": "2026-08-22T18:00:29+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Microsoft"
-            ]
-          },
-          {
-            "id": "141302554",
-            "headline": "Alphabet, Meta, and Microsoft Are Hiding $3 Trillion in Debt On the AI Boom’s Hidden Ledger",
-            "url": "https://finnhub.io/api/news?id=68b496274d3e2f5e26ff6397babd1c03a6d5bfa994c4d16124a1c7be25bac235",
-            "published_at": "2026-08-22T16:52:40+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Microsoft"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-08-24T12:24:18.964Z",
+      "last_attempt_at": "2026-08-24T18:23:20.849Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-08-24T18:23:20.849Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 14,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-08-24T12:24:18.964Z",
           "refresh_status": "success",
@@ -1174,54 +1143,44 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-23T00:39:15.400Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 14,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "META": {
       "latest": {
-        "fetched_at": "2026-08-24T12:24:19.774Z",
+        "fetched_at": "2026-08-24T18:23:21.782Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
           "signal_level": "low",
-          "combined_score": 19,
+          "combined_score": 18,
           "external_news_score": 15,
-          "latest_snapshot_score": 16,
-          "market_history_score": 24,
+          "latest_snapshot_score": 15,
+          "market_history_score": 23,
           "data_coverage": "FULL",
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-08-24T12:24:19.774Z"
+          "generated_at": "2026-08-24T18:23:21.782Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
-          "stock_return_1d": 0.0075,
-          "benchmark_return_1d": 0.0041,
-          "abnormal_return_1d": 0.0034,
-          "stock_return_5d": -0.0677,
-          "benchmark_return_5d": -0.0137,
-          "abnormal_return_5d": -0.054,
-          "interpretation": "underperforming",
+          "stock_return_1d": 0.0174,
+          "benchmark_return_1d": -0.0015,
+          "abnormal_return_1d": 0.0189,
+          "stock_return_5d": -0.0167,
+          "benchmark_return_5d": -0.0105,
+          "abnormal_return_5d": -0.0062,
+          "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 10,
+        "news_count": 8,
         "candidate_news_count": 20,
-        "relevant_news_count": 10,
-        "unique_relevant_news_count": 10,
+        "relevant_news_count": 8,
+        "unique_relevant_news_count": 8,
         "duplicate_news_count": 0,
-        "published_news_count": 10,
-        "excluded_news_count": 10,
+        "published_news_count": 8,
+        "excluded_news_count": 12,
         "items": [
           {
             "id": "141302547",
@@ -1327,39 +1286,23 @@
             "matched_terms": [
               "Meta"
             ]
-          },
-          {
-            "id": "141283998",
-            "headline": "Meta: We've Seen This Situation Before (Rating Upgrade)",
-            "url": "https://finnhub.io/api/news?id=ae7b8de08aa2e1923c854462aad4d7a236ddd84cf640268226a5120b025d2a95",
-            "published_at": "2026-08-22T08:30:43+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Meta"
-            ]
-          },
-          {
-            "id": "141294603",
-            "headline": "Meta is the latest tech giant to land in her courtroom. Meet Judge Yvonne Gonzalez Rogers",
-            "url": "https://finnhub.io/api/news?id=0c3e4671d412eba59683f5b4fd378521ca4434e4b991bed8d8da4491d9fa3690",
-            "published_at": "2026-08-22T08:00:01+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Meta"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-08-24T12:24:19.774Z",
+      "last_attempt_at": "2026-08-24T18:23:21.782Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-08-24T18:23:21.782Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 18,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-08-24T12:24:19.774Z",
           "refresh_status": "success",
@@ -1419,55 +1362,58 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-23T00:39:16.139Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 19,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AMZN": {
       "latest": {
-        "fetched_at": "2026-08-24T12:24:20.463Z",
+        "fetched_at": "2026-08-24T18:23:22.708Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
           "signal_level": "low",
           "combined_score": 14,
           "external_news_score": 15,
-          "latest_snapshot_score": 16,
-          "market_history_score": 11,
+          "latest_snapshot_score": 15,
+          "market_history_score": 13,
           "data_coverage": "FULL",
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-08-24T12:24:20.463Z"
+          "generated_at": "2026-08-24T18:23:22.708Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
-          "stock_return_1d": -0.0057,
-          "benchmark_return_1d": 0.0041,
-          "abnormal_return_1d": -0.0098,
-          "stock_return_5d": -0.0153,
-          "benchmark_return_5d": -0.0137,
-          "abnormal_return_5d": -0.0016,
+          "stock_return_1d": 0.0162,
+          "benchmark_return_1d": -0.0015,
+          "abnormal_return_1d": 0.0177,
+          "stock_return_5d": 0.0057,
+          "benchmark_return_5d": -0.0105,
+          "abnormal_return_5d": 0.0162,
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 10,
+        "news_count": 8,
         "candidate_news_count": 20,
-        "relevant_news_count": 11,
-        "unique_relevant_news_count": 11,
+        "relevant_news_count": 8,
+        "unique_relevant_news_count": 8,
         "duplicate_news_count": 0,
-        "published_news_count": 10,
-        "excluded_news_count": 9,
+        "published_news_count": 8,
+        "excluded_news_count": 12,
         "items": [
+          {
+            "id": "141308197",
+            "headline": "Forget The Cloud Rally: Semiconductors Rule AI",
+            "url": "https://finnhub.io/api/news?id=87652d8c25e54fdb6d8316b57bd4c2a947a4545e9333fde9f835b8e6be929cbf",
+            "published_at": "2026-08-24T08:11:16+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "AWS"
+            ]
+          },
           {
             "id": "141302526",
             "headline": "This is One of the Cheapest Magnificent Seven Stocks Right Now",
@@ -1560,52 +1506,23 @@
             "matched_terms": [
               "Amazon"
             ]
-          },
-          {
-            "id": "141302582",
-            "headline": "Billionaire Stanley Druckenmiller Just Sold Some Sandisk Stock and Bought These 3 Unstoppable Artificial Intelligence (AI) Stocks",
-            "url": "https://finnhub.io/api/news?id=d469f1c31d1338c4990facb8f05c8560762402a4729fce5e1e14081a6d6f8b3c",
-            "published_at": "2026-08-22T21:04:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_summary",
-            "matched_terms": [
-              "Amazon"
-            ]
-          },
-          {
-            "id": "141302571",
-            "headline": "Amazon's Custom Chip Business Crossed a $25 Billion Run Rate: Time to Load Up on Shares?",
-            "url": "https://finnhub.io/api/news?id=648682be8cb994b69b5edba70a8aa7191e4dda348d11d137b2107c8cfa4a3931",
-            "published_at": "2026-08-22T19:53:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Amazon"
-            ]
-          },
-          {
-            "id": "141302564",
-            "headline": "Amazon Stock Is Historically Cheap. Is This a Once-in-a-Decade Buying Opportunity?",
-            "url": "https://finnhub.io/api/news?id=24172906e5802c2098bf171687969ef0492fad37f25308db9882e29edc5d3db3",
-            "published_at": "2026-08-22T14:30:46+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Amazon"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-08-24T12:24:20.463Z",
+      "last_attempt_at": "2026-08-24T18:23:22.708Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-08-24T18:23:22.708Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 14,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-08-24T12:24:20.463Z",
           "refresh_status": "success",
@@ -1658,16 +1575,6 @@
         },
         {
           "fetched_at": "2026-08-23T06:21:58.465Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 14,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
-        },
-        {
-          "fetched_at": "2026-08-23T00:39:16.831Z",
           "refresh_status": "success",
           "summary": {
             "signal_level": "low",
