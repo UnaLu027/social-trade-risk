@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-08-29T11:55:39.986Z",
+  "generated_at": "2026-08-29T15:56:50.663Z",
   "refresh_status": "partial",
   "symbols": {
     "GME": {
       "latest": {
-        "fetched_at": "2026-08-29T11:55:41.106Z",
+        "fetched_at": "2026-08-29T15:56:51.880Z",
         "refresh_status": "partial",
         "fetch_errors": [
           "market-snapshots: market-snapshots[GME] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
@@ -19,7 +19,7 @@
           "interpretation_status": "preliminary",
           "coverage_note": "部分資料來源無法取得，摘要為初步觀察。",
           "source_count": 2,
-          "generated_at": "2026-08-29T11:55:41.106Z"
+          "generated_at": "2026-08-29T15:56:51.880Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -55,12 +55,22 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-29T11:55:41.106Z",
+      "last_attempt_at": "2026-08-29T15:56:51.880Z",
       "last_attempt_status": "partial",
       "last_attempt_errors": [
         "market-snapshots: market-snapshots[GME] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
       ],
       "history": [
+        {
+          "fetched_at": "2026-08-29T15:56:51.880Z",
+          "refresh_status": "partial",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 14,
+            "data_coverage": "PARTIAL",
+            "interpretation_status": "preliminary"
+          }
+        },
         {
           "fetched_at": "2026-08-29T11:55:41.106Z",
           "refresh_status": "partial",
@@ -120,22 +130,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-26T19:29:27.169Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 14,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "TSLA": {
       "latest": {
-        "fetched_at": "2026-08-29T11:55:42.595Z",
+        "fetched_at": "2026-08-29T15:56:53.492Z",
         "refresh_status": "partial",
         "fetch_errors": [
           "market-snapshots: market-snapshots[TSLA] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
@@ -150,7 +150,7 @@
           "interpretation_status": "preliminary",
           "coverage_note": "部分資料來源無法取得，摘要為初步觀察。",
           "source_count": 2,
-          "generated_at": "2026-08-29T11:55:42.595Z"
+          "generated_at": "2026-08-29T15:56:53.492Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -238,12 +238,22 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-29T11:55:42.595Z",
+      "last_attempt_at": "2026-08-29T15:56:53.492Z",
       "last_attempt_status": "partial",
       "last_attempt_errors": [
         "market-snapshots: market-snapshots[TSLA] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
       ],
       "history": [
+        {
+          "fetched_at": "2026-08-29T15:56:53.492Z",
+          "refresh_status": "partial",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 21,
+            "data_coverage": "PARTIAL",
+            "interpretation_status": "preliminary"
+          }
+        },
         {
           "fetched_at": "2026-08-29T11:55:42.595Z",
           "refresh_status": "partial",
@@ -303,22 +313,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-26T19:29:29.163Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 22,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AAPL": {
       "latest": {
-        "fetched_at": "2026-08-29T11:55:43.945Z",
+        "fetched_at": "2026-08-29T15:56:54.448Z",
         "refresh_status": "partial",
         "fetch_errors": [
           "market-snapshots: market-snapshots[AAPL] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
@@ -333,7 +333,7 @@
           "interpretation_status": "preliminary",
           "coverage_note": "部分資料來源無法取得，摘要為初步觀察。",
           "source_count": 2,
-          "generated_at": "2026-08-29T11:55:43.945Z"
+          "generated_at": "2026-08-29T15:56:54.448Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -346,14 +346,40 @@
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 8,
+        "news_count": 10,
         "candidate_news_count": 20,
-        "relevant_news_count": 8,
-        "unique_relevant_news_count": 8,
+        "relevant_news_count": 10,
+        "unique_relevant_news_count": 10,
         "duplicate_news_count": 0,
-        "published_news_count": 8,
-        "excluded_news_count": 12,
+        "published_news_count": 10,
+        "excluded_news_count": 10,
         "items": [
+          {
+            "id": "141343433",
+            "headline": "Apple: CEO Changes, But Double Compounding Does Not",
+            "url": "https://finnhub.io/api/news?id=1b5f89d6fcb7930c900891c077f1b2ab260649c50b000a9d1e2a6f63bc45873e",
+            "published_at": "2026-08-29T08:26:16+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Apple"
+            ]
+          },
+          {
+            "id": "141343353",
+            "headline": "Apple: Low Margin Guidance Doesn't Concern Me",
+            "url": "https://finnhub.io/api/news?id=62dff6630eabe5ba307aa554e77d22bd4c15fa3055ab03a3fcd5d9aede799196",
+            "published_at": "2026-08-29T08:08:30+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Apple"
+            ]
+          },
           {
             "id": "141338582",
             "headline": "Apple hikes subscription prices for Apple TV and Apple One in the U.S.",
@@ -460,12 +486,22 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-29T11:55:43.945Z",
+      "last_attempt_at": "2026-08-29T15:56:54.448Z",
       "last_attempt_status": "partial",
       "last_attempt_errors": [
         "market-snapshots: market-snapshots[AAPL] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
       ],
       "history": [
+        {
+          "fetched_at": "2026-08-29T15:56:54.448Z",
+          "refresh_status": "partial",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 15,
+            "data_coverage": "PARTIAL",
+            "interpretation_status": "preliminary"
+          }
+        },
         {
           "fetched_at": "2026-08-29T11:55:43.945Z",
           "refresh_status": "partial",
@@ -525,22 +561,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-26T19:29:30.172Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 17,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AMC": {
       "latest": {
-        "fetched_at": "2026-08-29T11:55:44.853Z",
+        "fetched_at": "2026-08-29T15:56:55.354Z",
         "refresh_status": "partial",
         "fetch_errors": [
           "market-snapshots: market-snapshots[AMC] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
@@ -555,7 +581,7 @@
           "interpretation_status": "preliminary",
           "coverage_note": "部分資料來源無法取得，摘要為初步觀察。",
           "source_count": 2,
-          "generated_at": "2026-08-29T11:55:44.853Z"
+          "generated_at": "2026-08-29T15:56:55.354Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -682,12 +708,22 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-29T11:55:44.853Z",
+      "last_attempt_at": "2026-08-29T15:56:55.354Z",
       "last_attempt_status": "partial",
       "last_attempt_errors": [
         "market-snapshots: market-snapshots[AMC] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
       ],
       "history": [
+        {
+          "fetched_at": "2026-08-29T15:56:55.354Z",
+          "refresh_status": "partial",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 21,
+            "data_coverage": "PARTIAL",
+            "interpretation_status": "preliminary"
+          }
+        },
         {
           "fetched_at": "2026-08-29T11:55:44.853Z",
           "refresh_status": "partial",
@@ -747,22 +783,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-26T19:29:31.243Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 21,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "NVDA": {
       "latest": {
-        "fetched_at": "2026-08-29T11:55:45.606Z",
+        "fetched_at": "2026-08-29T15:56:56.004Z",
         "refresh_status": "partial",
         "fetch_errors": [
           "market-snapshots: market-snapshots[NVDA] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
@@ -777,7 +803,7 @@
           "interpretation_status": "preliminary",
           "coverage_note": "部分資料來源無法取得，摘要為初步觀察。",
           "source_count": 2,
-          "generated_at": "2026-08-29T11:55:45.606Z"
+          "generated_at": "2026-08-29T15:56:56.004Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -798,6 +824,32 @@
         "published_news_count": 10,
         "excluded_news_count": 9,
         "items": [
+          {
+            "id": "141343921",
+            "headline": "Nvidia: The Cracks Are Finally Showing",
+            "url": "https://finnhub.io/api/news?id=fa44021702aed3cdbea9da4fff7ec59e76881a6f89fbf7fe139d5bb13da95e84",
+            "published_at": "2026-08-29T10:00:54+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "NVIDIA"
+            ]
+          },
+          {
+            "id": "141343923",
+            "headline": "Nvidia: The Space Matters More Than The Share",
+            "url": "https://finnhub.io/api/news?id=940dae103ed4e2dad19d4d7f1366a443b028af56e34bf13125b53184a0526b00",
+            "published_at": "2026-08-29T09:57:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "NVIDIA"
+            ]
+          },
           {
             "id": "141343025",
             "headline": "What Moved Markets This Week",
@@ -903,41 +955,25 @@
             "matched_terms": [
               "NVIDIA"
             ]
-          },
-          {
-            "id": "141338007",
-            "headline": "Nvidia Q2 Earnings Review: Beating Was Never The Problem",
-            "url": "https://finnhub.io/api/news?id=0740b862f332c99ee859817263e00218893e78d3cf118fce60754b25b22f6994",
-            "published_at": "2026-08-28T11:25:40+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "NVIDIA"
-            ]
-          },
-          {
-            "id": "141337976",
-            "headline": "NVDY: Great Nvidia Earnings Means Less Uncertainty (Rating Downgrade)",
-            "url": "https://finnhub.io/api/news?id=7f92216e7d6094588db340224b363df9861c817d7a93a4af19bbb6459e3dfa16",
-            "published_at": "2026-08-28T11:15:11+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "NVIDIA"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-08-29T11:55:45.606Z",
+      "last_attempt_at": "2026-08-29T15:56:56.004Z",
       "last_attempt_status": "partial",
       "last_attempt_errors": [
         "market-snapshots: market-snapshots[NVDA] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
       ],
       "history": [
+        {
+          "fetched_at": "2026-08-29T15:56:56.004Z",
+          "refresh_status": "partial",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 20,
+            "data_coverage": "PARTIAL",
+            "interpretation_status": "preliminary"
+          }
+        },
         {
           "fetched_at": "2026-08-29T11:55:45.606Z",
           "refresh_status": "partial",
@@ -997,22 +1033,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-26T19:29:31.884Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 16,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "MSFT": {
       "latest": {
-        "fetched_at": "2026-08-29T11:55:46.391Z",
+        "fetched_at": "2026-08-29T15:56:56.774Z",
         "refresh_status": "partial",
         "fetch_errors": [
           "market-snapshots: market-snapshots[MSFT] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
@@ -1027,7 +1053,7 @@
           "interpretation_status": "preliminary",
           "coverage_note": "部分資料來源無法取得，摘要為初步觀察。",
           "source_count": 2,
-          "generated_at": "2026-08-29T11:55:46.391Z"
+          "generated_at": "2026-08-29T15:56:56.774Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -1102,12 +1128,22 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-29T11:55:46.391Z",
+      "last_attempt_at": "2026-08-29T15:56:56.774Z",
       "last_attempt_status": "partial",
       "last_attempt_errors": [
         "market-snapshots: market-snapshots[MSFT] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
       ],
       "history": [
+        {
+          "fetched_at": "2026-08-29T15:56:56.774Z",
+          "refresh_status": "partial",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 14,
+            "data_coverage": "PARTIAL",
+            "interpretation_status": "preliminary"
+          }
+        },
         {
           "fetched_at": "2026-08-29T11:55:46.391Z",
           "refresh_status": "partial",
@@ -1167,22 +1203,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-26T19:29:32.710Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 14,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "META": {
       "latest": {
-        "fetched_at": "2026-08-29T11:55:47.110Z",
+        "fetched_at": "2026-08-29T15:56:57.643Z",
         "refresh_status": "partial",
         "fetch_errors": [
           "market-snapshots: market-snapshots[META] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
@@ -1197,7 +1223,7 @@
           "interpretation_status": "preliminary",
           "coverage_note": "部分資料來源無法取得，摘要為初步觀察。",
           "source_count": 2,
-          "generated_at": "2026-08-29T11:55:47.110Z"
+          "generated_at": "2026-08-29T15:56:57.643Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -1354,12 +1380,22 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-29T11:55:47.110Z",
+      "last_attempt_at": "2026-08-29T15:56:57.643Z",
       "last_attempt_status": "partial",
       "last_attempt_errors": [
         "market-snapshots: market-snapshots[META] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
       ],
       "history": [
+        {
+          "fetched_at": "2026-08-29T15:56:57.643Z",
+          "refresh_status": "partial",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 17,
+            "data_coverage": "PARTIAL",
+            "interpretation_status": "preliminary"
+          }
+        },
         {
           "fetched_at": "2026-08-29T11:55:47.110Z",
           "refresh_status": "partial",
@@ -1419,22 +1455,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-26T19:29:33.602Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 24,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AMZN": {
       "latest": {
-        "fetched_at": "2026-08-29T11:55:47.882Z",
+        "fetched_at": "2026-08-29T15:56:58.424Z",
         "refresh_status": "partial",
         "fetch_errors": [
           "market-snapshots: market-snapshots[AMZN] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
@@ -1449,7 +1475,7 @@
           "interpretation_status": "preliminary",
           "coverage_note": "部分資料來源無法取得，摘要為初步觀察。",
           "source_count": 2,
-          "generated_at": "2026-08-29T11:55:47.882Z"
+          "generated_at": "2026-08-29T15:56:58.424Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -1524,12 +1550,22 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-29T11:55:47.882Z",
+      "last_attempt_at": "2026-08-29T15:56:58.424Z",
       "last_attempt_status": "partial",
       "last_attempt_errors": [
         "market-snapshots: market-snapshots[AMZN] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
       ],
       "history": [
+        {
+          "fetched_at": "2026-08-29T15:56:58.424Z",
+          "refresh_status": "partial",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 15,
+            "data_coverage": "PARTIAL",
+            "interpretation_status": "preliminary"
+          }
+        },
         {
           "fetched_at": "2026-08-29T11:55:47.882Z",
           "refresh_status": "partial",
@@ -1586,16 +1622,6 @@
           "summary": {
             "signal_level": "low",
             "combined_score": 15,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
-        },
-        {
-          "fetched_at": "2026-08-26T19:29:34.441Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 14,
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
