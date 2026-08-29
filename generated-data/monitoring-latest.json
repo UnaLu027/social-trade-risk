@@ -1,32 +1,34 @@
 {
-  "generated_at": "2026-08-29T01:17:01.138Z",
-  "refresh_status": "success",
+  "generated_at": "2026-08-29T11:55:39.986Z",
+  "refresh_status": "partial",
   "symbols": {
     "GME": {
       "latest": {
-        "fetched_at": "2026-08-29T01:17:02.260Z",
-        "refresh_status": "success",
-        "fetch_errors": [],
+        "fetched_at": "2026-08-29T11:55:41.106Z",
+        "refresh_status": "partial",
+        "fetch_errors": [
+          "market-snapshots: market-snapshots[GME] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
+        ],
         "summary": {
           "signal_level": "low",
-          "combined_score": 15,
+          "combined_score": 14,
           "external_news_score": 15,
-          "latest_snapshot_score": 17,
-          "market_history_score": 12,
-          "data_coverage": "FULL",
-          "interpretation_status": "comprehensive",
-          "coverage_note": "",
-          "source_count": 3,
-          "generated_at": "2026-08-29T01:17:02.260Z"
+          "latest_snapshot_score": 0,
+          "market_history_score": 14,
+          "data_coverage": "PARTIAL",
+          "interpretation_status": "preliminary",
+          "coverage_note": "部分資料來源無法取得，摘要為初步觀察。",
+          "source_count": 2,
+          "generated_at": "2026-08-29T11:55:41.106Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
-          "stock_return_1d": -0.0208,
-          "benchmark_return_1d": -0.0023,
-          "abnormal_return_1d": -0.0185,
-          "stock_return_5d": -0.0187,
-          "benchmark_return_5d": 0.0047,
-          "abnormal_return_5d": -0.0234,
+          "stock_return_1d": -1,
+          "benchmark_return_1d": -1,
+          "abnormal_return_1d": 0,
+          "stock_return_5d": -1,
+          "benchmark_return_5d": -1,
+          "abnormal_return_5d": 0,
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
@@ -53,10 +55,22 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-29T01:17:02.260Z",
-      "last_attempt_status": "success",
-      "last_attempt_errors": [],
+      "last_attempt_at": "2026-08-29T11:55:41.106Z",
+      "last_attempt_status": "partial",
+      "last_attempt_errors": [
+        "market-snapshots: market-snapshots[GME] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
+      ],
       "history": [
+        {
+          "fetched_at": "2026-08-29T11:55:41.106Z",
+          "refresh_status": "partial",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 14,
+            "data_coverage": "PARTIAL",
+            "interpretation_status": "preliminary"
+          }
+        },
         {
           "fetched_at": "2026-08-29T01:17:02.260Z",
           "refresh_status": "success",
@@ -116,44 +130,36 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-26T12:27:45.073Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 15,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "TSLA": {
       "latest": {
-        "fetched_at": "2026-08-29T01:17:03.700Z",
-        "refresh_status": "success",
-        "fetch_errors": [],
+        "fetched_at": "2026-08-29T11:55:42.595Z",
+        "refresh_status": "partial",
+        "fetch_errors": [
+          "market-snapshots: market-snapshots[TSLA] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
+        ],
         "summary": {
           "signal_level": "low",
-          "combined_score": 22,
+          "combined_score": 21,
           "external_news_score": 15,
-          "latest_snapshot_score": 17,
-          "market_history_score": 34,
-          "data_coverage": "FULL",
-          "interpretation_status": "comprehensive",
-          "coverage_note": "",
-          "source_count": 3,
-          "generated_at": "2026-08-29T01:17:03.700Z"
+          "latest_snapshot_score": 0,
+          "market_history_score": 26,
+          "data_coverage": "PARTIAL",
+          "interpretation_status": "preliminary",
+          "coverage_note": "部分資料來源無法取得，摘要為初步觀察。",
+          "source_count": 2,
+          "generated_at": "2026-08-29T11:55:42.595Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
-          "stock_return_1d": -0.0171,
-          "benchmark_return_1d": -0.0023,
-          "abnormal_return_1d": -0.0148,
-          "stock_return_5d": -0.0389,
-          "benchmark_return_5d": 0.0047,
-          "abnormal_return_5d": -0.0436,
+          "stock_return_1d": -1,
+          "benchmark_return_1d": -1,
+          "abnormal_return_1d": 0,
+          "stock_return_5d": -1,
+          "benchmark_return_5d": -1,
+          "abnormal_return_5d": 0,
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
@@ -232,10 +238,22 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-29T01:17:03.700Z",
-      "last_attempt_status": "success",
-      "last_attempt_errors": [],
+      "last_attempt_at": "2026-08-29T11:55:42.595Z",
+      "last_attempt_status": "partial",
+      "last_attempt_errors": [
+        "market-snapshots: market-snapshots[TSLA] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
+      ],
       "history": [
+        {
+          "fetched_at": "2026-08-29T11:55:42.595Z",
+          "refresh_status": "partial",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 21,
+            "data_coverage": "PARTIAL",
+            "interpretation_status": "preliminary"
+          }
+        },
         {
           "fetched_at": "2026-08-29T01:17:03.700Z",
           "refresh_status": "success",
@@ -295,44 +313,36 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-26T12:27:46.451Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 23,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AAPL": {
       "latest": {
-        "fetched_at": "2026-08-29T01:17:04.906Z",
-        "refresh_status": "success",
-        "fetch_errors": [],
+        "fetched_at": "2026-08-29T11:55:43.945Z",
+        "refresh_status": "partial",
+        "fetch_errors": [
+          "market-snapshots: market-snapshots[AAPL] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
+        ],
         "summary": {
           "signal_level": "low",
-          "combined_score": 16,
+          "combined_score": 15,
           "external_news_score": 15,
-          "latest_snapshot_score": 18,
-          "market_history_score": 16,
-          "data_coverage": "FULL",
-          "interpretation_status": "comprehensive",
-          "coverage_note": "",
-          "source_count": 3,
-          "generated_at": "2026-08-29T01:17:04.906Z"
+          "latest_snapshot_score": 0,
+          "market_history_score": 15,
+          "data_coverage": "PARTIAL",
+          "interpretation_status": "preliminary",
+          "coverage_note": "部分資料來源無法取得，摘要為初步觀察。",
+          "source_count": 2,
+          "generated_at": "2026-08-29T11:55:43.945Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
-          "stock_return_1d": 0.0163,
-          "benchmark_return_1d": -0.0023,
-          "abnormal_return_1d": 0.0186,
-          "stock_return_5d": 0.0335,
-          "benchmark_return_5d": 0.0047,
-          "abnormal_return_5d": 0.0288,
+          "stock_return_1d": -1,
+          "benchmark_return_1d": -1,
+          "abnormal_return_1d": 0,
+          "stock_return_5d": -1,
+          "benchmark_return_5d": -1,
+          "abnormal_return_5d": 0,
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
@@ -450,10 +460,22 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-29T01:17:04.906Z",
-      "last_attempt_status": "success",
-      "last_attempt_errors": [],
+      "last_attempt_at": "2026-08-29T11:55:43.945Z",
+      "last_attempt_status": "partial",
+      "last_attempt_errors": [
+        "market-snapshots: market-snapshots[AAPL] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
+      ],
       "history": [
+        {
+          "fetched_at": "2026-08-29T11:55:43.945Z",
+          "refresh_status": "partial",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 15,
+            "data_coverage": "PARTIAL",
+            "interpretation_status": "preliminary"
+          }
+        },
         {
           "fetched_at": "2026-08-29T01:17:04.906Z",
           "refresh_status": "success",
@@ -513,44 +535,36 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-26T12:27:47.289Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 17,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AMC": {
       "latest": {
-        "fetched_at": "2026-08-29T01:17:05.887Z",
-        "refresh_status": "success",
-        "fetch_errors": [],
+        "fetched_at": "2026-08-29T11:55:44.853Z",
+        "refresh_status": "partial",
+        "fetch_errors": [
+          "market-snapshots: market-snapshots[AMC] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
+        ],
         "summary": {
           "signal_level": "low",
-          "combined_score": 22,
+          "combined_score": 21,
           "external_news_score": 15,
-          "latest_snapshot_score": 20,
-          "market_history_score": 30,
-          "data_coverage": "FULL",
-          "interpretation_status": "comprehensive",
-          "coverage_note": "",
-          "source_count": 3,
-          "generated_at": "2026-08-29T01:17:05.887Z"
+          "latest_snapshot_score": 0,
+          "market_history_score": 27,
+          "data_coverage": "PARTIAL",
+          "interpretation_status": "preliminary",
+          "coverage_note": "部分資料來源無法取得，摘要為初步觀察。",
+          "source_count": 2,
+          "generated_at": "2026-08-29T11:55:44.853Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
-          "stock_return_1d": -0.0407,
-          "benchmark_return_1d": -0.0023,
-          "abnormal_return_1d": -0.0384,
-          "stock_return_5d": 0.0157,
-          "benchmark_return_5d": 0.0047,
-          "abnormal_return_5d": 0.011,
+          "stock_return_1d": -1,
+          "benchmark_return_1d": -1,
+          "abnormal_return_1d": 0,
+          "stock_return_5d": -1,
+          "benchmark_return_5d": -1,
+          "abnormal_return_5d": 0,
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
@@ -668,10 +682,22 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-29T01:17:05.887Z",
-      "last_attempt_status": "success",
-      "last_attempt_errors": [],
+      "last_attempt_at": "2026-08-29T11:55:44.853Z",
+      "last_attempt_status": "partial",
+      "last_attempt_errors": [
+        "market-snapshots: market-snapshots[AMC] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
+      ],
       "history": [
+        {
+          "fetched_at": "2026-08-29T11:55:44.853Z",
+          "refresh_status": "partial",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 21,
+            "data_coverage": "PARTIAL",
+            "interpretation_status": "preliminary"
+          }
+        },
         {
           "fetched_at": "2026-08-29T01:17:05.887Z",
           "refresh_status": "success",
@@ -731,55 +757,61 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-26T12:27:48.080Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 23,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "NVDA": {
       "latest": {
-        "fetched_at": "2026-08-29T01:17:06.533Z",
-        "refresh_status": "success",
-        "fetch_errors": [],
+        "fetched_at": "2026-08-29T11:55:45.606Z",
+        "refresh_status": "partial",
+        "fetch_errors": [
+          "market-snapshots: market-snapshots[NVDA] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
+        ],
         "summary": {
           "signal_level": "low",
-          "combined_score": 23,
+          "combined_score": 20,
           "external_news_score": 15,
-          "latest_snapshot_score": 21,
-          "market_history_score": 33,
-          "data_coverage": "FULL",
-          "interpretation_status": "comprehensive",
-          "coverage_note": "",
-          "source_count": 3,
-          "generated_at": "2026-08-29T01:17:06.533Z"
+          "latest_snapshot_score": 0,
+          "market_history_score": 24,
+          "data_coverage": "PARTIAL",
+          "interpretation_status": "preliminary",
+          "coverage_note": "部分資料來源無法取得，摘要為初步觀察。",
+          "source_count": 2,
+          "generated_at": "2026-08-29T11:55:45.606Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
-          "stock_return_1d": -0.0457,
-          "benchmark_return_1d": -0.0023,
-          "abnormal_return_1d": -0.0434,
-          "stock_return_5d": 0.0132,
-          "benchmark_return_5d": 0.0047,
-          "abnormal_return_5d": 0.0085,
+          "stock_return_1d": -1,
+          "benchmark_return_1d": -1,
+          "abnormal_return_1d": 0,
+          "stock_return_5d": -1,
+          "benchmark_return_5d": -1,
+          "abnormal_return_5d": 0,
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
         "news_count": 10,
         "candidate_news_count": 20,
-        "relevant_news_count": 13,
-        "unique_relevant_news_count": 13,
+        "relevant_news_count": 11,
+        "unique_relevant_news_count": 11,
         "duplicate_news_count": 0,
         "published_news_count": 10,
-        "excluded_news_count": 7,
+        "excluded_news_count": 9,
         "items": [
+          {
+            "id": "141343025",
+            "headline": "What Moved Markets This Week",
+            "url": "https://finnhub.io/api/news?id=307fbeb44bfec41ba7f90d78131c5d0333daa8b7ef6d7b73e31981bca15907a3",
+            "published_at": "2026-08-29T06:37:14+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "NVDA",
+              "NVIDIA"
+            ]
+          },
           {
             "id": "141339787",
             "headline": "Warsh Sparks Rate-Hike Bets, Nvidia Reaffirms AI Growth Story: This Week on Wall Street",
@@ -897,26 +929,25 @@
             "matched_terms": [
               "NVIDIA"
             ]
-          },
-          {
-            "id": "141338108",
-            "headline": "Nvidia Stock at Crossroads: Expert Says Shares ‘Could Double’ or AI Bubble Could Pop",
-            "url": "https://finnhub.io/api/news?id=2d7f4d9fe89eb721e50a6b3df08afc0478abaab0eff9c032ff1fb9e13a00e0bf",
-            "published_at": "2026-08-28T10:52:46+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "NVIDIA"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-08-29T01:17:06.533Z",
-      "last_attempt_status": "success",
-      "last_attempt_errors": [],
+      "last_attempt_at": "2026-08-29T11:55:45.606Z",
+      "last_attempt_status": "partial",
+      "last_attempt_errors": [
+        "market-snapshots: market-snapshots[NVDA] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
+      ],
       "history": [
+        {
+          "fetched_at": "2026-08-29T11:55:45.606Z",
+          "refresh_status": "partial",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 20,
+            "data_coverage": "PARTIAL",
+            "interpretation_status": "preliminary"
+          }
+        },
         {
           "fetched_at": "2026-08-29T01:17:06.533Z",
           "refresh_status": "success",
@@ -976,45 +1007,37 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-26T12:27:48.537Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 16,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "MSFT": {
       "latest": {
-        "fetched_at": "2026-08-29T01:17:07.247Z",
-        "refresh_status": "success",
-        "fetch_errors": [],
+        "fetched_at": "2026-08-29T11:55:46.391Z",
+        "refresh_status": "partial",
+        "fetch_errors": [
+          "market-snapshots: market-snapshots[MSFT] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
+        ],
         "summary": {
           "signal_level": "low",
-          "combined_score": 15,
+          "combined_score": 14,
           "external_news_score": 15,
-          "latest_snapshot_score": 20,
-          "market_history_score": 11,
-          "data_coverage": "FULL",
-          "interpretation_status": "comprehensive",
-          "coverage_note": "",
-          "source_count": 3,
-          "generated_at": "2026-08-29T01:17:07.247Z"
+          "latest_snapshot_score": 0,
+          "market_history_score": 14,
+          "data_coverage": "PARTIAL",
+          "interpretation_status": "preliminary",
+          "coverage_note": "部分資料來源無法取得，摘要為初步觀察。",
+          "source_count": 2,
+          "generated_at": "2026-08-29T11:55:46.391Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
-          "stock_return_1d": 0.0168,
-          "benchmark_return_1d": -0.0023,
-          "abnormal_return_1d": 0.0191,
-          "stock_return_5d": 0.0627,
-          "benchmark_return_5d": 0.0047,
-          "abnormal_return_5d": 0.058,
-          "interpretation": "outperforming",
+          "stock_return_1d": -1,
+          "benchmark_return_1d": -1,
+          "abnormal_return_1d": 0,
+          "stock_return_5d": -1,
+          "benchmark_return_5d": -1,
+          "abnormal_return_5d": 0,
+          "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
         "news_count": 4,
@@ -1079,10 +1102,22 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-29T01:17:07.247Z",
-      "last_attempt_status": "success",
-      "last_attempt_errors": [],
+      "last_attempt_at": "2026-08-29T11:55:46.391Z",
+      "last_attempt_status": "partial",
+      "last_attempt_errors": [
+        "market-snapshots: market-snapshots[MSFT] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
+      ],
       "history": [
+        {
+          "fetched_at": "2026-08-29T11:55:46.391Z",
+          "refresh_status": "partial",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 14,
+            "data_coverage": "PARTIAL",
+            "interpretation_status": "preliminary"
+          }
+        },
         {
           "fetched_at": "2026-08-29T01:17:07.247Z",
           "refresh_status": "success",
@@ -1142,44 +1177,36 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-26T12:27:49.149Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 14,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "META": {
       "latest": {
-        "fetched_at": "2026-08-29T01:17:07.915Z",
-        "refresh_status": "success",
-        "fetch_errors": [],
+        "fetched_at": "2026-08-29T11:55:47.110Z",
+        "refresh_status": "partial",
+        "fetch_errors": [
+          "market-snapshots: market-snapshots[META] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
+        ],
         "summary": {
           "signal_level": "low",
           "combined_score": 17,
           "external_news_score": 15,
-          "latest_snapshot_score": 20,
-          "market_history_score": 17,
-          "data_coverage": "FULL",
-          "interpretation_status": "comprehensive",
-          "coverage_note": "",
-          "source_count": 3,
-          "generated_at": "2026-08-29T01:17:07.915Z"
+          "latest_snapshot_score": 0,
+          "market_history_score": 18,
+          "data_coverage": "PARTIAL",
+          "interpretation_status": "preliminary",
+          "coverage_note": "部分資料來源無法取得，摘要為初步觀察。",
+          "source_count": 2,
+          "generated_at": "2026-08-29T11:55:47.110Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
-          "stock_return_1d": 0.0121,
-          "benchmark_return_1d": -0.0023,
-          "abnormal_return_1d": 0.0144,
-          "stock_return_5d": 0.0511,
-          "benchmark_return_5d": 0.0047,
-          "abnormal_return_5d": 0.0464,
+          "stock_return_1d": -1,
+          "benchmark_return_1d": -1,
+          "abnormal_return_1d": 0,
+          "stock_return_5d": -1,
+          "benchmark_return_5d": -1,
+          "abnormal_return_5d": 0,
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
@@ -1327,10 +1354,22 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-29T01:17:07.915Z",
-      "last_attempt_status": "success",
-      "last_attempt_errors": [],
+      "last_attempt_at": "2026-08-29T11:55:47.110Z",
+      "last_attempt_status": "partial",
+      "last_attempt_errors": [
+        "market-snapshots: market-snapshots[META] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
+      ],
       "history": [
+        {
+          "fetched_at": "2026-08-29T11:55:47.110Z",
+          "refresh_status": "partial",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 17,
+            "data_coverage": "PARTIAL",
+            "interpretation_status": "preliminary"
+          }
+        },
         {
           "fetched_at": "2026-08-29T01:17:07.915Z",
           "refresh_status": "success",
@@ -1390,44 +1429,36 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-08-26T12:27:49.734Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 18,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AMZN": {
       "latest": {
-        "fetched_at": "2026-08-29T01:17:08.607Z",
-        "refresh_status": "success",
-        "fetch_errors": [],
+        "fetched_at": "2026-08-29T11:55:47.882Z",
+        "refresh_status": "partial",
+        "fetch_errors": [
+          "market-snapshots: market-snapshots[AMZN] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
+        ],
         "summary": {
           "signal_level": "low",
-          "combined_score": 16,
+          "combined_score": 15,
           "external_news_score": 15,
-          "latest_snapshot_score": 19,
+          "latest_snapshot_score": 0,
           "market_history_score": 15,
-          "data_coverage": "FULL",
-          "interpretation_status": "comprehensive",
-          "coverage_note": "",
-          "source_count": 3,
-          "generated_at": "2026-08-29T01:17:08.607Z"
+          "data_coverage": "PARTIAL",
+          "interpretation_status": "preliminary",
+          "coverage_note": "部分資料來源無法取得，摘要為初步觀察。",
+          "source_count": 2,
+          "generated_at": "2026-08-29T11:55:47.882Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
-          "stock_return_1d": 0.0397,
-          "benchmark_return_1d": -0.0023,
-          "abnormal_return_1d": 0.042,
-          "stock_return_5d": 0.0302,
-          "benchmark_return_5d": 0.0047,
-          "abnormal_return_5d": 0.0255,
+          "stock_return_1d": -1,
+          "benchmark_return_1d": -1,
+          "abnormal_return_1d": 0,
+          "stock_return_5d": -1,
+          "benchmark_return_5d": -1,
+          "abnormal_return_5d": 0,
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
@@ -1493,10 +1524,22 @@
           }
         ]
       },
-      "last_attempt_at": "2026-08-29T01:17:08.607Z",
-      "last_attempt_status": "success",
-      "last_attempt_errors": [],
+      "last_attempt_at": "2026-08-29T11:55:47.882Z",
+      "last_attempt_status": "partial",
+      "last_attempt_errors": [
+        "market-snapshots: market-snapshots[AMZN] non-JSON: HTTP 500; content-type=text/plain; charset=utf-8; body=Internal Server Error"
+      ],
       "history": [
+        {
+          "fetched_at": "2026-08-29T11:55:47.882Z",
+          "refresh_status": "partial",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 15,
+            "data_coverage": "PARTIAL",
+            "interpretation_status": "preliminary"
+          }
+        },
         {
           "fetched_at": "2026-08-29T01:17:08.607Z",
           "refresh_status": "success",
@@ -1553,16 +1596,6 @@
           "summary": {
             "signal_level": "low",
             "combined_score": 14,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
-        },
-        {
-          "fetched_at": "2026-08-26T12:27:50.330Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 15,
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
