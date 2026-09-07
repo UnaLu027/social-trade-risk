@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-09-07T01:45:35.505Z",
+  "generated_at": "2026-09-07T10:58:46.472Z",
   "refresh_status": "success",
   "symbols": {
     "GME": {
       "latest": {
-        "fetched_at": "2026-09-07T01:45:36.279Z",
+        "fetched_at": "2026-09-07T10:58:48.273Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -17,7 +17,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-09-07T01:45:36.279Z"
+          "generated_at": "2026-09-07T10:58:48.273Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -93,10 +93,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-09-07T01:45:36.279Z",
+      "last_attempt_at": "2026-09-07T10:58:48.273Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-09-07T10:58:48.273Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 25,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-09-07T01:45:36.279Z",
           "refresh_status": "success",
@@ -156,22 +166,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-09-05T14:10:19.510Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 25,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "TSLA": {
       "latest": {
-        "fetched_at": "2026-09-07T01:45:38.232Z",
+        "fetched_at": "2026-09-07T10:58:50.648Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -184,7 +184,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-09-07T01:45:38.232Z"
+          "generated_at": "2026-09-07T10:58:50.648Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -199,12 +199,39 @@
         },
         "news_count": 10,
         "candidate_news_count": 20,
-        "relevant_news_count": 13,
-        "unique_relevant_news_count": 13,
+        "relevant_news_count": 14,
+        "unique_relevant_news_count": 14,
         "duplicate_news_count": 0,
         "published_news_count": 10,
-        "excluded_news_count": 7,
+        "excluded_news_count": 6,
         "items": [
+          {
+            "id": "141758951",
+            "headline": "Hot Payrolls Reload the September Hike Bet and Push Wall Street Into a Quiet Labor Day on the Back Foot",
+            "url": "https://finnhub.io/api/news?id=f18133eba8cfe4de1a0040ef723c5f04e69debc44f0a362604012a2d4d428379",
+            "published_at": "2026-09-07T08:22:58+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "Tesla"
+            ]
+          },
+          {
+            "id": "141602408",
+            "headline": "Tesla (TSLA) Rolls Out its Safety Numbers ahead of a Make-or-Break EU Vote",
+            "url": "https://finnhub.io/api/news?id=7007c79cd25c2c18c0ebd819f762828ebe8d86919790dff22643d034f583a505",
+            "published_at": "2026-09-07T01:12:46+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "TSLA",
+              "Tesla"
+            ]
+          },
           {
             "id": "141593637",
             "headline": "Goldman sees Cybercab giving Tesla a cost advantage in robotaxis",
@@ -308,39 +335,23 @@
             "matched_terms": [
               "Tesla"
             ]
-          },
-          {
-            "id": "141546875",
-            "headline": "Tesla's Cybercab 'Storm' Was More of a 'Drizzle,' WSJ's Tim Higgins Says",
-            "url": "https://finnhub.io/api/news?id=6e9debe36a2c6bce961f14fecb6e263d30fb26236e23500c612f578e470176c4",
-            "published_at": "2026-09-05T19:34:01+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Tesla"
-            ]
-          },
-          {
-            "id": "141560730",
-            "headline": "Tesla’s Mixed European Sales Send Clear Signal on Regional Demand",
-            "url": "https://finnhub.io/api/news?id=b2d90c6348732d7384020c62e2230126ed87be424497bbc0c851106f01f8939b",
-            "published_at": "2026-09-05T18:30:02+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Tesla"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-09-07T01:45:38.232Z",
+      "last_attempt_at": "2026-09-07T10:58:50.648Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-09-07T10:58:50.648Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 24,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-09-07T01:45:38.232Z",
           "refresh_status": "success",
@@ -400,22 +411,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-09-05T14:10:21.376Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 24,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AAPL": {
       "latest": {
-        "fetched_at": "2026-09-07T01:45:39.198Z",
+        "fetched_at": "2026-09-07T10:58:51.536Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -428,7 +429,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-09-07T01:45:39.198Z"
+          "generated_at": "2026-09-07T10:58:51.536Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -443,11 +444,11 @@
         },
         "news_count": 10,
         "candidate_news_count": 20,
-        "relevant_news_count": 18,
-        "unique_relevant_news_count": 18,
+        "relevant_news_count": 17,
+        "unique_relevant_news_count": 17,
         "duplicate_news_count": 0,
         "published_news_count": 10,
-        "excluded_news_count": 2,
+        "excluded_news_count": 3,
         "items": [
           {
             "id": "141593554",
@@ -584,10 +585,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-09-07T01:45:39.198Z",
+      "last_attempt_at": "2026-09-07T10:58:51.536Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-09-07T10:58:51.536Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 22,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-09-07T01:45:39.198Z",
           "refresh_status": "success",
@@ -647,22 +658,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-09-05T14:10:22.179Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 22,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AMC": {
       "latest": {
-        "fetched_at": "2026-09-07T01:45:40.277Z",
+        "fetched_at": "2026-09-07T10:58:52.401Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -675,7 +676,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-09-07T01:45:40.277Z"
+          "generated_at": "2026-09-07T10:58:52.401Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -828,10 +829,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-09-07T01:45:40.277Z",
+      "last_attempt_at": "2026-09-07T10:58:52.401Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-09-07T10:58:52.401Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 25,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-09-07T01:45:40.277Z",
           "refresh_status": "success",
@@ -891,22 +902,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-09-05T14:10:23.106Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 25,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "NVDA": {
       "latest": {
-        "fetched_at": "2026-09-07T01:45:41.165Z",
+        "fetched_at": "2026-09-07T10:58:53.159Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -919,7 +920,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-09-07T01:45:41.165Z"
+          "generated_at": "2026-09-07T10:58:53.159Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -932,19 +933,45 @@
           "interpretation": "outperforming",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 9,
+        "news_count": 7,
         "candidate_news_count": 20,
-        "relevant_news_count": 9,
-        "unique_relevant_news_count": 9,
+        "relevant_news_count": 7,
+        "unique_relevant_news_count": 7,
         "duplicate_news_count": 0,
-        "published_news_count": 9,
-        "excluded_news_count": 11,
+        "published_news_count": 7,
+        "excluded_news_count": 13,
         "items": [
+          {
+            "id": "141758951",
+            "headline": "Hot Payrolls Reload the September Hike Bet and Push Wall Street Into a Quiet Labor Day on the Back Foot",
+            "url": "https://finnhub.io/api/news?id=f18133eba8cfe4de1a0040ef723c5f04e69debc44f0a362604012a2d4d428379",
+            "published_at": "2026-09-07T08:22:58+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "NVIDIA"
+            ]
+          },
           {
             "id": "141593554",
             "headline": "Dow Jones Futures Fall With Iran, Apple, Inflation In Focus; Nvidia, Micron, Sandisk Flash Buy Signals",
             "url": "https://finnhub.io/api/news?id=cffb60530c356ad83d70f5ba341f71adb8ce87c95dbba1f4ae5067ff4efff611",
             "published_at": "2026-09-07T00:45:26+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "NVIDIA"
+            ]
+          },
+          {
+            "id": "141595849",
+            "headline": "Nvidia makes staggering $12.9 billion bet to protect AI empire",
+            "url": "https://finnhub.io/api/news?id=264a3fe648c00b8f2f5957eebe33d38e49cf132ffd19782208dc741b71502201",
+            "published_at": "2026-09-07T00:03:00+00:00",
             "source": "finnhub",
             "ai_risk_label": "Low",
             "ai_risk_score": 15,
@@ -1006,67 +1033,23 @@
               "NVDA",
               "NVIDIA"
             ]
-          },
-          {
-            "id": "141593559",
-            "headline": "Can Nvidia (NVDA) Prove it Doesn’t Live or Die by a Handful of Hyperscalers?",
-            "url": "https://finnhub.io/api/news?id=bb778d9eb180c7bcb18e5ce8f837dfc5465ee61464aa9559b4c0f9af1e0ab636",
-            "published_at": "2026-09-06T21:21:05+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "NVDA",
-              "NVIDIA"
-            ]
-          },
-          {
-            "id": "141594104",
-            "headline": "Nvidia: New Upside Catalysts Emerge And Why I'm Raising My Target",
-            "url": "https://finnhub.io/api/news?id=506e6113788fa9393af2e18faf761bd59f0a6a96190f1041a0774b4f29ffa458",
-            "published_at": "2026-09-06T20:47:33+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "NVIDIA"
-            ]
-          },
-          {
-            "id": "141593560",
-            "headline": "Could $10,000 Invested in Nvidia Today Make You a Millionaire?",
-            "url": "https://finnhub.io/api/news?id=af250f8ec57c04287c3dc18058c06b1054540d44bfeab7549b484be705c20ca1",
-            "published_at": "2026-09-06T20:43:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "NVIDIA"
-            ]
-          },
-          {
-            "id": "141593561",
-            "headline": "NVIDIA (NVDA)’s $20 Billion Groq Bet Goes Live This Year With New AI Racks",
-            "url": "https://finnhub.io/api/news?id=5aaa1773b10d0e7c8402bea7abc7bf5bf0e1f289c3e0cb25371369ee5b61766d",
-            "published_at": "2026-09-06T20:07:37+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "NVDA",
-              "NVIDIA"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-09-07T01:45:41.165Z",
+      "last_attempt_at": "2026-09-07T10:58:53.159Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-09-07T10:58:53.159Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 24,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-09-07T01:45:41.165Z",
           "refresh_status": "success",
@@ -1126,22 +1109,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-09-05T14:10:23.751Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 24,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "MSFT": {
       "latest": {
-        "fetched_at": "2026-09-07T01:45:42.044Z",
+        "fetched_at": "2026-09-07T10:58:53.788Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -1154,7 +1127,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-09-07T01:45:42.044Z"
+          "generated_at": "2026-09-07T10:58:53.788Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -1175,6 +1148,20 @@
         "published_news_count": 8,
         "excluded_news_count": 12,
         "items": [
+          {
+            "id": "141610017",
+            "headline": "Microsoft (MSFT)’s Outlook and OpenAI’s ChatGPT Work Both Broke the Same Day",
+            "url": "https://finnhub.io/api/news?id=2b055ec749833f584e8dc50cb98ce2375ce3ff77dd74cb4cb7758fc61cb7a433",
+            "published_at": "2026-09-07T00:29:34+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "MSFT",
+              "Microsoft"
+            ]
+          },
           {
             "id": "141593559",
             "headline": "Can Nvidia (NVDA) Prove it Doesn’t Live or Die by a Handful of Hyperscalers?",
@@ -1265,27 +1252,23 @@
             "matched_terms": [
               "Microsoft"
             ]
-          },
-          {
-            "id": "141472617",
-            "headline": "What Will Microsoft (MSFT) Reveal With Its New AI And Cloud Reporting?",
-            "url": "https://finnhub.io/api/news?id=07596a211a515ae22daa73d316b15320b11efc72019e3674f899b19116f0b0c4",
-            "published_at": "2026-09-05T00:05:55+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "MSFT",
-              "Microsoft"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-09-07T01:45:42.044Z",
+      "last_attempt_at": "2026-09-07T10:58:53.788Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-09-07T10:58:53.788Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 20,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-09-07T01:45:42.044Z",
           "refresh_status": "success",
@@ -1345,22 +1328,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-09-05T14:10:24.587Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 20,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "META": {
       "latest": {
-        "fetched_at": "2026-09-07T01:45:43.013Z",
+        "fetched_at": "2026-09-07T10:58:54.625Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -1373,7 +1346,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-09-07T01:45:43.013Z"
+          "generated_at": "2026-09-07T10:58:54.625Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -1386,14 +1359,40 @@
           "interpretation": "outperforming",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 7,
+        "news_count": 9,
         "candidate_news_count": 20,
-        "relevant_news_count": 7,
-        "unique_relevant_news_count": 7,
+        "relevant_news_count": 9,
+        "unique_relevant_news_count": 9,
         "duplicate_news_count": 0,
-        "published_news_count": 7,
-        "excluded_news_count": 13,
+        "published_news_count": 9,
+        "excluded_news_count": 11,
         "items": [
+          {
+            "id": "141760478",
+            "headline": "Bypassing RevenueBench To Buy The Feedback Loop",
+            "url": "https://finnhub.io/api/news?id=e5b71ec0e5b840a4e1521eb586d233afa6d7e4341a89c21ae7f0b26648a929b2",
+            "published_at": "2026-09-07T06:30:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "Meta"
+            ]
+          },
+          {
+            "id": "141611410",
+            "headline": "Meta’s $18 Billion Teen Safety Deal Puts the Pressure on TikTok and YouTube Next",
+            "url": "https://finnhub.io/api/news?id=13dfd6f695cca4f6776492e69d2af6375a4836c13cfcb6621751508bc0dde196",
+            "published_at": "2026-09-07T01:16:13+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Meta"
+            ]
+          },
           {
             "id": "141593559",
             "headline": "Can Nvidia (NVDA) Prove it Doesn’t Live or Die by a Handful of Hyperscalers?",
@@ -1489,10 +1488,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-09-07T01:45:43.013Z",
+      "last_attempt_at": "2026-09-07T10:58:54.625Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-09-07T10:58:54.625Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 21,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-09-07T01:45:43.013Z",
           "refresh_status": "success",
@@ -1552,22 +1561,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-09-05T14:10:25.396Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 21,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AMZN": {
       "latest": {
-        "fetched_at": "2026-09-07T01:45:43.840Z",
+        "fetched_at": "2026-09-07T10:58:55.299Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -1580,7 +1579,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-09-07T01:45:43.840Z"
+          "generated_at": "2026-09-07T10:58:55.299Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -1593,13 +1592,13 @@
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 10,
+        "news_count": 9,
         "candidate_news_count": 20,
-        "relevant_news_count": 10,
-        "unique_relevant_news_count": 10,
+        "relevant_news_count": 9,
+        "unique_relevant_news_count": 9,
         "duplicate_news_count": 0,
-        "published_news_count": 10,
-        "excluded_news_count": 10,
+        "published_news_count": 9,
+        "excluded_news_count": 11,
         "items": [
           {
             "id": "141593566",
@@ -1718,26 +1717,23 @@
             "matched_terms": [
               "Amazon"
             ]
-          },
-          {
-            "id": "141512368",
-            "headline": "Amazon: 2 Tiny Fears, 3 Massive Growth Engines",
-            "url": "https://finnhub.io/api/news?id=c8521f07cf64344ed6af6c47f00a7762642342d043586c3b584dae10135e3352",
-            "published_at": "2026-09-05T06:59:44+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Amazon"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-09-07T01:45:43.840Z",
+      "last_attempt_at": "2026-09-07T10:58:55.299Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-09-07T10:58:55.299Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 22,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-09-07T01:45:43.840Z",
           "refresh_status": "success",
@@ -1790,16 +1786,6 @@
         },
         {
           "fetched_at": "2026-09-05T19:40:55.836Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 22,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
-        },
-        {
-          "fetched_at": "2026-09-05T14:10:26.208Z",
           "refresh_status": "success",
           "summary": {
             "signal_level": "low",
