@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-11-08T12:23:41.247Z",
+  "generated_at": "2026-11-08T21:27:13.826Z",
   "refresh_status": "success",
   "symbols": {
     "GME": {
       "latest": {
-        "fetched_at": "2026-11-08T12:23:43.201Z",
+        "fetched_at": "2026-11-08T21:27:16.605Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -17,7 +17,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-11-08T12:23:43.201Z"
+          "generated_at": "2026-11-08T21:27:16.605Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -172,10 +172,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-11-08T12:23:43.201Z",
+      "last_attempt_at": "2026-11-08T21:27:16.605Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-11-08T21:27:16.605Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 21,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-11-08T12:23:43.201Z",
           "refresh_status": "success",
@@ -235,22 +245,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-11-06T13:24:53.376Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 20,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "TSLA": {
       "latest": {
-        "fetched_at": "2026-11-08T12:23:45.732Z",
+        "fetched_at": "2026-11-08T21:27:19.135Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -263,7 +263,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-11-08T12:23:45.732Z"
+          "generated_at": "2026-11-08T21:27:19.135Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -276,14 +276,80 @@
           "interpretation": "underperforming",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 9,
+        "news_count": 10,
         "candidate_news_count": 20,
-        "relevant_news_count": 9,
-        "unique_relevant_news_count": 9,
+        "relevant_news_count": 10,
+        "unique_relevant_news_count": 10,
         "duplicate_news_count": 0,
-        "published_news_count": 9,
-        "excluded_news_count": 11,
+        "published_news_count": 10,
+        "excluded_news_count": 10,
         "items": [
+          {
+            "id": "143641755",
+            "headline": "Tesla Isn’t a Mag-Y Stock. This Is.",
+            "url": "https://finnhub.io/api/news?id=44102834bcf3134059ce41a03f2583b1b1acfe310cf78b8d00fdb17a1fc49bee",
+            "published_at": "2026-11-08T17:23:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Tesla"
+            ]
+          },
+          {
+            "id": "143640226",
+            "headline": "Tesla's FSD (Supervised) Attach Rate Hit 75% on New Vehicles. Here's Why That Single Number Could Matter More Than Robotaxi for the Stock in 2027.",
+            "url": "https://finnhub.io/api/news?id=7867867ed2816b9aff0f990938cffbe228f5b86d34af5486daa2798043e66bf1",
+            "published_at": "2026-11-08T15:10:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Tesla"
+            ]
+          },
+          {
+            "id": "143639606",
+            "headline": "Cathie Wood Sees Tesla’s Robotaxi Business Taking Off — Says This Is The Moment Investors Have Waited For",
+            "url": "https://finnhub.io/api/news?id=be931c4a5d0ea8e964b8acaa5006944924c7cef5fa955fc3fec5312803ede5c0",
+            "published_at": "2026-11-08T13:09:30+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Tesla"
+            ]
+          },
+          {
+            "id": "143639589",
+            "headline": "Elon Musk Says Tesla Will End Cybertruck Production -- Here's Why",
+            "url": "https://finnhub.io/api/news?id=350363f6d1ed8db3fe1aa3e965668e6c4ea2c7dbf5ff059d81dd814b91a6a664",
+            "published_at": "2026-11-08T12:53:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Tesla"
+            ]
+          },
+          {
+            "id": "143639608",
+            "headline": "Tesla (TSLA) To End Cybertruck Production In 2027 As Cybercab Takes Priority",
+            "url": "https://finnhub.io/api/news?id=a23de8ca5071451aabce980736d8f1c87ca76c94689e8ac5fdb3ee1da7bcfc8e",
+            "published_at": "2026-11-08T12:09:04+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "TSLA",
+              "Tesla"
+            ]
+          },
           {
             "id": "143638950",
             "headline": "Tesla Stock Hasn't Closed at a Record in Nearly 11 Months. Here's How Its Past Record Droughts Ended.",
@@ -311,6 +377,32 @@
             ]
           },
           {
+            "id": "143639863",
+            "headline": "This Week in TSLA: Elon Musk Loses Big in Midterms, Cybertruck Ends Production and More",
+            "url": "https://finnhub.io/api/news?id=ddc02e79ee8f929dd264f12067abe41060b8207d2efb2a13476558b07d5dc5bf",
+            "published_at": "2026-11-08T09:45:26+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "TSLA"
+            ]
+          },
+          {
+            "id": "143639904",
+            "headline": "Elon Musk Says Tesla's Cybertruck Backlog Is Too Big To Clear Before Production Ends — Orders Extra Shift",
+            "url": "https://finnhub.io/api/news?id=93fef7addde1b532e6dbb67f645179edb39748fa8fdef88386aff9cf8bd83a3a",
+            "published_at": "2026-11-07T22:37:28+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Tesla"
+            ]
+          },
+          {
             "id": "143619620",
             "headline": "Elon Musk Is Winding Down Cybertruck Production to Build Cybercabs. The Model S and Model X Already Gave Up Their Factory Space to Robots.",
             "url": "https://finnhub.io/api/news?id=5db675a16d937dacfa09678316c388a2c2d3b9a167995d9284a9278b90251188",
@@ -322,91 +414,23 @@
             "matched_terms": [
               "Tesla"
             ]
-          },
-          {
-            "id": "143614403",
-            "headline": "ON Semiconductor (ON) Is Jeff Brown’s Chip Play on Tesla’s Optimus Robot",
-            "url": "https://finnhub.io/api/news?id=9b8e3a7bbb1dd24198a62bb0daa424d338c0e6efd73f435ab04f004f695a84e7",
-            "published_at": "2026-11-07T12:41:40+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Tesla"
-            ]
-          },
-          {
-            "id": "143613528",
-            "headline": "Elon Musk Wants to Build an \"Enormous Robot Army.\" Here's What That Means for Tesla and SpaceX Investors.",
-            "url": "https://finnhub.io/api/news?id=3d55e63ba4c13e059af58c34a01f723d00019f7f507dfc0dd87efc3e40b12e02",
-            "published_at": "2026-11-07T11:49:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Tesla"
-            ]
-          },
-          {
-            "id": "143614307",
-            "headline": "TSLA, AMD, MU and More: 5 Stocks Investors Couldn't Stop Buzzing About This Week",
-            "url": "https://finnhub.io/api/news?id=9df883e7f113e79e4237507dd259690424ca9dda318b623a79d328583037ddcf",
-            "published_at": "2026-11-07T09:30:06+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "TSLA"
-            ]
-          },
-          {
-            "id": "143607413",
-            "headline": "Prediction: Tesla’s FSD Attach Rate Will “Trend to 100%.” But Will It Be Enough to Save the Stock?",
-            "url": "https://finnhub.io/api/news?id=7cc2c0a0bb67e28905ccd95ec91dbe91fdfc92f3da7a51ba6a11028e9069af7c",
-            "published_at": "2026-11-07T06:49:03+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Tesla"
-            ]
-          },
-          {
-            "id": "143596554",
-            "headline": "A Retiree Who Bought 1,000 Tesla Shares at $197 Just Watched Musk Kill the Cybertruck",
-            "url": "https://finnhub.io/api/news?id=8564278466cd119c443ba44463df9ac058445dddc22173aa7491a9abbfb52b07",
-            "published_at": "2026-11-07T05:07:11+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Tesla"
-            ]
-          },
-          {
-            "id": "143614357",
-            "headline": "‘Another Failure For Tesla’: Ross Gerber Slams Elon Musk Amid Cybertruck Shutdown Plans, Gary Black Calls It a ‘Missed Opportunity’",
-            "url": "https://finnhub.io/api/news?id=84d35653931f0f132dc0bde390de52b51e00375489a97e45132a209878e81ffd",
-            "published_at": "2026-11-07T02:31:36+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Tesla"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-11-08T12:23:45.732Z",
+      "last_attempt_at": "2026-11-08T21:27:19.135Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-11-08T21:27:19.135Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 20,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-11-08T12:23:45.732Z",
           "refresh_status": "success",
@@ -466,22 +490,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-11-06T13:24:55.876Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 28,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AAPL": {
       "latest": {
-        "fetched_at": "2026-11-08T12:23:46.930Z",
+        "fetched_at": "2026-11-08T21:27:20.339Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -494,7 +508,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-11-08T12:23:46.930Z"
+          "generated_at": "2026-11-08T21:27:20.339Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -507,14 +521,68 @@
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 4,
+        "news_count": 8,
         "candidate_news_count": 20,
-        "relevant_news_count": 4,
-        "unique_relevant_news_count": 4,
+        "relevant_news_count": 8,
+        "unique_relevant_news_count": 8,
         "duplicate_news_count": 0,
-        "published_news_count": 4,
-        "excluded_news_count": 16,
+        "published_news_count": 8,
+        "excluded_news_count": 12,
         "items": [
+          {
+            "id": "143640857",
+            "headline": "Democrats prepare to go after Apple, Meta and Elon Musk companies",
+            "url": "https://finnhub.io/api/news?id=fb9a0a6ea53b4ea4bb74e173b4e192a07c82181c4b15b031e9c94f5e5c114a9e",
+            "published_at": "2026-11-08T17:17:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Apple"
+            ]
+          },
+          {
+            "id": "143640222",
+            "headline": "Dow Jones Futures Loom With Market Damaged, Big Winners Broken; Apple, Amazon, Microsoft Strong",
+            "url": "https://finnhub.io/api/news?id=1975ae0423862c182127b64aac2632039a64f7506c285b0d590ba5393378ea97",
+            "published_at": "2026-11-08T14:14:55+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Apple"
+            ]
+          },
+          {
+            "id": "143641754",
+            "headline": "Apple’s iPhone Demand Surges, But AAPL Still Isn’t a ‘Strong Buy’",
+            "url": "https://finnhub.io/api/news?id=83b5777bed27c0fc795b88c5f87956d99c6ac2aadfe61310fe8df36a232bcef8",
+            "published_at": "2026-11-08T13:41:45+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "AAPL",
+              "Apple"
+            ]
+          },
+          {
+            "id": "143639845",
+            "headline": "Analysts Question AAPL's Valuation, Apple's Margin Pressure and More:  This Week in Appleverse",
+            "url": "https://finnhub.io/api/news?id=0209d4c3517174ac5739861a479146b0c4cc2dddbc9042bf7eab02b036248fb9",
+            "published_at": "2026-11-08T09:00:08+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "AAPL",
+              "Apple"
+            ]
+          },
           {
             "id": "143617887",
             "headline": "Did Apple Just Get a Boost From Democrats? Data Center Moratoriums Could Benefit the iPhone Maker",
@@ -555,24 +623,34 @@
             ]
           },
           {
-            "id": "143613357",
-            "headline": "Mark Gurman Expects “More Price Increases” on Apple Hardware Through 2027",
-            "url": "https://finnhub.io/api/news?id=3544d9f8baf2001cd8182d08b3e052495af47f8bc42ae2612cfcef2b14ca8ca9",
-            "published_at": "2026-11-07T07:38:39+00:00",
+            "id": "143639586",
+            "headline": "MarketBeat Week in Review – 11/2 - 11/6",
+            "url": "https://finnhub.io/api/news?id=8374a8eaf2e3855e96c32ee45b20424a417901caa56175b2cab23ffb8ce68d1f",
+            "published_at": "2026-11-07T12:00:00+00:00",
             "source": "finnhub",
             "ai_risk_label": "Low",
             "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
+            "relevance_basis": "issuer_term_in_summary",
             "matched_terms": [
               "Apple"
             ]
           }
         ]
       },
-      "last_attempt_at": "2026-11-08T12:23:46.930Z",
+      "last_attempt_at": "2026-11-08T21:27:20.339Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-11-08T21:27:20.339Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 23,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-11-08T12:23:46.930Z",
           "refresh_status": "success",
@@ -632,22 +710,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-11-06T13:24:56.945Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 24,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AMC": {
       "latest": {
-        "fetched_at": "2026-11-08T12:23:47.886Z",
+        "fetched_at": "2026-11-08T21:27:21.495Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -660,7 +728,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-11-08T12:23:47.886Z"
+          "generated_at": "2026-11-08T21:27:21.495Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -813,10 +881,20 @@
           }
         ]
       },
-      "last_attempt_at": "2026-11-08T12:23:47.886Z",
+      "last_attempt_at": "2026-11-08T21:27:21.495Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-11-08T21:27:21.495Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 24,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-11-08T12:23:47.886Z",
           "refresh_status": "success",
@@ -876,22 +954,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-11-06T13:24:57.800Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 32,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "NVDA": {
       "latest": {
-        "fetched_at": "2026-11-08T12:23:48.889Z",
+        "fetched_at": "2026-11-08T21:27:22.654Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -904,7 +972,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-11-08T12:23:48.889Z"
+          "generated_at": "2026-11-08T21:27:22.654Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -926,24 +994,34 @@
         "excluded_news_count": 19,
         "items": [
           {
-            "id": "143638955",
-            "headline": "Coherent Is Up 21% in a Year as AI Goes “From Copper to Optical.” Is It a Buy?",
-            "url": "https://finnhub.io/api/news?id=20a4f74fbba500d3e4cb41a88e300b331cdba654b512f057a9d08b61491f9b97",
-            "published_at": "2026-11-08T09:36:17+00:00",
+            "id": "143640862",
+            "headline": "Why Nvidia Stock Looks Like a Bargain Right Now",
+            "url": "https://finnhub.io/api/news?id=1f463e451590b7ed525db665bc6c34ffb3c12a5ec3cf9e2fbec442af90692d4d",
+            "published_at": "2026-11-08T17:10:00+00:00",
             "source": "finnhub",
             "ai_risk_label": "Low",
             "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_summary",
+            "relevance_basis": "issuer_term_in_headline",
             "matched_terms": [
               "NVIDIA"
             ]
           }
         ]
       },
-      "last_attempt_at": "2026-11-08T12:23:48.889Z",
+      "last_attempt_at": "2026-11-08T21:27:22.654Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-11-08T21:27:22.654Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 23,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-11-08T12:23:48.889Z",
           "refresh_status": "success",
@@ -1003,22 +1081,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-11-06T13:24:58.669Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 29,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "MSFT": {
       "latest": {
-        "fetched_at": "2026-11-08T12:23:49.713Z",
+        "fetched_at": "2026-11-08T21:27:23.716Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -1031,7 +1099,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-11-08T12:23:49.713Z"
+          "generated_at": "2026-11-08T21:27:23.716Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -1044,14 +1112,106 @@
           "interpretation": "neutral",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 6,
+        "news_count": 10,
         "candidate_news_count": 20,
-        "relevant_news_count": 6,
-        "unique_relevant_news_count": 6,
+        "relevant_news_count": 10,
+        "unique_relevant_news_count": 10,
         "duplicate_news_count": 0,
-        "published_news_count": 6,
-        "excluded_news_count": 14,
+        "published_news_count": 10,
+        "excluded_news_count": 10,
         "items": [
+          {
+            "id": "143641769",
+            "headline": "Microsoft Is Reportedly Getting Pickier About AI Data Center Deals. Is the Stock a Buy Now?",
+            "url": "https://finnhub.io/api/news?id=e6155b5dfad271ba25b190d258c671c56b88e7898095540649aa847d9d901fc6",
+            "published_at": "2026-11-08T17:58:02+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Microsoft"
+            ]
+          },
+          {
+            "id": "143640877",
+            "headline": "Microsoft (MSFT) Makes the 10 Best Dow Stocks for 2027 List as Azure Growth Speeds Up",
+            "url": "https://finnhub.io/api/news?id=86b8679b0c57c6ca4bbe214721bf1eca20444c4c60e14a2ba232ddf238d686bd",
+            "published_at": "2026-11-08T17:36:28+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "MSFT",
+              "Microsoft"
+            ]
+          },
+          {
+            "id": "143640876",
+            "headline": "Anthropic’s $2.5 Trillion IPO Dream Could Be Heading for a $1 Trillion Reality Check",
+            "url": "https://finnhub.io/api/news?id=24fe51dde8052ad84fa2b8ff7bd01493fe94003f6b87a5c3273a654d7e9638b3",
+            "published_at": "2026-11-08T16:10:55+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "Microsoft"
+            ]
+          },
+          {
+            "id": "143640881",
+            "headline": "Bill Gates Says A $10-an-Hour Robot Could Replace The $20-an-Hour Worker – 'There Is No Plan' For What Comes Next",
+            "url": "https://finnhub.io/api/news?id=3f9c62b9472a4b90f145c0f11456bd3a5964bcd631e2bf9ed99a717b101c1a99",
+            "published_at": "2026-11-08T16:00:08+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "Microsoft"
+            ]
+          },
+          {
+            "id": "143640239",
+            "headline": "What Is Lumen Technologies (LUMN) Doing To Simplify AI Connectivity For Enterprises?",
+            "url": "https://finnhub.io/api/news?id=e81a0115f2beb2f7555ebee8a82921dbdfbe3ed47381586851e83dc8573c0357",
+            "published_at": "2026-11-08T15:08:16+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "Microsoft"
+            ]
+          },
+          {
+            "id": "143640222",
+            "headline": "Dow Jones Futures Loom With Market Damaged, Big Winners Broken; Apple, Amazon, Microsoft Strong",
+            "url": "https://finnhub.io/api/news?id=1975ae0423862c182127b64aac2632039a64f7506c285b0d590ba5393378ea97",
+            "published_at": "2026-11-08T14:14:55+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Microsoft"
+            ]
+          },
+          {
+            "id": "143639597",
+            "headline": "EXCLUSIVE: Democrats Took Congress. But AI's Spending Binge Isn't Going Anywhere, This CEO Says",
+            "url": "https://finnhub.io/api/news?id=672ad686b709e9351bcac15fb01b81d16506361ded66760238567d43b1f929cc",
+            "published_at": "2026-11-08T11:45:06+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "Microsoft"
+            ]
+          },
           {
             "id": "143637259",
             "headline": "Got $5,000? 2 Growth Stocks Building the Software Backbone of Artificial Intelligence (AI).",
@@ -1090,52 +1250,23 @@
             "matched_terms": [
               "Microsoft"
             ]
-          },
-          {
-            "id": "143618876",
-            "headline": "Why AGI’s Fuzzy Definition Matters for Investors Betting on Google, Meta, and Microsoft",
-            "url": "https://finnhub.io/api/news?id=4ce812490718222c280e3ff9a5d4ef0e0fdd5c2214c00c50f5377d53c344aa0e",
-            "published_at": "2026-11-07T15:30:03+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Microsoft"
-            ]
-          },
-          {
-            "id": "143616088",
-            "headline": "Fed Chair Kevin Warsh Just Issued a 6-Word Warning That Could Spell Disaster for AI Stocks",
-            "url": "https://finnhub.io/api/news?id=bf1da8d5e8d34a150b4f2ed762821c66cb0ba1735cfe7c2ea16cda9d547d0f7b",
-            "published_at": "2026-11-07T15:26:32+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_summary",
-            "matched_terms": [
-              "Microsoft"
-            ]
-          },
-          {
-            "id": "143614384",
-            "headline": "Dan Ives: Big Tech Free Cash Flow “Will Trough in 1H2027” as Capex Growth Peaks Early",
-            "url": "https://finnhub.io/api/news?id=654493aac01699eca0f7649fbee25bdaf50c025d61dd2a0ab14fb9ea0bd79136",
-            "published_at": "2026-11-07T12:06:46+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_summary",
-            "matched_terms": [
-              "Microsoft"
-            ]
           }
         ]
       },
-      "last_attempt_at": "2026-11-08T12:23:49.713Z",
+      "last_attempt_at": "2026-11-08T21:27:23.716Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-11-08T21:27:23.716Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 24,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-11-08T12:23:49.713Z",
           "refresh_status": "success",
@@ -1195,22 +1326,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-11-06T13:24:59.342Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 28,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "META": {
       "latest": {
-        "fetched_at": "2026-11-08T12:23:50.530Z",
+        "fetched_at": "2026-11-08T21:27:24.721Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -1223,7 +1344,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-11-08T12:23:50.530Z"
+          "generated_at": "2026-11-08T21:27:24.721Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -1245,6 +1366,19 @@
         "excluded_news_count": 11,
         "items": [
           {
+            "id": "143640857",
+            "headline": "Democrats prepare to go after Apple, Meta and Elon Musk companies",
+            "url": "https://finnhub.io/api/news?id=fb9a0a6ea53b4ea4bb74e173b4e192a07c82181c4b15b031e9c94f5e5c114a9e",
+            "published_at": "2026-11-08T17:17:00+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Meta"
+            ]
+          },
+          {
             "id": "143638963",
             "headline": "Here's how bro scaled from $10K to $60K/month with 1 creator 🤯",
             "url": "https://finnhub.io/api/news?id=d1eb1f468488ef11e9e8e3861a64fe80f38489fc8711f13b3afa1b0aed0bf16f",
@@ -1253,6 +1387,19 @@
             "ai_risk_label": "Low",
             "ai_risk_score": 15,
             "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "Meta"
+            ]
+          },
+          {
+            "id": "143639887",
+            "headline": "Consumer Tech (Oct 2-6): Big Earnings Dominate Headline, Meta, Google Face Political And Regulatory Pressure Over AI Expansion & More",
+            "url": "https://finnhub.io/api/news?id=ec1338be3aebd5819f0885edec9c8dbc4bbd179f681c4e8187e4050fc245cade",
+            "published_at": "2026-11-08T10:30:06+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
             "matched_terms": [
               "Meta"
             ]
@@ -1323,50 +1470,34 @@
             ]
           },
           {
-            "id": "143614384",
-            "headline": "Dan Ives: Big Tech Free Cash Flow “Will Trough in 1H2027” as Capex Growth Peaks Early",
-            "url": "https://finnhub.io/api/news?id=654493aac01699eca0f7649fbee25bdaf50c025d61dd2a0ab14fb9ea0bd79136",
-            "published_at": "2026-11-07T12:06:46+00:00",
+            "id": "143640734",
+            "headline": "Meta chief strategy officer Dave Wehner leaves to join AI infrastructure startup Fireworks as CFO",
+            "url": "https://finnhub.io/api/news?id=6e1c8c133af1b6634b36fb682432f8588d93ec1763011bc87a7e4289feb081a3",
+            "published_at": "2026-11-07T12:51:16+00:00",
             "source": "finnhub",
             "ai_risk_label": "Low",
             "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_summary",
-            "matched_terms": [
-              "Meta"
-            ]
-          },
-          {
-            "id": "143613358",
-            "headline": "Big Tech’s $1 Trillion Rally Bets Regulation Won’t Touch “the Profits of the Tech Companies”",
-            "url": "https://finnhub.io/api/news?id=613c2faf75b37b41f48cd58d629507239e0c54e65a89856ed3992b655163241c",
-            "published_at": "2026-11-07T10:51:17+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_summary",
-            "matched_terms": [
-              "Meta"
-            ]
-          },
-          {
-            "id": "143614397",
-            "headline": "Mark Zuckerberg’s fortune tops $200 billion. His 3 daughters won’t inherit most of it",
-            "url": "https://finnhub.io/api/news?id=a51e42fd64cc7510e8b7d245c5c92dd69378072a668f06165269ee2b36f20b0b",
-            "published_at": "2026-11-07T09:30:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_summary",
+            "relevance_basis": "issuer_term_in_headline",
             "matched_terms": [
               "Meta"
             ]
           }
         ]
       },
-      "last_attempt_at": "2026-11-08T12:23:50.530Z",
+      "last_attempt_at": "2026-11-08T21:27:24.721Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-11-08T21:27:24.721Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 19,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-11-08T12:23:50.530Z",
           "refresh_status": "success",
@@ -1426,22 +1557,12 @@
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
-        },
-        {
-          "fetched_at": "2026-11-06T13:24:59.950Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 20,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
         }
       ]
     },
     "AMZN": {
       "latest": {
-        "fetched_at": "2026-11-08T12:23:51.383Z",
+        "fetched_at": "2026-11-08T21:27:25.639Z",
         "refresh_status": "success",
         "fetch_errors": [],
         "summary": {
@@ -1454,7 +1575,7 @@
           "interpretation_status": "comprehensive",
           "coverage_note": "",
           "source_count": 3,
-          "generated_at": "2026-11-08T12:23:51.383Z"
+          "generated_at": "2026-11-08T21:27:25.639Z"
         },
         "abnormal_return": {
           "benchmark_symbol": "SPY",
@@ -1467,14 +1588,68 @@
           "interpretation": "outperforming",
           "data_quality": "computed_from_market_history"
         },
-        "news_count": 6,
+        "news_count": 7,
         "candidate_news_count": 20,
-        "relevant_news_count": 6,
-        "unique_relevant_news_count": 6,
+        "relevant_news_count": 7,
+        "unique_relevant_news_count": 7,
         "duplicate_news_count": 0,
-        "published_news_count": 6,
-        "excluded_news_count": 14,
+        "published_news_count": 7,
+        "excluded_news_count": 13,
         "items": [
+          {
+            "id": "143640882",
+            "headline": "Amazon (AMZN): AWS Grew 39%, and Management Expects Growth Above 40% in 2027 and 2028",
+            "url": "https://finnhub.io/api/news?id=990b5177e10d7dae77bafa179627ce08fcffbece27e41b2d85b2f8e717290168",
+            "published_at": "2026-11-08T17:37:22+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "AMZN",
+              "Amazon",
+              "AWS"
+            ]
+          },
+          {
+            "id": "143640876",
+            "headline": "Anthropic’s $2.5 Trillion IPO Dream Could Be Heading for a $1 Trillion Reality Check",
+            "url": "https://finnhub.io/api/news?id=24fe51dde8052ad84fa2b8ff7bd01493fe94003f6b87a5c3273a654d7e9638b3",
+            "published_at": "2026-11-08T16:10:55+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "Amazon"
+            ]
+          },
+          {
+            "id": "143640222",
+            "headline": "Dow Jones Futures Loom With Market Damaged, Big Winners Broken; Apple, Amazon, Microsoft Strong",
+            "url": "https://finnhub.io/api/news?id=1975ae0423862c182127b64aac2632039a64f7506c285b0d590ba5393378ea97",
+            "published_at": "2026-11-08T14:14:55+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_headline",
+            "matched_terms": [
+              "Amazon"
+            ]
+          },
+          {
+            "id": "143639597",
+            "headline": "EXCLUSIVE: Democrats Took Congress. But AI's Spending Binge Isn't Going Anywhere, This CEO Says",
+            "url": "https://finnhub.io/api/news?id=672ad686b709e9351bcac15fb01b81d16506361ded66760238567d43b1f929cc",
+            "published_at": "2026-11-08T11:45:06+00:00",
+            "source": "finnhub",
+            "ai_risk_label": "Low",
+            "ai_risk_score": 15,
+            "relevance_basis": "issuer_term_in_summary",
+            "matched_terms": [
+              "Amazon"
+            ]
+          },
           {
             "id": "143637265",
             "headline": "1 Stat That Makes Amazon Hard to Ignore Right Now",
@@ -1489,49 +1664,10 @@
             ]
           },
           {
-            "id": "143617906",
-            "headline": "He Loses His Job at 62 as Amazon Cuts 95 More Positions. He Claims Social Security to Get By, Then Faces an $8,400 Bill to Undo It",
-            "url": "https://finnhub.io/api/news?id=7399ae15fbdb3a278e9a2cbcf12eb44699f642435d080dd2de55ae99de3212cb",
-            "published_at": "2026-11-07T19:04:44+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Amazon"
-            ]
-          },
-          {
-            "id": "143617121",
-            "headline": "Amazon Prime members' new Uber Eats perk comes with a $25 minimum",
-            "url": "https://finnhub.io/api/news?id=a16186d7e12afcdb51cb308ee680ee9608827cec9e0ff648ff534edc781fe8d5",
-            "published_at": "2026-11-07T18:07:00+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Amazon"
-            ]
-          },
-          {
-            "id": "143616080",
-            "headline": "Anthropic's IPO Could Come Within Weeks. Amazon Already Owns a Piece of It.",
-            "url": "https://finnhub.io/api/news?id=7f65afb899bade577843d84c1bd98ab3872b04ac7b254b75f0604de7990ae906",
-            "published_at": "2026-11-07T15:47:02+00:00",
-            "source": "finnhub",
-            "ai_risk_label": "Low",
-            "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_headline",
-            "matched_terms": [
-              "Amazon"
-            ]
-          },
-          {
-            "id": "143614384",
-            "headline": "Dan Ives: Big Tech Free Cash Flow “Will Trough in 1H2027” as Capex Growth Peaks Early",
-            "url": "https://finnhub.io/api/news?id=654493aac01699eca0f7649fbee25bdaf50c025d61dd2a0ab14fb9ea0bd79136",
-            "published_at": "2026-11-07T12:06:46+00:00",
+            "id": "143639845",
+            "headline": "Analysts Question AAPL's Valuation, Apple's Margin Pressure and More:  This Week in Appleverse",
+            "url": "https://finnhub.io/api/news?id=0209d4c3517174ac5739861a479146b0c4cc2dddbc9042bf7eab02b036248fb9",
+            "published_at": "2026-11-08T09:00:08+00:00",
             "source": "finnhub",
             "ai_risk_label": "Low",
             "ai_risk_score": 15,
@@ -1541,24 +1677,34 @@
             ]
           },
           {
-            "id": "143613358",
-            "headline": "Big Tech’s $1 Trillion Rally Bets Regulation Won’t Touch “the Profits of the Tech Companies”",
-            "url": "https://finnhub.io/api/news?id=613c2faf75b37b41f48cd58d629507239e0c54e65a89856ed3992b655163241c",
-            "published_at": "2026-11-07T10:51:17+00:00",
+            "id": "143640730",
+            "headline": "Amazon's Astro home robot has fans but looks destined for the 'trash heap.' Why it's trying again",
+            "url": "https://finnhub.io/api/news?id=bee89da59d8aab994a2a5845dc9e9d74baa29af405cefee51fa1b38e020c6ce7",
+            "published_at": "2026-11-08T08:00:01+00:00",
             "source": "finnhub",
             "ai_risk_label": "Low",
             "ai_risk_score": 15,
-            "relevance_basis": "issuer_term_in_summary",
+            "relevance_basis": "issuer_term_in_headline",
             "matched_terms": [
               "Amazon"
             ]
           }
         ]
       },
-      "last_attempt_at": "2026-11-08T12:23:51.383Z",
+      "last_attempt_at": "2026-11-08T21:27:25.639Z",
       "last_attempt_status": "success",
       "last_attempt_errors": [],
       "history": [
+        {
+          "fetched_at": "2026-11-08T21:27:25.639Z",
+          "refresh_status": "success",
+          "summary": {
+            "signal_level": "low",
+            "combined_score": 23,
+            "data_coverage": "FULL",
+            "interpretation_status": "comprehensive"
+          }
+        },
         {
           "fetched_at": "2026-11-08T12:23:51.383Z",
           "refresh_status": "success",
@@ -1615,16 +1761,6 @@
           "summary": {
             "signal_level": "low",
             "combined_score": 23,
-            "data_coverage": "FULL",
-            "interpretation_status": "comprehensive"
-          }
-        },
-        {
-          "fetched_at": "2026-11-06T13:25:00.843Z",
-          "refresh_status": "success",
-          "summary": {
-            "signal_level": "low",
-            "combined_score": 30,
             "data_coverage": "FULL",
             "interpretation_status": "comprehensive"
           }
